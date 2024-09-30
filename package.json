@@ -1,0 +1,15 @@
+{
+  "name": "sutil-helloworld",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "dotnet fable src/App -o build && vite build",
+    "start": "dotnet fable watch src/App --verbose -o build --run vite",
+    "preview": "vite preview",
+    "clean": "dotnet fable clean -o build --yes"
+  },  
+  "devDependencies": {
+    "vite": "^5.1.4"
+  }
+}
