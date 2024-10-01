@@ -3,21 +3,30 @@
 open Dsl
 open Bind
 open Core
+open Style
+
+let style = [
+
+    rule ".red" [
+        "color", "red"
+    ]
+
+]
 
 let view() = 
     let counter = Store.make 0
     let nameS = Store.make ""
 
     Html.div [
-        Html.div "Hello World"
+        Html.divc "red" [ text "Hello World" ]
 
         Html.button [
-            Html.text "Press Me"
+            text "Press Me"
             Ev.onClick (fun _ ->  counter.Value <- counter.Value + 1)
         ]
 
         Html.div [
-            Bind.el( counter, fun n -> Html.text (sprintf "%d" n))
+            Bind.el( counter, fun n -> text (sprintf "%d" n))
         ]
 
         Bind.el( nameS, fun name ->
@@ -29,10 +38,10 @@ let view() =
                     )
                 ]
                 Html.div [
-                    Html.text (sprintf "Hello %s" name)
+                    text (sprintf "Hello %s" name)
                 ]
             ]
         )
-    ]
+    ] |> withStyle style
 
 view() |> mountAsChild "sutil-app"

@@ -1,14 +1,7 @@
 Experimental rewrite of the Sutil core to support a diffing engine
 
-Currently features:
+New in Sutil 3
 
-- Compatibility with Feliz.Engine
-- Ev.input that extends Event argument to give you ev.targetElement : HTMLInputElement
-- Virtual DOM that applies patches where possible in Bind
-- Minimal Store
-- Bind.el
-
-Missing
-- No styling
-- No Bind.each, etc
-- No transitions
+- DOM updates are optimised using a patching mechanism, very much like React
+- withStyle uses nested stylesheets, rather than recoding all rule selectors to insert ".__sutil_xx" selectors
+- Ev.input understands that it belongs to an HTMLInputElement, and so `e.targeElement.value` will work without casts

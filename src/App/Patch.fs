@@ -59,7 +59,6 @@ let diffAttributes (a : NamedNodeMap) (attrs : (string * string)[]) =
             | _ -> ()
     |]
 
-
 let rec calculatePatch (existing : Node) (ve : VElement) : Action =
     //Fable.Core.JS.console.log("calculate patch: ", (if isNull existing then "null" :> obj else existing), ve )
 
@@ -93,7 +92,7 @@ let rec calculatePatch (existing : Node) (ve : VElement) : Action =
     else
         ReplaceNew ve
 
-let rec applyPatch (node : Node) (parent : HTMLElement) (action: Action) : (Result * Node) =
+let rec applyPatch (context : CoreTypes.BuildContext) (node : Node) (action: Action) : (Result * Node) =
 
     let nodeChildren = 
         node |> DomHelpers.children |> Seq.toArray
@@ -110,7 +109,7 @@ let rec applyPatch (node : Node) (parent : HTMLElement) (action: Action) : (Resu
             node.textContent <- text
 
         | ChildAction (ix, action) ->
-            let result = applyPatch (nodeChildren[ix]) (asElement node) action
+            let result = applyPatch (context.WithParent(node)) (nodeChildren[ix]) action
             ()
 
     match action with
@@ -121,13 +120,13 @@ let rec applyPatch (node : Node) (parent : HTMLElement) (action: Action) : (Resu
         Removed, node
 
     | ReplaceNew (ve) ->
-        let de = VirtualDom.toDom ve
-        DomHelpers.replace parent node de
+        let de = VirtualDom.toDom context ve
+        DomHelpers.replace context.ParentElement node de
         Replaced, de
 
     | AppendNew ve ->
-        let de = VirtualDom.toDom ve
-        DomHelpers.append parent de
+        let de = VirtualDom.toDom context ve
+        DomHelpers.append context.ParentElement de
         Appended, de
 
     | Patch patches ->

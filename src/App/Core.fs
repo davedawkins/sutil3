@@ -10,8 +10,9 @@ let mountAsChild (parentElementId : string)  (se : SutilElement) =
     if isNull container then
         failwith ("Cannot find element for mount point: " + parentElementId)
 
+    let context = BuildContext.Create()
     se 
     |> VirtualDom.fromSutil 
-    |> VirtualDom.toDom 
+    |> VirtualDom.toDom context
     |> DomHelpers.append container
 

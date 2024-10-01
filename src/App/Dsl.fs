@@ -69,4 +69,6 @@ let Html = HtmlEngine()
 let Ev = EventEngine()
 let Attr = AttrEngine()
 
+let text = Html.text
+
 do ()

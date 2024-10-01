@@ -25,7 +25,7 @@ type Bind =
                     //Fable.Core.JS.console.log( "Patch action: ", Fable.Core.JS.JSON.stringify( patchAction, space = 4) )
                     Fable.Core.JS.console.log( "Patch action: ", patchAction.ToString() )
 
-                    currentNode <- Patch.applyPatch currentNode context.ParentElement patchAction |> snd
+                    currentNode <- Patch.applyPatch context currentNode patchAction |> snd
 
                 ) |> ignore
                 ()

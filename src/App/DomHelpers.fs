@@ -5,6 +5,33 @@ open Browser.Types
 open Browser.Dom
 open Browser.CssExtensions
 
+
+module SutilKeys =
+
+    open Fable.Core.JsInterop
+
+    let [<Literal>] Id = "__sutil_id"
+
+    let hasKey (key : string) (node : Node) =
+        jsIn key node
+
+    let setKey (key : string)  (node : Node) (value : obj) : unit =
+        Fable.Core.JS.console.log("setKey: ", key, " = ", value )
+        node?(key) <- value
+        Fable.Core.JS.console.log("setKey: ", node )
+
+    let getKey (key : string)  (node : Node) : obj = 
+        node?(key)
+
+    let setId (node : Node) (x: string) = 
+        setKey Id node x
+    
+    let getId (node : Node) = 
+        if hasKey Id node then
+            getKey Id node |> string
+        else    
+            ""
+    
 [<Literal>]
 let internal ElementNodeType = 1.0
 
@@ -24,6 +51,8 @@ let asEl<'T when 'T :> HTMLElement> (n : Node) : 'T = n :?> 'T
 let asElement (n : Node) : HTMLElement = n :?> HTMLElement
 
 let elementTag (n : Node) = if isElementNode n then (asElement n).tagName else ""
+
+let findElement (doc : Document) selector = doc.querySelector(selector)
 
 let children (node: Node) =
     let rec visit (child: Node) =

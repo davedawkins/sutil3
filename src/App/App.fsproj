@@ -5,10 +5,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Helpers.fs" />
+    <Compile Include="DomHelpers.fs" />
+    <Compile Include="StyleDomHelpers.js.fs" />
     <Compile Include="CoreTypes.fs" />
+    <Compile Include="Style.fs" />
     <Compile Include="EventHelpers.fs" />
     <Compile Include="Store.fs" />
-    <Compile Include="DomHelpers.fs" />
     <Compile Include="VirtualDom.fs" />
     <Compile Include="Patch.fs" />
     <Compile Include="Core.fs" />

@@ -12,3 +12,9 @@ let pairOptionals (x : 'T seq) (y : 'U seq) : ('T option * 'U option) seq =
         for i in 0 .. (n-1) do
             (safeGet x i, safeGet y i)
     |]
+
+let createIdGenerator() =
+    let mutable i = 0
+    (fun () -> 
+        i <- i  + 1
+        i)
