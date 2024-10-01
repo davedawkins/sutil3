@@ -1,5 +1,7 @@
 module CoreTypes
 
+type disposable = System.IDisposable
+
 open Browser.Types
 
 type BuildContext = 
@@ -23,15 +25,5 @@ type SutilElement =
     | Attribute of (string * string)
     | Event of (string * DomEventHandler)
     | SideEffect of (BuildContext -> unit)
-    //| MapContext of (BuildContext -> BuildContext)
     | MapElement of ( (Node -> Node) * SutilElement )
-
-//      | Fragment of (SutilElement[])
-
-type SutilBuildResult =
-    | DomNode of Node
-    | DomElement of (HTMLElement * SutilBuildResult[])
-    | PatchedNode of Node
-    | PatchedElement of (HTMLElement * SutilBuildResult[])
-//        | DomFragment of Node[]
-    | DomSideEffect
+    | Fragment of (SutilElement[])

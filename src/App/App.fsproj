@@ -1,21 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <DefineConstants>$(DefineConstants);FABLE_COMPILER;</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Helpers.fs" />
-    <Compile Include="DomHelpers.fs" />
-    <Compile Include="StyleDomHelpers.js.fs" />
-    <Compile Include="CoreTypes.fs" />
-    <Compile Include="Style.fs" />
-    <Compile Include="EventHelpers.fs" />
-    <Compile Include="Store.fs" />
-    <Compile Include="VirtualDom.fs" />
-    <Compile Include="Patch.fs" />
-    <Compile Include="Core.fs" />
-    <Compile Include="Dsl.fs" />
-    <Compile Include="Bind.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>

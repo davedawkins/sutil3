@@ -12,8 +12,15 @@ type VElement = VirtualDom.Element
 type PatchAction =
     | SetAttr of string * string
     | RemoveAttr of string * string
+    | AddEvent of string * (Browser.Types.Event -> unit)
+    | RemoveEvent of string * (Browser.Types.Event -> unit)
     | SetInnerText of string
     | ChildAction of (int * Action)
+    // override __.ToString (): string = 
+    //     match __ with
+    //     | Patch (actions) ->
+    //         sprintf "Patch: [%s]" (actions |> Array.map (_.ToString()) |> String.concat ",")
+    //     | _ -> sprintf "%A" __
 
 // What we're going to do to an existing (node, vnode) pair
 and Action =
@@ -22,12 +29,20 @@ and Action =
     | ReplaceNew of VElement
     | AppendNew of VElement
     | Remove
-        
+    override __.ToString (): string = 
+        match __ with
+        | Patch (actions) ->
+            sprintf "Patch: [%s]" (actions |> Array.map (_.ToString()) |> String.concat ",")
+        | ReplaceNew _ -> "ReplaceNew"
+        | AppendNew _ -> "AppendNew"
+        | Remove  -> "Remove"
+        | AsIs  -> "AsIs"
+
 type Result =
     | Replaced
     | Appended
     | Removed
-    | Patched
+    | Patched of ((Result * Node)[])
     | Unchanged
 
 let asArray (n : NamedNodeMap) =
@@ -70,7 +85,10 @@ let rec calculatePatch (existing : Node) (ve : VElement) : Action =
     elif isElementNode existing && ve.IsElementNode && ve.Tag = (asElement existing).tagName.ToLower() then
         [|
             yield! (diffAttributes (existing.attributes) (ve.Attributes) )
-            // TODO: Events, side-effects
+            // TODO: side-effects
+    
+            // Always add the events, we clear them out first
+            yield! (ve.Events |> Array.map AddEvent)
 
             yield! Helpers.pairOptionals (DomHelpers.children existing) (ve.Children)
             |> Seq.mapi (fun i (x, y) ->
@@ -97,26 +115,41 @@ let rec applyPatch (context : CoreTypes.BuildContext) (node : Node) (action: Act
     let nodeChildren = 
         node |> DomHelpers.children |> Seq.toArray
 
-    let apply (a : PatchAction) =
+    let nodeChild ix =
+        if ix < nodeChildren.Length then nodeChildren[ix] else null
+
+    let apply (a : PatchAction) : (Result * Node) option=
+        // Fable.Core.JS.console.log(sprintf "apply: %A" a)
         match a with
         | SetAttr (name,value) -> 
             (asElement node).setAttribute(name,value)
+            None
 
         | RemoveAttr (name,_) -> 
             (asElement node).removeAttribute(name)
+            None
+
+        | AddEvent(name,value) -> 
+            DomHelpers.EventListeners.add node name value
+            None
+
+        | RemoveEvent (name,value) -> 
+            (asElement node).removeEventListener(name,value)
+            None
 
         | SetInnerText text ->
             node.textContent <- text
+            None
 
         | ChildAction (ix, action) ->
-            let result = applyPatch (context.WithParent(node)) (nodeChildren[ix]) action
-            ()
+            applyPatch (context.WithParent(node)) (nodeChild ix) action |> Some
 
     match action with
     | AsIs ->
         Unchanged, node
 
     | Remove ->
+        DomHelpers.remove node
         Removed, node
 
     | ReplaceNew (ve) ->
@@ -130,5 +163,6 @@ let rec applyPatch (context : CoreTypes.BuildContext) (node : Node) (action: Act
         Appended, de
 
     | Patch patches ->
-        patches |> Array.iter apply
-        Patched, node
+        DomHelpers.EventListeners.clear node
+        let result = patches |> Array.choose apply
+        Patched result, node

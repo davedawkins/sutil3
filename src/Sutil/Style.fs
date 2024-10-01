@@ -56,9 +56,8 @@ let withStyle (styleSheet : StyleSheet) (el : CoreTypes.SutilElement) =
 
     let addStyle ( node : Node ) : Node =
         let el = asElement node
-        let elId = SutilKeys.getId node
+        let elId = DomHelpers.Id.getId node
         if elId = "" then 
-            Fable.Core.JS.console.log(node)
             failwith "Not a sutil element"
 
         let className = sprintf "sutil-%s" elId

@@ -5,29 +5,50 @@ open Bind
 open Core
 open Style
 
-let style = [
+let css (s: string) = s
 
+let _style = css $"""
+    .red {{
+        color: red;
+    }}
+"""
+
+let style = [
     rule ".red" [
         "color", "red"
     ]
-
 ]
 
 let view() = 
     let counter = Store.make 0
     let nameS = Store.make ""
 
+    Html.fragment [
     Html.div [
+        Ev.onMount (fun _ ->
+            Fable.Core.JS.console.log("Mounted")
+        )
+
         Html.divc "red" [ text "Hello World" ]
 
         Html.button [
-            text "Press Me"
+            text "+"
             Ev.onClick (fun _ ->  counter.Value <- counter.Value + 1)
         ]
 
-        Html.div [
-            Bind.el( counter, fun n -> text (sprintf "%d" n))
+        Html.button [
+            text "-"
+            Ev.onClick (fun _ ->  counter.Value <- counter.Value - 1)
         ]
+
+        Html.div [
+            Bind.el( counter, fun n -> text (sprintf "n=%d" n))
+        ]
+
+        Bind.el( counter, fun n -> 
+            Html.fragment [ 
+                for i in 0 .. n-1 do Html.div (sprintf "%d" i)
+            ] )
 
         Bind.el( nameS, fun name ->
             Html.div [
@@ -37,11 +58,16 @@ let view() =
                         nameS.Value <- e.targetElement.value 
                     )
                 ]
-                Html.div [
-                    text (sprintf "Hello %s" name)
-                ]
+                if name = "" then
+                    Html.p "Hello stranger"
+                else
+                    Html.div [
+                        Ev.onMount (fun _ -> Fable.Core.JS.console.log "mounted")
+                        Ev.onUnmount (fun _ -> Fable.Core.JS.console.log "unmounted")
+                        text (sprintf "Hello %s" name)
+                    ]
             ]
         )
-    ] |> withStyle style
+    ] ] |> withStyle style
 
 view() |> mountAsChild "sutil-app"

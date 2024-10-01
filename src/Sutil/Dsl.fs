@@ -24,12 +24,14 @@ type HtmlEngine() =
             |]
         )
         
+    let makeFragment (children) =
+        SutilElement.Fragment (children |> Seq.toArray)
 
-    // let makeFragment (children) =
-    //     SutilElement.Fragment (children |> Seq.toArray)
-
-    // member __.fragment (children) = 
-    //     makeFragment children
+    member __.fragment (children) = 
+        makeFragment children
+    
+    member __.p (text : string) = 
+        makeElement ("p", [ __.text text ] )
     
     member __.div (text : string) = 
         makeElement ("div", [ __.text text ] )
@@ -58,6 +60,12 @@ type EventEngine() =
 
     member __.onClick( handler ) =
         SutilElement.Event( "click", handler )
+
+    member __.onMount( handler ) =
+        SutilElement.Event( DomHelpers.CustomEvents.CustomEvent.Mount, handler )
+
+    member __.onUnmount( handler ) =
+        SutilElement.Event( DomHelpers.CustomEvents.CustomEvent.Unmount, handler )
 
     member __.onInput( handler : TypedEvent<HTMLInputElement> -> unit)=
         SutilElement.Event( 
