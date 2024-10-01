@@ -1,20 +1,34 @@
 
 module Patch 
 
+// Compare a VirtualDom.Element with a real DOM node, and return
+// an Action that will either replace the DOM node or patch it
+
 open Browser.Types
 open DomHelpers
 
 type VElement = VirtualDom.Element
 
-type NodeAction =
+type PatchAction =
     | SetAttr of string * string
     | RemoveAttr of string * string
     | SetInnerText of string
-    | ReplaceNew of VElement
+    | ChildAction of (int * Action)
 
-type Action = 
-    | NodeAction of (Node * NodeAction)
+// What we're going to do to an existing (node, vnode) pair
+and Action =
+    | AsIs
+    | Patch of PatchAction[]
+    | ReplaceNew of VElement
     | AppendNew of VElement
+    | Remove
+        
+type Result =
+    | Replaced
+    | Appended
+    | Removed
+    | Patched
+    | Unchanged
 
 let asArray (n : NamedNodeMap) =
     [| 
@@ -45,52 +59,77 @@ let diffAttributes (a : NamedNodeMap) (attrs : (string * string)[]) =
             | _ -> ()
     |]
 
-let rec calculatePatch (existing : Node) (ve : VElement) : Action[] =
+
+let rec calculatePatch (existing : Node) (ve : VElement) : Action =
+    //Fable.Core.JS.console.log("calculate patch: ", (if isNull existing then "null" :> obj else existing), ve )
+
     if isTextNode existing && ve.IsTextNode then
+        if existing.textContent <> ve.Text then
+            Patch [| SetInnerText ve.Text |]
+        else 
+            AsIs
+    elif isElementNode existing && ve.IsElementNode && ve.Tag = (asElement existing).tagName.ToLower() then
         [|
-            if existing.textContent <> ve.Text then
-                NodeAction (existing, SetInnerText ve.Text) 
+            yield! (diffAttributes (existing.attributes) (ve.Attributes) )
+            // TODO: Events, side-effects
+
+            yield! Helpers.pairOptionals (DomHelpers.children existing) (ve.Children)
+            |> Seq.mapi (fun i (x, y) ->
+                match (x, y) with   
+                | Some x, Some y -> 
+                    ChildAction (i,calculatePatch x y)
+                | Some x, None -> 
+                    ChildAction (i, Remove)
+                | None, Some x -> 
+                    ChildAction (i, AppendNew x)
+                | _ -> failwith "Internal error"
+            )
+            |> Seq.filter (function ChildAction(_,AsIs) -> false| _ -> true)
         |]
-    elif isElementNode existing && ve.IsElementNode && ve.Tag = (asElement existing).tagName then
-        [|
-            yield! diffAttributes (existing.attributes) (ve.Attributes) |> Array.map (fun a -> NodeAction (existing,a))
-            // FIXME: Children, events, side-effects??
-        |]
+        |> (fun patches -> if patches.Length > 0 then Patch patches else AsIs)
+
+    elif isNull existing then
+        AppendNew ve
     else
-        [| 
-            if isNull existing then
-                AppendNew ve
-            else
-                NodeAction (existing, ReplaceNew ve)
-        |] 
+        ReplaceNew ve
 
-let applyPatch (parent : HTMLElement) (actions : Action[]) =
-    let apply results (a : Action) =
+let rec applyPatch (node : Node) (parent : HTMLElement) (action: Action) : (Result * Node) =
 
+    let nodeChildren = 
+        node |> DomHelpers.children |> Seq.toArray
+
+    let apply (a : PatchAction) =
         match a with
-        | NodeAction (node, na) ->
+        | SetAttr (name,value) -> 
+            (asElement node).setAttribute(name,value)
 
-            match na with
-            | SetAttr (name,value) -> 
-                (asElement node).setAttribute(name,value)
-                node
+        | RemoveAttr (name,_) -> 
+            (asElement node).removeAttribute(name)
 
-            | RemoveAttr (name,_) -> 
-                (asElement node).removeAttribute(name)
-                node
+        | SetInnerText text ->
+            node.textContent <- text
 
-            | SetInnerText text ->
-                node.textContent <- text
-                node
+        | ChildAction (ix, action) ->
+            let result = applyPatch (nodeChildren[ix]) (asElement node) action
+            ()
 
-            | ReplaceNew (ve) ->
-                let de = VirtualDom.toDom ve
-                DomHelpers.replace parent node de
-                de
+    match action with
+    | AsIs ->
+        Unchanged, node
 
-        | AppendNew ve ->
-            let de = VirtualDom.toDom ve
-            DomHelpers.append parent de
-            de
+    | Remove ->
+        Removed, node
 
-    actions |> Array.fold apply (null : Node)
+    | ReplaceNew (ve) ->
+        let de = VirtualDom.toDom ve
+        DomHelpers.replace parent node de
+        Replaced, de
+
+    | AppendNew ve ->
+        let de = VirtualDom.toDom ve
+        DomHelpers.append parent de
+        Appended, de
+
+    | Patch patches ->
+        patches |> Array.iter apply
+        Patched, node

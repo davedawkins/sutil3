@@ -7,4 +7,8 @@ Currently features:
 - Virtual DOM that applies patches where possible in Bind
 - Minimal Store
 - Bind.el
-- 
+
+Missing
+- No styling
+- No Bind.each, etc
+- No transitions

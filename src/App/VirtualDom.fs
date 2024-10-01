@@ -4,8 +4,10 @@ module VirtualDom
 open CoreTypes
 
 type EventHandler = (Browser.Types.Event -> unit)
+
 let [<Literal>] TextTag = "[text]"
 
+/// VirtualDom element. Cheap and nasty.
 type Element = {
     Tag : string
     Text : string
@@ -24,7 +26,14 @@ with
     member __.AddEffect( effect ) = { __ with SideEffects = Array.singleton (effect) |> Array.append __.SideEffects }
     member __.IsTextNode = __.Tag = TextTag
     member __.IsElementNode = __.Tag <> TextTag && __.Tag <> ""
+    override __.ToString() = 
+        if __.IsTextNode then "<text>" + __.Text + "</text>"
+        else 
+            "<" + __.Tag + ">" + 
+                "..." + 
+                "</" + __.Tag + ">"
 
+/// Apply the SutilElement to the parent VirtualDom element
 let rec addSutilElement (parent : Element) ( se : SutilElement ) : Element =
     match se with
     | Text text -> 
@@ -38,6 +47,8 @@ let rec addSutilElement (parent : Element) ( se : SutilElement ) : Element =
     | SideEffect f -> 
         parent.AddEffect f
 
+/// Create a VirtualDom element from a SutilElement. 
+/// This function will also be able to hoist fragment children up into the parent element
 let fromSutil (se : SutilElement) : Element =
     let root = addSutilElement (Element.Empty) se
 
@@ -57,6 +68,7 @@ let fromSutil (se : SutilElement) : Element =
 
     el
 
+/// Create a DOM element from a VirtualDom element
 let rec toDom (ve : Element) =
     match ve.Tag with
     | _ when ve.IsTextNode ->

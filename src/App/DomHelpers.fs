@@ -33,7 +33,7 @@ let children (node: Node) =
                 yield! visit child.nextSibling
         }
 
-    visit node.firstChild
+    if isNull node then Seq.empty else visit node.firstChild
 
 let remove (node : Node) = 
     dispose node

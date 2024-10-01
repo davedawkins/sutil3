@@ -5,8 +5,8 @@ open Core
 open CoreTypes
 open Store
 open Browser.Types
-open Fable.Core.JS
 
+// Simplest binding
 type Bind =
     static member el( source : 'T observable, view : ('T -> SutilElement) ) =
         SutilElement.SideEffect <|
@@ -15,14 +15,18 @@ type Bind =
                 let mutable currentNode : Node = null
 
                 source.Subscribe( fun value ->
-                    let se = view value
-                    let ve = VirtualDom.fromSutil se
 
-                    let actions =
-                        Patch.calculatePatch currentNode ve
+                    let patchAction =
+                        value
+                        |> view
+                        |> VirtualDom.fromSutil
+                        |> Patch.calculatePatch currentNode
 
-                    console.log( actions |> Seq.map (sprintf "%A") |> String.concat "\n:")
-                    currentNode <- Patch.applyPatch context.ParentElement actions
+                    //Fable.Core.JS.console.log( "Patch action: ", Fable.Core.JS.JSON.stringify( patchAction, space = 4) )
+                    Fable.Core.JS.console.log( "Patch action: ", patchAction.ToString() )
+
+                    currentNode <- Patch.applyPatch currentNode context.ParentElement patchAction |> snd
+
                 ) |> ignore
                 ()
     

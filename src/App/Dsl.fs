@@ -9,9 +9,21 @@ open CoreTypes
 open EventHelpers
 open Fable.Core.JsInterop
 
+// This can be replaced by Feliz.Engine very easily
+
 type HtmlEngine() =
     let makeElement (name, children) =
         SutilElement.Element (name, children |> Seq.toArray)
+
+    let makeElementC (cls, name, children) =
+        SutilElement.Element (
+            name, 
+            [|
+                SutilElement.Attribute ("class", cls)
+                yield! children
+            |]
+        )
+        
 
     // let makeFragment (children) =
     //     SutilElement.Fragment (children |> Seq.toArray)
@@ -25,6 +37,9 @@ type HtmlEngine() =
     member __.div (children : SutilElement seq) = 
         makeElement ("div", children )
     
+    member __.divc (cls : string) (children : SutilElement seq) = 
+        makeElementC (cls, "div", children )
+    
     member __.button (children) = 
         makeElement ("button", children )
     
@@ -36,6 +51,7 @@ type HtmlEngine() =
 
 type AttrEngine() =
     member __.value (v: string) = SutilElement.Attribute ("value", v)
+    member __.className (v: string) = SutilElement.Attribute ("class", v)
     member __.placeholder (v : string) = SutilElement.Attribute("placeholder", v)
 
 type EventEngine() =
