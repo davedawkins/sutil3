@@ -1,5 +1,5 @@
 
-module DomHelpers
+module Sutil.DomHelpers
 
 open Browser.Types
 open Browser.Dom
@@ -215,7 +215,8 @@ let findElement (doc : Document) selector = doc.querySelector(selector)
 
 let remove (node : Node) = 
     Dispose.dispose node
-    node.parentNode.removeChild(node) |> ignore
+    if not (isNull node.parentNode) then
+        node.parentNode.removeChild(node) |> ignore
 
 let append (parent : Node) (node : Node) = 
     parent.appendChild(node) |> ignore
@@ -247,7 +248,8 @@ let replaceNodes (parent : Node) (existing : Node[]) (nodes : Node[]) =
         nodes |> Array.iter (fun node -> last.parentNode.insertBefore(node, last.nextSibling) |> ignore)
         existing |> Array.iter remove
 
-let clear (e : HTMLElement) =
+/// Remove all children of this node, cleaning up Sutil resources and dispatching "unmount" events
+let clear (e : Node) =
     e |> children |> Seq.toArray |> Array.iter remove
 
 let text s : Node = document.createTextNode s
@@ -275,3 +277,22 @@ module EventListeners =
         NodeKey.getKeyWith Listeners node empty
         |> Array.iter (fun (name, f) -> node.removeEventListener(name,f))
         NodeKey.deleteKey Listeners node
+
+
+let nodeStrShort (node: Node) =
+    let svId node = Id.getId node
+    
+    if isNull node then
+        "null"
+    else
+        let mutable tc = node.textContent
+
+        if tc.Length > 16 then
+            tc <- tc.Substring(0, 16) + "..."
+
+        match node.nodeType with
+        | ElementNodeType ->
+            let e = node :?> HTMLElement
+            $"<{e.tagName.ToLower()}> #{svId node}"
+        | TextNodeType -> $"text:\"{tc}\" #{svId node}"
+        | _ -> $"?'{tc}'#{svId node}"

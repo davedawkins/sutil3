@@ -1,4 +1,4 @@
-module EventHelpers
+module Sutil.EventHelpers
 
 open Browser.Types
 

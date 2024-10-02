@@ -8,7 +8,6 @@ open WebTestRunner
 
 open Sutil
 open Sutil.Core
-open Sutil.CoreElements
 
 describe "Sutil.Store" <| fun () ->
 

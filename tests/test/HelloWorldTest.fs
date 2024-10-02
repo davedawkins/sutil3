@@ -7,10 +7,11 @@ open WebTestRunner
 #endif
 
 open Sutil
+open Sutil.Dsl
 
 describe "Hello World" <| fun () ->
     it "says hello" <| fun () -> promise {
-        mountTestApp <| Html.div "Hello World"
+        Html.div "Hello World" |> mountTestApp
         Expect.queryText "div" "Hello World"
     }
 

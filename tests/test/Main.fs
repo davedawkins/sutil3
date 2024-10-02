@@ -1,5 +1,6 @@
 module Main
 
+Fable.Core.JS.console.log("Started tests: Main")
 
 #if !HEADLESS
 

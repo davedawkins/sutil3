@@ -1,5 +1,5 @@
 
-module Style 
+module Sutil.Style 
 
 open DomHelpers
 open Browser.Types
@@ -71,4 +71,4 @@ let withStyle (styleSheet : StyleSheet) (el : CoreTypes.SutilElement) =
 
         el
 
-    CoreTypes.SutilElement.MapElement (addStyle, el)
+    CoreTypes.SutilElement.MapElement ("withStyle", addStyle, el)

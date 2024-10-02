@@ -8,8 +8,9 @@ open WebTestRunner
 #endif
 
 open Sutil
+open Sutil.Dsl
 open Sutil.Core
-open Sutil.CoreElements
+open Sutil.Bind
 
 type Record = {
     Id : int
@@ -165,7 +166,7 @@ describe "Sutil.Binding" <| fun () ->
 
 
     it "Bind disposal nestx2" <| fun () ->promise {
-        let storeInner = Store.make 0
+        let storeInner : Store.IStore<int> = Store.make 0
         let storeOuter = Store.make 0
         let mutable disposed = 0
         let app =
@@ -183,13 +184,13 @@ describe "Sutil.Binding" <| fun () ->
 
         mountTestApp app
 
-        Expect.areEqual(storeInner.Debugger.NumSubscribers,1)
-        Expect.areEqual(storeOuter.Debugger.NumSubscribers,1)
+        Expect.areEqual(Store.countSubscribers storeInner,1)
+        Expect.areEqual(Store.countSubscribers storeOuter,1)
 
         storeOuter |> Store.modify ((+)1)
 
-        Expect.areEqual(storeInner.Debugger.NumSubscribers,1)
-        Expect.areEqual(storeOuter.Debugger.NumSubscribers,1)
+        Expect.areEqual(Store.countSubscribers storeInner,1)
+        Expect.areEqual(Store.countSubscribers storeOuter,1)
         Expect.areEqual(disposed,1)
     }
 
@@ -230,32 +231,32 @@ describe "Sutil.Binding" <| fun () ->
         reset()
         mountTestApp (app())
 
-        Expect.areEqual(storeInner.Debugger.NumSubscribers,1,"NumSubscribers")
-        Expect.areEqual(storeOuter.Debugger.NumSubscribers,1,"NumSubscribers")
+        Expect.areEqual(storeInner |> Store.countSubscribers,1,"NumSubscribers")
+        Expect.areEqual(storeOuter |> Store.countSubscribers,1,"NumSubscribers")
         Expect.areEqual(disposed,0,"disposed")
         Expect.areEqual(numRenders,4,"numRenders #1")
 
         reset()
         storeOuter2 |> Store.modify ((+)1)
 
-        Expect.areEqual(storeInner.Debugger.NumSubscribers,1,"NumSubscribers")
-        Expect.areEqual(storeOuter.Debugger.NumSubscribers,1,"NumSubscribers")
+        Expect.areEqual(storeInner |> Store.countSubscribers,1,"NumSubscribers")
+        Expect.areEqual(storeOuter |> Store.countSubscribers,1,"NumSubscribers")
         Expect.areEqual(disposed,1,"disposed")
         Expect.areEqual(numRenders,3,"numRenders #2")
 
         reset()
         storeOuter2 |> Store.modify ((+)1)
 
-        Expect.areEqual(storeInner.Debugger.NumSubscribers,1,"NumSubscribers")
-        Expect.areEqual(storeOuter.Debugger.NumSubscribers,1,"NumSubscribers")
+        Expect.areEqual(storeInner |> Store.countSubscribers,1,"NumSubscribers")
+        Expect.areEqual(storeOuter |> Store.countSubscribers,1,"NumSubscribers")
         Expect.areEqual(disposed,2,"disposed")
         Expect.areEqual(numRenders,3,"numRenders #3")
 
         reset()
         storeOuter |> Store.modify ((+)1)
 
-        Expect.areEqual(storeInner.Debugger.NumSubscribers,1,"NumSubscribers")
-        Expect.areEqual(storeOuter.Debugger.NumSubscribers,1,"NumSubscribers")
+        Expect.areEqual(storeInner |> Store.countSubscribers,1,"NumSubscribers")
+        Expect.areEqual(storeOuter |> Store.countSubscribers,1,"NumSubscribers")
         Expect.areEqual(disposed,3,"disposed")
         Expect.areEqual(numRenders,2,"numRenders #4")
     }

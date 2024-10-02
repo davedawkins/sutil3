@@ -1,4 +1,4 @@
-module Helpers
+module Sutil.Helpers
 
 
 let pairOptionals (x : 'T seq) (y : 'U seq) : ('T option * 'U option) seq =

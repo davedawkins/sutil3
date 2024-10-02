@@ -1,5 +1,4 @@
-
-module VirtualDom 
+module Sutil.VirtualDom 
 
 open CoreTypes
 
@@ -11,23 +10,33 @@ let [<Literal>] TextTag = "[text]"
 type Element = {
     Tag : string
     Text : string
+
     Children : Element[]
     Attributes : (string * string) []
     Events : (string * EventHandler) []
-    SideEffects : (BuildContext -> unit) []
-    Mappers : (Browser.Types.Node -> Browser.Types.Node) []
+
+    /// Hooks for things like bindings, which will usually subscribe to some event
+    /// and then use the BuildContext to make some change to the DOM.
+    /// They may also just make a one-time change and exit. 
+    SideEffects : (string * (BuildContext -> unit)) []
+
+    Mappers : (string * (Browser.Types.Node -> Browser.Types.Node)) []
 }
 with
     static member Empty = { Tag = ""; Text = ""; Children = [||]; Attributes = [||]; Events = [||]; SideEffects = [||]; Mappers = [||] }
+
     static member TextNode( s : string ) = { Element.Empty with Tag = TextTag; Text = s }
     static member ElementNode( tag : string ) = { Element.Empty with Tag = tag; }
+
+    member __.IsTextNode = __.Tag = TextTag
+    member __.IsElementNode = __.Tag <> TextTag && __.Tag <> ""
+
     member __.AddChild( ch : Element ) = { __ with Children = Array.singleton ch |> Array.append __.Children }
     member __.AddAttr( name, value ) = { __ with Attributes = Array.singleton (name,value) |> Array.append __.Attributes }
     member __.AddEvent( name, handler ) = { __ with Events = Array.singleton (name,handler) |> Array.append __.Events }
     member __.AddEffect( effect ) = { __ with SideEffects = Array.singleton (effect) |> Array.append __.SideEffects }
     member __.AddMapper( m ) = { __ with Mappers = Array.singleton (m) |> Array.append __.Mappers }
-    member __.IsTextNode = __.Tag = TextTag
-    member __.IsElementNode = __.Tag <> TextTag && __.Tag <> ""
+
     override __.ToString() = 
         if __.IsTextNode then "<text>" + __.Text + "</text>"
         else 
@@ -61,8 +70,8 @@ let rec addSutilElement (parent : Element) ( se : SutilElement ) : Element =
         parent.AddEvent(name,handler)
     | SideEffect f -> 
         parent.AddEffect f
-    | MapElement (map, _se) -> 
-        _se |> fromSutil |> _.AddMapper(map) |> parent.AddChild
+    | MapElement (name, map, _se) -> 
+        _se |> fromSutil |> _.AddMapper(name,map) |> parent.AddChild
 
 /// Create a VirtualDom element from a SutilElement. 
 /// This function will also be able to hoist fragment children up into the parent element
@@ -112,5 +121,5 @@ let rec toDom (context : BuildContext) (ve : Element) =
         ve.Attributes |> Array.iter (fun (name,value) -> el.setAttribute(name,value) |> ignore )
         ve.Events |> Array.iter (fun (name,h) -> DomHelpers.EventListeners.add el name h)
         ve.Children |> Array.iter (fun child -> DomHelpers.append el (toDom context child))
-        ve.SideEffects |> Array.iter (fun effect -> effect( context.WithParent(el) ))
-        ve.Mappers |> Array.fold (fun el map -> map el) el
+        ve.SideEffects |> Array.iter (fun (name,effect) -> effect( context.WithParent(el) ))
+        ve.Mappers |> Array.fold (fun el (name,map) -> map el) el

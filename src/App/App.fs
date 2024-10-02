@@ -1,9 +1,12 @@
 ﻿module App
 
+open Sutil
+
 open Dsl
 open Bind
 open Core
 open Style
+
 
 let css (s: string) = s
 
@@ -33,12 +36,12 @@ let view() =
 
         Html.button [
             text "+"
-            Ev.onClick (fun _ ->  counter.Value <- counter.Value + 1)
+            Ev.onClick (fun _ ->  counter.Value + 1 |> Store.set counter)
         ]
 
         Html.button [
             text "-"
-            Ev.onClick (fun _ ->  counter.Value <- counter.Value - 1)
+            Ev.onClick (fun _ ->  counter.Value - 1 |> Store.set counter)
         ]
 
         Html.div [
@@ -54,8 +57,8 @@ let view() =
             Html.div [
                 Html.input [
                     Attr.placeholder ("Enter name")
-                    Ev.onInput( fun e ->
-                        nameS.Value <- e.targetElement.value 
+                    Ev.onInputT( fun e ->
+                        e.targetElement.value |> Store.set nameS
                     )
                 ]
                 if name = "" then
@@ -70,4 +73,4 @@ let view() =
         )
     ] ] |> withStyle style
 
-view() |> mountAsChild "sutil-app"
+view() |> Program.mount

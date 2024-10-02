@@ -16,12 +16,15 @@
     <Compile Include="CoreTypes.fs" />
     <Compile Include="Style.fs" />
     <Compile Include="EventHelpers.fs" />
+    <Compile Include="Cmd.fs" />
     <Compile Include="Store.fs" />
+    <Compile Include="Elmish.fs" />
     <Compile Include="VirtualDom.fs" />
     <Compile Include="Patch.fs" />
     <Compile Include="Core.fs" />
-    <Compile Include="Dsl.fs" />
     <Compile Include="Bind.fs" />
+    <Compile Include="Dsl.fs" />
+    <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Feliz.Engine" Version="1.0.0-beta-004" />

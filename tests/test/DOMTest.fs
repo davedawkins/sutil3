@@ -8,8 +8,9 @@ open WebTestRunner
 
 open Sutil
 open Sutil.Core
-open Sutil.CoreElements
 open Sutil.DomHelpers
+open Sutil.Dsl
+open Bind
 
 let log s = Fable.Core.JS.console.log s
 
@@ -31,27 +32,27 @@ describe "DOM" <| fun () ->
     it "Mount is called once" <| fun () -> promise {
         let counters = Array.zeroCreate 6
 
-        let countMount i opts =
-            onMount (fun e -> counters.[i] <- counters.[i] + 1; log(sprintf "mount %d: %s" i (DomHelpers.nodeStrShort (!!e.target)))) opts
+        let countMount i =
+            Ev.onMount (fun e -> counters.[i] <- counters.[i] + 1; log(sprintf "mount %d: %s" i (DomHelpers.nodeStrShort (!!e.target))))
 
         let app =
             Html.div [
-                countMount 0 []
+                countMount 0
                 Html.h1 [
-                    countMount 1 []
-                    fragment [ text "Hello" ]
+                    countMount 1
+                    Html.fragment [ text "Hello" ]
                 ]
-                fragment [
-                    countMount 2 [ ] //  target will be <div> (parent)
+                Html.fragment [
+                    countMount 2 //  target will be <div> (parent)
                     Html.p [
-                        countMount 3 []
+                        countMount 3 
                     ]
                     Html.span [
-                        countMount 4 []
+                        countMount 4 
                     ]
                 ]
-                fragment [
-                    countMount 5 [] // target will be <div> (parent)
+                Html.fragment [
+                    countMount 5 // target will be <div> (parent)
                 ]
             ]
 
@@ -67,12 +68,12 @@ describe "DOM" <| fun () ->
 
 
 
-    // Basic fragment
+    // Basic Html.fragment
     it "Fragment" <| fun () -> promise {
         let app =
             Html.div [
                 Html.div "Header"
-                fragment [
+                Html.fragment [
                     Html.div "Body"
                 ]
                 Html.div "Footer"
@@ -85,15 +86,15 @@ describe "DOM" <| fun () ->
         Expect.queryText "div>div:nth-child(3)" "Footer"
     }
 
-    // Basic fragment
+    // Basic Html.fragment
     it "Adjacent Fragments" <| fun () -> promise {
         let app =
             Html.div [
-                fragment [
+                Html.fragment [
                     Html.h2 "Section 1"
                     Html.div "Item 1.a"
                 ]
-                fragment [
+                Html.fragment [
                     Html.h2 "Section 2"
                     Html.div "Item 2.a"
                 ]
@@ -125,9 +126,9 @@ describe "DOM" <| fun () ->
     }
 
     it "Binding" <| fun () -> promise {
-        let store = Store.make 0
+        let store : Store.IStore<int> = Store.make 0
         let app =
-            fragment [
+            Html.fragment [
                 Bind.el(store, Html.div)
             ]
         mountTestApp app
@@ -140,7 +141,7 @@ describe "DOM" <| fun () ->
         let store1 = Store.make 10
         let store2 = Store.make 20
         let app =
-            fragment [
+            Html.fragment [
                 Bind.el(store1, Html.div)
                 Bind.el(store2, Html.div)
             ]
@@ -166,12 +167,12 @@ describe "DOM" <| fun () ->
         let app =
             Html.div [
                 Bind.el(store1,fun n ->
-                    fragment [
+                    Html.fragment [
                         Html.div "Binding 1"
                         Html.div (string n)
                     ])
                 Bind.el(store2,fun n ->
-                    fragment [
+                    Html.fragment [
                         Html.div "Binding 2"
                         Html.div (string n)
                     ])
@@ -244,7 +245,7 @@ describe "DOM" <| fun () ->
         Expect.queryText "div>div:nth-child(2)" "A"
         Expect.queryText "div>div:nth-child(3)" "Footer"
 
-        store1 |> Store.modify (cons "B")
+        Store.modify (cons "B") store1
 
         Expect.queryText "div>div:nth-child(1)" "Header"
         Expect.queryText "div>div:nth-child(2)" "B"
@@ -383,7 +384,7 @@ describe "DOM" <| fun () ->
                         ]
                     ]
                 else
-                    fragment []
+                    Html.fragment []
             )
 
         mountTestApp app
@@ -420,7 +421,7 @@ describe "DOM" <| fun () ->
                         ]
                     ]
                 else
-                    fragment []
+                    Html.fragment []
             )
 
         mountTestApp app
@@ -459,7 +460,7 @@ describe "DOM" <| fun () ->
         Expect.queryText "div" "node2"
         Expect.queryText "div>div" "node2"
 
-        DomEdit.removeChild node1 node2
+        DomHelpers.remove node2
 
         Expect.queryText "div" ""
         Expect.areEqual(node2_unsubbed,true)
@@ -467,7 +468,7 @@ describe "DOM" <| fun () ->
         return ()
     }
 
-    it "cleans up fragment"<| fun _ -> promise {
+    it "cleans up Html.fragment"<| fun _ -> promise {
         let mutable node1 = Unchecked.defaultof<_>
         let mutable node2 = Unchecked.defaultof<_>
         let mutable node2_fragment_unsubbed = 0
@@ -478,7 +479,7 @@ describe "DOM" <| fun () ->
 
                 Html.div [
                     hookParent (fun n -> node2 <- n)
-                    fragment [
+                    Html.fragment [
                         text "node2"
                         unsubscribeOnUnmount [
                             (fun _ -> node2_fragment_unsubbed <- node2_fragment_unsubbed + 1)
@@ -492,7 +493,7 @@ describe "DOM" <| fun () ->
         Expect.queryText "div" "node2"
         Expect.queryText "div>div" "node2"
 
-        DomEdit.removeChild node1 node2
+        DomHelpers.remove node2
 
         Expect.queryText "div" ""
         Expect.areEqual(node2_fragment_unsubbed,1)
@@ -500,7 +501,7 @@ describe "DOM" <| fun () ->
         return ()
     }
 
-    it "cleans up fragment"<| fun _ -> promise {
+    it "cleans up Html.fragment"<| fun _ -> promise {
         let mutable node1 = Unchecked.defaultof<_>
         let mutable node2 = Unchecked.defaultof<_>
         let mutable node2_fragment_unsubbed = 0
@@ -511,7 +512,7 @@ describe "DOM" <| fun () ->
 
                 Html.div [
                     hookParent (fun n -> node2 <- n)
-                    fragment [
+                    Html.fragment [
                         text "node2"
                         unsubscribeOnUnmount [
                             (fun _ -> node2_fragment_unsubbed <- node2_fragment_unsubbed + 1)
@@ -525,7 +526,7 @@ describe "DOM" <| fun () ->
         Expect.queryText "div" "node2"
         Expect.queryText "div>div" "node2"
 
-        DomEdit.removeChild node1 node2
+        DomHelpers.remove node2
 
         Expect.queryText "div" ""
         Expect.areEqual(node2_fragment_unsubbed,1)
@@ -533,7 +534,7 @@ describe "DOM" <| fun () ->
         return ()
     }
 
-    it "disposes conditional fragment" <| fun _ -> promise {
+    it "disposes conditional Html.fragment" <| fun _ -> promise {
         let switch = Store.make true
         let mutable disposed = false
         let mutable unsubbed = false
@@ -541,7 +542,7 @@ describe "DOM" <| fun () ->
         let app =
             Bind.el( switch, fun flag ->
                 if flag then
-                    fragment [
+                    Html.fragment [
                         text "frag001"
                         unsubscribeOnUnmount [
                             (fun _ -> unsubbed <- true)
@@ -551,7 +552,7 @@ describe "DOM" <| fun () ->
                         ]
                     ]
                 else
-                    fragment []
+                    Html.fragment []
             )
 
         mountTestApp app

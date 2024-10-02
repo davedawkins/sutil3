@@ -1,5 +1,5 @@
 
-module StyleDomHelpers 
+module Sutil.StyleDomHelpers 
 
 open Browser.Types
 open Browser.Dom

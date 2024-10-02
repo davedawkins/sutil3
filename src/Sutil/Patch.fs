@@ -1,5 +1,5 @@
 
-module Patch 
+module Sutil.Patch 
 
 // Compare a VirtualDom.Element with a real DOM node, and return
 // an Action that will either replace the DOM node or patch it
@@ -159,7 +159,7 @@ let rec applyPatch (context : CoreTypes.BuildContext) (node : Node) (action: Act
 
     | AppendNew ve ->
         let de = VirtualDom.toDom context ve
-        DomHelpers.append context.ParentElement de
+        context.Mount context.ParentElement de
         Appended, de
 
     | Patch patches ->
