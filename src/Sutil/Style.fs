@@ -2,7 +2,6 @@
 module Sutil.Style 
 
 open DomHelpers
-open Browser.Types
 
 let private toLines (s : string) =
     s.Split( [| '\n' |] )
@@ -54,9 +53,11 @@ let rule (selector : string) (styles : (string * string) seq) =
 
 let withStyle (styleSheet : StyleSheet) (el : CoreTypes.SutilElement) =
 
-    let addStyle ( node : Node ) : Node =
-        let el = asElement node
-        let elId = DomHelpers.Id.getId node
+    let addStyle ( context : CoreTypes.BuildContext )  =
+
+        let el = Sutil.Core.mount context null el |> asElement
+        let elId = DomHelpers.Id.getId el
+
         if elId = "" then 
             failwith "Not a sutil element"
 
@@ -69,6 +70,6 @@ let withStyle (styleSheet : StyleSheet) (el : CoreTypes.SutilElement) =
 
         StyleDomHelpers.addGlobalStyleSheet( css ) |> ignore
 
-        el
+        CoreTypes.CreatedNode el
 
-    CoreTypes.SutilElement.MapElement ("withStyle", addStyle, el)
+    CoreTypes.SutilElement.SideEffect ("withStyle", addStyle)

@@ -33,7 +33,7 @@ describe "DOM" <| fun () ->
         let counters = Array.zeroCreate 6
 
         let countMount i =
-            Ev.onMount (fun e -> counters.[i] <- counters.[i] + 1; log(sprintf "mount %d: %s" i (DomHelpers.nodeStrShort (!!e.target))))
+            Ev.onMount (fun e -> counters.[i] <- counters.[i] + 1; log(sprintf "mount %d: %s" i (DomHelpers.Id.nodeStrShort (!!e.target))))
 
         let app =
             Html.div [
@@ -147,18 +147,18 @@ describe "DOM" <| fun () ->
             ]
         mountTestApp app
 
-        Expect.queryText "div:nth-child(1)" "10"
-        Expect.queryText "div:nth-child(2)" "20"
+        Expect.queryText "div.fragment>div:nth-child(1)" "10"
+        Expect.queryText "div.fragment>div:nth-child(2)" "20"
 
         store1 |> Store.modify ((+)1)
 
-        Expect.queryText "div:nth-child(1)" "11"
-        Expect.queryText "div:nth-child(2)" "20"
+        Expect.queryText "div.fragment>div:nth-child(1)" "11"
+        Expect.queryText "div.fragment>div:nth-child(2)" "20"
 
         store2 |> Store.modify ((+)1)
 
-        Expect.queryText "div:nth-child(1)" "11"
-        Expect.queryText "div:nth-child(2)" "21"
+        Expect.queryText "div.fragment>div:nth-child(1)" "11"
+        Expect.queryText "div.fragment>div:nth-child(2)" "21"
     }
 
     it "Consecutive Binding Fragments" <| fun () -> promise {
@@ -179,24 +179,25 @@ describe "DOM" <| fun () ->
             ]
         mountTestApp app
 
-        Expect.queryText "div>div:nth-child(1)" "Binding 1"
-        Expect.queryText "div>div:nth-child(2)" "10"
-        Expect.queryText "div>div:nth-child(3)" "Binding 2"
-        Expect.queryText "div>div:nth-child(4)" "20"
+        Expect.queryText "div >div.fragment >div:nth-child(1)" "Binding 1"
+        Expect.queryText "div >div.fragment >div:nth-child(2)" "10"
+
+        Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(1)" "Binding 2"
+        Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(2)" "20"
 
         store1 |> Store.modify ((+)1)
 
-        Expect.queryText "div>div:nth-child(1)" "Binding 1"
-        Expect.queryText "div>div:nth-child(2)" "11"
-        Expect.queryText "div>div:nth-child(3)" "Binding 2"
-        Expect.queryText "div>div:nth-child(4)" "20"
+        Expect.queryText "div >div.fragment >div:nth-child(1)" "Binding 1"
+        Expect.queryText "div >div.fragment >div:nth-child(2)" "11"
+        Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(1)" "Binding 2"
+        Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(2)" "20"
 
         store2 |> Store.modify ((+)1)
 
-        Expect.queryText "div>div:nth-child(1)" "Binding 1"
-        Expect.queryText "div>div:nth-child(2)" "11"
-        Expect.queryText "div>div:nth-child(3)" "Binding 2"
-        Expect.queryText "div>div:nth-child(4)" "21"
+        Expect.queryText "div >div.fragment >div:nth-child(1)" "Binding 1"
+        Expect.queryText "div >div.fragment >div:nth-child(2)" "11"
+        Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(1)" "Binding 2"
+        Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(2)" "21"
     }
 
     it "Each" <| fun () -> promise {
@@ -212,7 +213,7 @@ describe "DOM" <| fun () ->
         mountTestApp app
 
         Expect.queryText "div>div:nth-child(1)" "Header"
-        Expect.queryText "div>div:nth-child(2)" "Footer"
+        Expect.queryText "div>div:nth-child(3)" "Footer"
 
         store1 |> Store.modify (cons "A")
 
@@ -237,37 +238,37 @@ describe "DOM" <| fun () ->
         mountTestApp app
 
         Expect.queryText "div>div:nth-child(1)" "Header"
-        Expect.queryText "div>div:nth-child(2)" "Footer"
+        Expect.queryText "div>div:nth-child(4)" "Footer"
 
         store1 |> Store.modify (cons "A")
 
         Expect.queryText "div>div:nth-child(1)" "Header"
         Expect.queryText "div>div:nth-child(2)" "A"
-        Expect.queryText "div>div:nth-child(3)" "Footer"
+        Expect.queryText "div>div:nth-child(4)" "Footer"
 
         Store.modify (cons "B") store1
 
         Expect.queryText "div>div:nth-child(1)" "Header"
-        Expect.queryText "div>div:nth-child(2)" "B"
-        Expect.queryText "div>div:nth-child(3)" "A"
+        Expect.queryText "div>div:nth-child(2)>div:nth-child(1)" "B"
+        Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
         Expect.queryText "div>div:nth-child(4)" "Footer"
 
         store2 |> Store.modify (cons "X")
 
         Expect.queryText "div>div:nth-child(1)" "Header"
-        Expect.queryText "div>div:nth-child(2)" "B"
-        Expect.queryText "div>div:nth-child(3)" "A"
-        Expect.queryText "div>div:nth-child(4)" "X"
-        Expect.queryText "div>div:nth-child(5)" "Footer"
+        Expect.queryText "div>div:nth-child(2)>div:nth-child(1)" "B"
+        Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+        Expect.queryText "div>div:nth-child(3)" "X"
+        Expect.queryText "div>div:nth-child(4)" "Footer"
 
         store2 |> Store.modify (cons "Y")
 
         Expect.queryText "div>div:nth-child(1)" "Header"
-        Expect.queryText "div>div:nth-child(2)" "B"
-        Expect.queryText "div>div:nth-child(3)" "A"
-        Expect.queryText "div>div:nth-child(4)" "Y"
-        Expect.queryText "div>div:nth-child(5)" "X"
-        Expect.queryText "div>div:nth-child(6)" "Footer"
+        Expect.queryText "div>div:nth-child(2)>div:nth-child(1)" "B"
+        Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+        Expect.queryText "div>div:nth-child(3)>div:nth-child(1)" "Y"
+        Expect.queryText "div>div:nth-child(3)>div:nth-child(2)" "X"
+        Expect.queryText "div>div:nth-child(4)" "Footer"
     }
 
     it "Consecutive Each Update Sequence #2" <| fun () -> promise {
@@ -333,14 +334,14 @@ describe "DOM" <| fun () ->
 
         mountTestApp app
         Expect.queryText "div>div:nth-child(1)" "Header"
-        Expect.queryText "div>div:nth-child(2)" "Middle"
-        Expect.queryText "div>div:nth-child(3)" "Footer"
+        Expect.queryText "div>div:nth-child(3)" "Middle"
+        Expect.queryText "div>div:nth-child(5)" "Footer"
 
         store1 |> Store.modify (cons "A")
         Expect.queryText "div>div:nth-child(1)" "Header"
         Expect.queryText "div>div:nth-child(2)" "A"
         Expect.queryText "div>div:nth-child(3)" "Middle"
-        Expect.queryText "div>div:nth-child(4)" "Footer"
+        Expect.queryText "div>div:nth-child(5)" "Footer"
 
         store2 |> Store.modify (cons "X")
         Expect.queryText "div>div:nth-child(1)" "Header"
@@ -351,20 +352,20 @@ describe "DOM" <| fun () ->
 
         store1 |> Store.modify (cons "B")
         Expect.queryText "div>div:nth-child(1)" "Header"
-        Expect.queryText "div>div:nth-child(2)" "B"
-        Expect.queryText "div>div:nth-child(3)" "A"
-        Expect.queryText "div>div:nth-child(4)" "Middle"
-        Expect.queryText "div>div:nth-child(5)" "X"
-        Expect.queryText "div>div:nth-child(6)" "Footer"
+        Expect.queryText "div>div:nth-child(2)>div" "B"
+        Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+        Expect.queryText "div>div:nth-child(3)" "Middle"
+        Expect.queryText "div>div:nth-child(4)" "X"
+        Expect.queryText "div>div:nth-child(5)" "Footer"
 
         store2 |> Store.modify (cons "Y")
         Expect.queryText "div>div:nth-child(1)" "Header"
-        Expect.queryText "div>div:nth-child(2)" "B"
-        Expect.queryText "div>div:nth-child(3)" "A"
-        Expect.queryText "div>div:nth-child(4)" "Middle"
-        Expect.queryText "div>div:nth-child(5)" "Y"
-        Expect.queryText "div>div:nth-child(6)" "X"
-        Expect.queryText "div>div:nth-child(7)" "Footer"
+        Expect.queryText "div>div:nth-child(2)>div" "B"
+        Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+        Expect.queryText "div>div:nth-child(3)" "Middle"
+        Expect.queryText "div>div:nth-child(4)>div" "Y"
+        Expect.queryText "div>div:nth-child(4)>div:nth-child(2)" "X"
+        Expect.queryText "div>div:nth-child(5)" "Footer"
     }
 
     it "disposes conditional div" <| fun _ -> promise {

@@ -9,13 +9,11 @@ open DomHelpers.CustomEvents
 
 let private logPatch (patchAction) = 
     //Fable.Core.JS.console.log( "Patch action: ", Fable.Core.JS.JSON.stringify( patchAction, space = 4) )
-    // Fable.Core.JS.console.log( "Patch action: ", patchAction.ToString() )
+    //Fable.Core.JS.console.log( "Patch action: ", patchAction.ToString() )
     patchAction
 
 let internal notifySutilEvents  (node : Node) =
     if DomHelpers.isConnected (node.parentNode) then
-        Fable.Core.JS.console.log( "Connected", node)
-
         CustomDispatch<_>.dispatch( node, CustomEvent.Connected )
         CustomDispatch<_>.dispatch( node, CustomEvent.Mount )
 
@@ -23,8 +21,6 @@ let internal notifySutilEvents  (node : Node) =
         |> DomHelpers.descendants
         |> Seq.filter DomHelpers.isElementNode
         |> Seq.iter (fun n ->  CustomDispatch<_>.dispatch(n,CustomEvent.Mount))
-    else
-        Fable.Core.JS.console.log( "Not connected", node)
 
 let exclusive (se : SutilElement) =
     ()
@@ -40,11 +36,16 @@ let rec private notifyNewNodes (result, node) =
         results |> Array.iter notifyNewNodes
     | _ -> ()
 
+let create (context : BuildContext) (se : SutilElement) : Node =
+    se
+    |> VirtualDom.fromSutil                 // SutilElement -> VirtualDom.Element
+    |> VirtualDom.toDom context
+
 let mount (context : BuildContext) (current : Node) (se : SutilElement) : Node =
     se
     |> VirtualDom.fromSutil                 // SutilElement -> VirtualDom.Element
     |> Patch.calculatePatch current         // Calculate patch for new element
-    //|> logPatch                             // Log the patch (debug)
+    // |> logPatch                             // Log the patch (debug)
     |> Patch.applyPatch context current     // Apply patch
     |> fun (result, node) ->
         notifyNewNodes (result,node)        // Notify new nodes
@@ -61,13 +62,6 @@ let mountAsChild (parentElementId : string)  (se : SutilElement) =
     se 
     |> mount context null 
 
-    // se 
-    // |> VirtualDom.fromSutil 
-    // |> VirtualDom.toDom context
-    // |> fun node ->
-    //     DomHelpers.append container node
-    //     notifySutilEvents node
-
 let unsubscribeOnUnmount (fns : (unit -> unit) seq ) =
     SutilElement.SideEffect(
         "unsubscribeOnUnmount",
@@ -77,6 +71,7 @@ let unsubscribeOnUnmount (fns : (unit -> unit) seq ) =
                 CustomEvent.Unmount
                 (fun _ -> fns |> Seq.iter (fun u -> u())) 
             
+            EffectedNode context.ParentElement
         )
     )
 
@@ -90,6 +85,7 @@ let disposeOnUnmount (fns : (System.IDisposable) seq ) =
                 CustomEvent.Unmount
                 (fun _ -> fns |> Seq.iter (fun u -> u.Dispose())) 
             
+            EffectedNode context.ParentElement
         )
     )
 
@@ -103,5 +99,6 @@ let hookParent (f : HTMLElement -> unit) =
                 CustomEvent.Mount
                 (fun e -> (e.target :?> HTMLElement) |> f) 
             
+            EffectedNode context.ParentElement
         )
     )

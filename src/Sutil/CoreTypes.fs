@@ -1,7 +1,5 @@
 module Sutil.CoreTypes
 
-type disposable = System.IDisposable
-
 open Browser.Types
 
 type BuildContext = 
@@ -29,6 +27,15 @@ type BuildContext =
 
 type DomEventHandler = Event -> unit
 
+type EffectResult =
+    | CreatedNode of Node
+    | EffectedNode of Node
+    with 
+        member __.Node = 
+            match __ with CreatedNode node -> node | EffectedNode node -> node
+
+type SideEffect = string * (BuildContext -> EffectResult)
+
 /// New version of SutilElement
 /// This DSL can be inspected before committing to real DOM elements
 
@@ -37,6 +44,11 @@ type SutilElement =
     | Element of (string * SutilElement[])
     | Attribute of (string * string)
     | Event of (string * DomEventHandler)
-    | SideEffect of (string * (BuildContext -> unit))
-    | MapElement of (string * (Node -> Node) * SutilElement )
+    | SideEffect of SideEffect
     | Fragment of (SutilElement[])
+
+    with    
+        static member HiddenDiv =
+            SutilElement.Element( "div", [|
+                SutilElement.Attribute( "style", "display:none" )
+            |])

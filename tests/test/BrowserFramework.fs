@@ -122,5 +122,9 @@ let runTests (tests : TestSuite list) =
     logI $"{timestamp(0.)}: Starting test"
     nextTestSuite { StartTime = timeNow(); NumPass = 0; NumFail = 0; TestSuites = tests; TestCases = [] }
 
-let runAll() =
-    runTests testSuites
+let runAll( suiteName : string, caseName : string ) =
+    runTests 
+        (testSuites 
+            |> List.filter (fun s -> suiteName = "*" || s.Name = suiteName) 
+            |> List.map (fun s -> { s with Tests = s.Tests |> List.filter (fun t -> caseName = "*" || t.Name = caseName ) })
+        )

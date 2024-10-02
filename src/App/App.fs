@@ -26,17 +26,26 @@ let view() =
     let counter = Store.make 0
     let nameS = Store.make ""
 
-    Html.fragment [
     Html.div [
         Ev.onMount (fun _ ->
             Fable.Core.JS.console.log("Mounted")
         )
 
         Html.divc "red" [ text "Hello World" ]
+        
+        let store2 = Store.make "xx"
+        Html.div [
+            Html.div "Header"
+            Bind.el(store2, Html.div)
+            Html.div "Footer"
+        ]
 
         Html.button [
             text "+"
-            Ev.onClick (fun _ ->  counter.Value + 1 |> Store.set counter)
+            Ev.onClick (fun _ ->  
+                counter.Value + 1 |> Store.set counter
+                counter.Value |> string |> Store.set store2
+            )
         ]
 
         Html.button [
@@ -71,6 +80,6 @@ let view() =
                     ]
             ]
         )
-    ] ] |> withStyle style
+    ] |> withStyle style
 
 view() |> Program.mount

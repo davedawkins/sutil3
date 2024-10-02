@@ -28,19 +28,22 @@ and Action =
     | Patch of PatchAction[]
     | ReplaceNew of VElement
     | AppendNew of VElement
+    | ApplyEffect of VElement
     | Remove
     override __.ToString (): string = 
         match __ with
         | Patch (actions) ->
             sprintf "Patch: [%s]" (actions |> Array.map (_.ToString()) |> String.concat ",")
         | ReplaceNew _ -> "ReplaceNew"
-        | AppendNew _ -> "AppendNew"
+        | AppendNew e -> "AppendNew " + e.ToString()
         | Remove  -> "Remove"
+        | ApplyEffect _ -> "Effect"
         | AsIs  -> "AsIs"
 
 type Result =
     | Replaced
     | Appended
+    | Effected of string
     | Removed
     | Patched of ((Result * Node)[])
     | Unchanged
@@ -77,9 +80,11 @@ let diffAttributes (a : NamedNodeMap) (attrs : (string * string)[]) =
 let rec calculatePatch (existing : Node) (ve : VElement) : Action =
     //Fable.Core.JS.console.log("calculate patch: ", (if isNull existing then "null" :> obj else existing), ve )
 
+    let isDomNode = ve.IsElementNode || ve.IsTextNode
+
     if isTextNode existing && ve.IsTextNode then
-        if existing.textContent <> ve.Text then
-            Patch [| SetInnerText ve.Text |]
+        if existing.textContent <> ve.InnerText then
+            Patch [| SetInnerText ve.InnerText |]
         else 
             AsIs
     elif isElementNode existing && ve.IsElementNode && ve.Tag = (asElement existing).tagName.ToLower() then
@@ -105,10 +110,18 @@ let rec calculatePatch (existing : Node) (ve : VElement) : Action =
         |]
         |> (fun patches -> if patches.Length > 0 then Patch patches else AsIs)
 
-    elif isNull existing then
-        AppendNew ve
+    // Could we end up trying to patch a DOM node with a SideEffect/Mapper?
+    // ReplaceNew would be OK, since we get the side
+    elif isDomNode then
+        if isNull existing then
+            AppendNew ve
+        else
+            ReplaceNew ve
     else
-        ReplaceNew ve
+        if not (ve.IsEffectNode) then 
+            failwith "Unexpected virtual node"
+        ApplyEffect ve
+
 
 let rec applyPatch (context : CoreTypes.BuildContext) (node : Node) (action: Action) : (Result * Node) =
 
@@ -161,6 +174,9 @@ let rec applyPatch (context : CoreTypes.BuildContext) (node : Node) (action: Act
         let de = VirtualDom.toDom context ve
         context.Mount context.ParentElement de
         Appended, de
+
+    | ApplyEffect ve ->
+        Effected (ve.Tag), VirtualDom.toDom context ve
 
     | Patch patches ->
         DomHelpers.EventListeners.clear node

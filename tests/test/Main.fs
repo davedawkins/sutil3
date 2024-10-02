@@ -10,6 +10,8 @@ BindingTest.init()
 ObservableTest.init()
 StoreTest.init()
 
-BrowserFramework.runAll()
+BrowserFramework.runAll( 
+    "*", 
+    "*" )
 
 #endif

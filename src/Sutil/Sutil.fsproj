@@ -11,10 +11,10 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Helpers.fs" />
+    <Compile Include="Log.fs" />
     <Compile Include="DomHelpers.fs" />
     <Compile Include="StyleDomHelpers.js.fs" />
     <Compile Include="CoreTypes.fs" />
-    <Compile Include="Style.fs" />
     <Compile Include="EventHelpers.fs" />
     <Compile Include="Cmd.fs" />
     <Compile Include="Store.fs" />
@@ -23,6 +23,7 @@
     <Compile Include="Patch.fs" />
     <Compile Include="Core.fs" />
     <Compile Include="Bind.fs" />
+    <Compile Include="Style.fs" />
     <Compile Include="Dsl.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

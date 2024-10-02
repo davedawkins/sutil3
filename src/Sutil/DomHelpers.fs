@@ -7,6 +7,12 @@ open Browser.CssExtensions
 
 let private _log (s : string) = ()
 
+[<Literal>]
+let internal ElementNodeType = 1.0
+
+[<Literal>]
+let internal TextNodeType = 3.0
+
 module JsMap =
     open Fable.Core.JsInterop
     open Fable.Core
@@ -65,6 +71,24 @@ module Id =
     let getId (node : Node) =
         getKeyWith Id node "" 
     
+
+    let nodeStrShort (node: Node) =
+        let svId node = getId node
+        
+        if isNull node then
+            "null"
+        else
+            let mutable tc = node.textContent
+
+            if tc.Length > 16 then
+                tc <- tc.Substring(0, 16) + "..."
+
+            match node.nodeType with
+            | ElementNodeType ->
+                let e = node :?> HTMLElement
+                $"<{e.tagName.ToLower()}> #{svId node}"
+            | TextNodeType -> $"text:\"{tc}\" #{svId node}"
+            | _ -> $"?'{tc}'#{svId node}"
 
 module CustomEvents =
     open Fable.Core
@@ -192,12 +216,6 @@ module Dispose =
         getDisposables node |> Array.iter safeDispose
         clearDisposables node
 
-[<Literal>]
-let internal ElementNodeType = 1.0
-
-[<Literal>]
-let internal TextNodeType = 3.0
-
 let internal isConnected (node: Node) : bool = JsMap.getKey node "isConnected"
 
 /// Return true if n is a Text node (nodeType = 3)
@@ -219,6 +237,8 @@ let remove (node : Node) =
         node.parentNode.removeChild(node) |> ignore
 
 let append (parent : Node) (node : Node) = 
+    // Log.Console.log("append: parent=", Id.getId parent, " child=", Id.getId node )
+    // Log.Console.log(parent, node )
     parent.appendChild(node) |> ignore
 
 let appendNodes (parent : Node) (nodes : Node[]) = 
@@ -278,21 +298,3 @@ module EventListeners =
         |> Array.iter (fun (name, f) -> node.removeEventListener(name,f))
         NodeKey.deleteKey Listeners node
 
-
-let nodeStrShort (node: Node) =
-    let svId node = Id.getId node
-    
-    if isNull node then
-        "null"
-    else
-        let mutable tc = node.textContent
-
-        if tc.Length > 16 then
-            tc <- tc.Substring(0, 16) + "..."
-
-        match node.nodeType with
-        | ElementNodeType ->
-            let e = node :?> HTMLElement
-            $"<{e.tagName.ToLower()}> #{svId node}"
-        | TextNodeType -> $"text:\"{tc}\" #{svId node}"
-        | _ -> $"?'{tc}'#{svId node}"
