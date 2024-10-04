@@ -5,7 +5,9 @@ module Sutil.Patch
 // an Action that will either replace the DOM node or patch it
 
 open Browser.Types
-open DomHelpers
+open Sutil.Dom
+open Sutil.Dom.DomHelpers
+open Sutil.Dom.TypeHelpers
 
 type VElement = VirtualDom.Element
 
@@ -15,6 +17,7 @@ type PatchAction =
     | AddEvent of string * (Browser.Types.Event -> unit)
     | RemoveEvent of string * (Browser.Types.Event -> unit)
     | SetInnerText of string
+    | ApplyEffect of VElement
     | ChildAction of (int * Action)
     // override __.ToString (): string = 
     //     match __ with
@@ -26,9 +29,9 @@ type PatchAction =
 and Action =
     | AsIs
     | Patch of PatchAction[]
+    | ActionApplyEffect of VElement
     | ReplaceNew of VElement
     | AppendNew of VElement
-    | ApplyEffect of VElement
     | Remove
     override __.ToString (): string = 
         match __ with
@@ -37,7 +40,7 @@ and Action =
         | ReplaceNew _ -> "ReplaceNew"
         | AppendNew e -> "AppendNew " + e.ToString()
         | Remove  -> "Remove"
-        | ApplyEffect _ -> "Effect"
+        | ActionApplyEffect _ -> "Effect"
         | AsIs  -> "AsIs"
 
 type Result =
@@ -80,8 +83,6 @@ let diffAttributes (a : NamedNodeMap) (attrs : (string * string)[]) =
 let rec calculatePatch (existing : Node) (ve : VElement) : Action =
     //Fable.Core.JS.console.log("calculate patch: ", (if isNull existing then "null" :> obj else existing), ve )
 
-    let isDomNode = ve.IsElementNode || ve.IsTextNode
-
     if isTextNode existing && ve.IsTextNode then
         if existing.textContent <> ve.InnerText then
             Patch [| SetInnerText ve.InnerText |]
@@ -95,7 +96,7 @@ let rec calculatePatch (existing : Node) (ve : VElement) : Action =
             // Always add the events, we clear them out first
             yield! (ve.Events |> Array.map AddEvent)
 
-            yield! Helpers.pairOptionals (DomHelpers.children existing) (ve.Children)
+            yield! Helpers.pairOptionals (DomHelpers.children existing) (ve.DomChildren)
             |> Seq.mapi (fun i (x, y) ->
                 match (x, y) with   
                 | Some x, Some y -> 
@@ -107,12 +108,14 @@ let rec calculatePatch (existing : Node) (ve : VElement) : Action =
                 | _ -> failwith "Internal error"
             )
             |> Seq.filter (function ChildAction(_,AsIs) -> false| _ -> true)
+
+            yield! (ve.EffectChildren |> Array.map (ApplyEffect))
         |]
         |> (fun patches -> if patches.Length > 0 then Patch patches else AsIs)
 
     // Could we end up trying to patch a DOM node with a SideEffect/Mapper?
     // ReplaceNew would be OK, since we get the side
-    elif isDomNode then
+    elif ve.IsDomNode then
         if isNull existing then
             AppendNew ve
         else
@@ -120,13 +123,13 @@ let rec calculatePatch (existing : Node) (ve : VElement) : Action =
     else
         if not (ve.IsEffectNode) then 
             failwith "Unexpected virtual node"
-        ApplyEffect ve
+        ActionApplyEffect ve
 
 
-let rec applyPatch (context : CoreTypes.BuildContext) (node : Node) (action: Action) : (Result * Node) =
+let rec applyPatch (context : CoreTypes.BuildContext) (current : Node) (action: Action) : (Result * Node) =
 
     let nodeChildren = 
-        node |> DomHelpers.children |> Seq.toArray
+        current |> DomHelpers.children |> Seq.toArray
 
     let nodeChild ix =
         if ix < nodeChildren.Length then nodeChildren[ix] else null
@@ -135,50 +138,65 @@ let rec applyPatch (context : CoreTypes.BuildContext) (node : Node) (action: Act
         // Fable.Core.JS.console.log(sprintf "apply: %A" a)
         match a with
         | SetAttr (name,value) -> 
-            (asElement node).setAttribute(name,value)
+            DomEdit.setAttribute (asElement current) name value
             None
 
         | RemoveAttr (name,_) -> 
-            (asElement node).removeAttribute(name)
+            DomEdit.removeAttribute (asElement current) name
             None
 
         | AddEvent(name,value) -> 
-            DomHelpers.EventListeners.add node name value
+            EventListeners.add current name value |> ignore
             None
 
         | RemoveEvent (name,value) -> 
-            (asElement node).removeEventListener(name,value)
+            (asElement current).removeEventListener(name,value)
             None
 
         | SetInnerText text ->
-            node.textContent <- text
+            current.textContent <- text
             None
 
         | ChildAction (ix, action) ->
-            applyPatch (context.WithParent(node)) (nodeChild ix) action |> Some
+            applyPatch (context.WithParent(current)) (nodeChild ix) action |> Some
+
+        | ApplyEffect ve ->
+            match ve.Type with
+            | VirtualDom.SideEffectNode (name, effect) ->
+                if isNull current then failwith "Cannot apply effect to null node"
+                Log.Console.log("Applying effect", name, " to ", context.ParentElement.outerHTML)
+                let result = effect (context.WithParent current)
+                None
+            | _ -> failwith "Not a side-effect"
+
 
     match action with
     | AsIs ->
-        Unchanged, node
+        Unchanged, current
 
     | Remove ->
-        DomHelpers.remove node
-        Removed, node
+        DomEdit.remove current
+        Removed, current
 
     | ReplaceNew (ve) ->
         let de = VirtualDom.toDom context ve
-        DomHelpers.replace context.ParentElement node de
+        DomEdit.replace context.ParentElement current de
         Replaced, de
 
     | AppendNew ve ->
         let de = VirtualDom.toDom context ve
-        context.Mount context.ParentElement de
+        if not (de.isSameNode(context.ParentElement)) then
+            context.Mount context.ParentElement de
         Appended, de
 
-    | ApplyEffect ve ->
+    | ActionApplyEffect ve ->
         Effected (ve.Tag), VirtualDom.toDom context ve
 
     | Patch patches ->
-        DomHelpers.EventListeners.clear node
+        if not (isNull current) then 
+            Log.Console.log(
+                "Patch: Disposing event listeners and side-effects\n", 
+                outerHTML current )
+            Dispose.disposeNode (current) // Cleanup event listeners and disposables
         let result = patches |> Array.choose apply
-        Patched result, node
+        Patched result, current

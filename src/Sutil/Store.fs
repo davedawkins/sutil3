@@ -2,42 +2,12 @@ module Sutil.Store
 
 type 'T observable = System.IObservable<'T>
 
-#if TESTING
-type Store<'T>( init : 'T ) =
-    let mutable value = init
-    let mutable clientId = 0
-    let mutable clients : Map<int, ('T -> unit)> = Map.empty
-
-    let unsubscribe cid =
-        clients <- clients.Remove(cid)
-
-    let notify() = 
-        clients.Values |> Seq.iter (fun f -> f value)
-
-    let update( v ) =
-        value <- v
-        notify()
-
-    member __.Value with get() = value and set(v) = update v
-
-    member __.Subscribe( f ) : System.IDisposable =
-        clientId <- clientId + 1
-        let cid = clientId
-        clients <- clients.Add( cid, f )
-        f value
-        { new System.IDisposable with member _.Dispose() = unsubscribe cid }
-
-    interface System.IObservable<'T> with
-        member __.Subscribe (observer: System.IObserver<'T>): System.IDisposable = 
-            __.Subscribe( observer.OnNext )
-
-let make (v : 't) = new Store<'t>(v)
-#else
-
 open System
 open Browser.Dom
 open Microsoft.FSharp.Core
 open System.Collections.Generic
+open Sutil.Dom
+open Sutil.Dom.Types
 
 ///  <exclude />
 type IReadOnlyStore<'T> =
@@ -104,7 +74,7 @@ module Observable =
                 let disposeA = a.Subscribe(fun v -> valueA <- Some v; notify())
                 let disposeB = b.Subscribe(fun v -> valueB <- Some v; notify())
 
-                DomHelpers.Dispose.makeDisposable(fun _ -> disposeA.Dispose(); disposeB.Dispose())
+                Dispose.makeDisposable(Unsubscribable.Of (fun _ -> disposeA.Dispose(); disposeB.Dispose()))
         }
 
     let zip<'A,'B> (a:IObservable<'A>) (b:IObservable<'B>) : IObservable<'A*'B> =
@@ -127,8 +97,8 @@ module Observable =
                         init <- true
                 )
 
-                DomHelpers.Dispose.makeDisposable (fun _ ->
-                    disposeA.Dispose()
+                Dispose.makeDisposable ( 
+                    Unsubscribe (fun _ -> disposeA.Dispose()  )
                 )
         }
 
@@ -153,7 +123,7 @@ module Observable =
 
                 notify()
 
-                DomHelpers.Dispose.makeDisposable (fun _ -> disposeA.Dispose() )
+                Dispose.makeDisposable ( (fun _ -> disposeA.Dispose()) |> Unsubscribe )
         }
 
 
@@ -166,7 +136,7 @@ module Observable =
                     try h.OnNext (predicate x)
                     with ex -> h.OnError ex
                 )
-                DomHelpers.Dispose.makeDisposable (fun _ -> disposeA.Dispose() )
+                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()) |> Unsubscribe )
         }
 
     /// Filters the observable elements of a sequence based on a predicate
@@ -177,7 +147,7 @@ module Observable =
                     try if predicate x then h.OnNext x
                     with ex -> h.OnError ex
                 )
-                DomHelpers.Dispose.makeDisposable (fun _ -> disposeA.Dispose() )
+                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()) |> Unsubscribe )
         }
 
     //let choose (f : 'T option -> 'R option) (source:IObservable<'T option>) : IObservable<'R> =
@@ -186,7 +156,7 @@ module Observable =
     //            let disposeA = source.Subscribe( fun x ->
     //                (try f x with ex -> h.OnError ex;None) |> Option.iter h.OnNext
     //            )
-    //            DomHelpers.Dispose.makeDisposable (fun _ -> disposeA.Dispose() )
+    //            Dispose.makeDisposable (fun _ -> disposeA.Dispose() )
     //    }
 
 // Allow stores that can handle mutable 'Model types (eg, <input>.FileList). In this
@@ -245,10 +215,10 @@ type Store<'Model>(init: unit -> 'Model, dispose: 'Model -> unit) =
         // Sutil depends on an immediate callback
         observer.OnNext(model())
 
-        DomHelpers.Dispose.makeDisposable( fun () ->
+        Dispose.makeDisposable( Unsubscribe ( fun () ->
             if logEnabled() then log $"unsubscribe {id}"
             subscribers.Remove(id) |> ignore
-        )
+        ))
 
     member this.Name with get() = name and set (v) = name <- v
 
@@ -548,10 +518,9 @@ let subscribe2<'A, 'B>
         console.log ("Error: subscribe didn't initialize us")
         failwith "Subscribe didn't initialize us"
 
-    DomHelpers.Dispose.makeDisposable
-    <| fun () ->
+    (fun () ->
         unsuba.Dispose()
-        unsubb.Dispose()
+        unsubb.Dispose()) |> Unsubscribe |> Dispose.makeDisposable
 
 /// <summary>
 /// Operators for store functions
@@ -723,4 +692,35 @@ module StoreExtensions =
         s
 
 
-#endif
+/// <summary>
+/// Support for <c>IObservable&lt;Promise&lt;T>></c>
+/// </summary>
+[<AutoOpen>]
+module ObservablePromise =
+
+    [<RequireQualifiedAccess>]
+    type PromiseState<'T> =
+        | Waiting
+        | Result of 'T
+        | Error of Exception
+
+    type ObservablePromise<'T>(p : JS.Promise<'T>) =
+        let store = make PromiseState.Waiting
+        // TODO: Clean up store
+
+        let run () =
+                store <~ PromiseState.Waiting
+                p |> Promise.map (fun v -> store <~ PromiseState.Result v)
+                  |> Promise.catch (fun x -> store <~ PromiseState.Error x)
+                  |> ignore
+
+        do
+            run()
+
+        interface IObservable<PromiseState<'T>> with
+            member this.Subscribe(observer: IObserver<PromiseState<'T>>) = store.Subscribe(observer)
+
+    type JS.Promise<'T> with
+        member self.ToObservable() : ObservablePromise<'T> =
+            ObservablePromise<'T>(self)
+

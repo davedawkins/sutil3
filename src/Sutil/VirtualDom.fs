@@ -1,6 +1,9 @@
 module Sutil.VirtualDom 
 
 open CoreTypes
+open Sutil.Dom
+open Sutil.Dom.DomHelpers
+
 
 type EventHandler = (Browser.Types.Event -> unit)
 
@@ -32,7 +35,11 @@ with
     member __.IsTextNode = match __.Type with TextNode _ -> true | _ -> false
     member __.IsElementNode = match __.Type with TagNode _ -> true | _ -> false
     member __.IsEffectNode = match __.Type with SideEffectNode _ -> true | _ -> false
+    member __.IsDomNode = __.IsTextNode || __.IsElementNode
 
+    member __.DomChildren = __.Children |> Array.filter _.IsDomNode
+    member __.EffectChildren = __.Children |> Array.filter _.IsEffectNode
+    
     member __.AddChild( ch : Element ) = { __ with Children = Array.singleton ch |> Array.append __.Children }
     member __.AddAttr( name, value ) = { __ with Attributes = Array.singleton (name,value) |> Array.append __.Attributes }
     member __.AddEvent( name, handler ) = { __ with Events = Array.singleton (name,handler) |> Array.append __.Events }
@@ -83,7 +90,13 @@ let private emptyDiv() =
     Element.ElementNode("div")
 
 let private invisibleDiv() = 
-    emptyDiv().AddAttr("style", "display:none")
+    // Use something other than 'div' for a fragment, because of this case:
+    //     if flag then fragment[] else Html.div [ ...; unsubscribeOnUnmount (cb) ]
+    // If fragment is a div then it can be patched between the two cases, and the
+    // unsubscribe/dispose/mount/unmount handlers are never called
+    // 
+    Element.ElementNode("sutil-fragment")
+        .AddAttr("style", "display:none")
 
 /// Apply the SutilElement to the parent VirtualDom element
 let rec addSutilElement (parent : Element) ( se : SutilElement ) : Element =
@@ -140,15 +153,15 @@ let rec toDom (context : BuildContext) (ve : Element) : Browser.Types.Node  =
     match ve.Type with
     | NullNode -> failwith "Cannot create DOM node from null node"
 
-    | TextNode s -> DomHelpers.text s
+    | TextNode s -> DomEdit.text s
 
     | TagNode tag ->
-        let el = DomHelpers.element tag
+        let el = DomEdit.element tag
 
-        DomHelpers.Id.setId el (context.MakeId() |> string)
+        Id.setId el (context.MakeId() |> string)
 
-        ve.Attributes |> Array.iter (fun (name,value) -> el.setAttribute(name,value) |> ignore )
-        ve.Events |> Array.iter (fun (name,h) -> DomHelpers.EventListeners.add el name h)
+        ve.Attributes |> Array.iter (fun (name,value) -> DomEdit.setAttribute el name value )
+        ve.Events |> Array.iter (fun (name,h) -> EventListeners.add el name h |> ignore)
 
         ve.Children 
         |> Array.iter (fun child -> 
@@ -157,7 +170,7 @@ let rec toDom (context : BuildContext) (ve : Element) : Browser.Types.Node  =
             // Maybe toDom should return an enum to be very specific about what
             // happened?
             if not (childEl.isSameNode(el)) then
-                DomHelpers.append el  childEl
+                DomEdit.appendLabel "toDom" el  childEl
         )
         el
 

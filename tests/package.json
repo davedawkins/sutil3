@@ -8,7 +8,7 @@
     "test": "dotnet fable test -o build --define HEADLESS --run web-test-runner build/*Test.js --node-resolve",
     "test:watch": "dotnet fable watch test --define HEADLESS --run web-test-runner build/*Test.js --node-resolve --watch",
     "test-in-browser:build": "dotnet fable test -o build --run vite",
-    "test-in-browser": "dotnet fable watch test -o build --run vite "
+    "test-in-browser": "dotnet fable watch test --verbose -o build --run vite "
   },
   "devDependencies": {
     "@web/test-runner": "^0.17.0",

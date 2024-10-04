@@ -22,6 +22,8 @@
     <Compile Include="VirtualDom.fs" />
     <Compile Include="Patch.fs" />
     <Compile Include="Core.fs" />
+    <Compile Include="ResizeObserver.fs" />
+    <Compile Include="Bindings.fs" />
     <Compile Include="Bind.fs" />
     <Compile Include="Style.fs" />
     <Compile Include="Dsl.fs" />

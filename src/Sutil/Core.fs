@@ -1,26 +1,45 @@
 
 module Sutil.Core
 
-open CoreTypes
 open Browser.Dom
 open Browser.Types
 
-open DomHelpers.CustomEvents
+open Sutil.CoreTypes
+open Sutil.Dom.DomHelpers
+open Sutil.Dom
+open Sutil.Dom.CustomEvents
+open Sutil.Dom.Types
+open Sutil.Dom.TypeHelpers
 
-let private logPatch (patchAction) = 
+let private logElement (context : BuildContext) (current : Node) (velement : VirtualDom.Element) = 
+    Fable.Core.JS.console.log(sprintf "New element: %s" (velement.ToString()) )
+    velement
+
+let private logPatch (context : BuildContext) (current : Node) (patchAction) = 
     //Fable.Core.JS.console.log( "Patch action: ", Fable.Core.JS.JSON.stringify( patchAction, space = 4) )
-    //Fable.Core.JS.console.log( "Patch action: ", patchAction.ToString() )
+    Fable.Core.JS.console.log( 
+        sprintf "Patch action:\n current= %s\n action=%s\n parent=%s" 
+            (outerHTML current)
+            (patchAction.ToString())
+            (context.ParentElement.outerHTML)
+            )
     patchAction
 
+type SutilEffect =
+    static member RegisterDisposable( node : Node, disposable : System.IDisposable ) =
+        Dispose.addDisposable node disposable
+    static member RegisterUnsubscribe( node : Node, disposable :Unsubscribable ) =
+        Dispose.addUnsubscribe node disposable
+
 let internal notifySutilEvents  (node : Node) =
-    if DomHelpers.isConnected (node.parentNode) then
-        CustomDispatch<_>.dispatch( node, CustomEvent.Connected )
-        CustomDispatch<_>.dispatch( node, CustomEvent.Mount )
+    if isConnected (node.parentNode) then
+        CustomDispatch<_>.dispatch( node, Connected )
+        CustomDispatch<_>.dispatch( node, Mount )
 
         node
-        |> DomHelpers.descendants
-        |> Seq.filter DomHelpers.isElementNode
-        |> Seq.iter (fun n ->  CustomDispatch<_>.dispatch(n,CustomEvent.Mount))
+        |> descendants
+        |> Seq.filter isElementNode
+        |> Seq.iter (fun n ->  CustomDispatch<_>.dispatch(n, Mount))
 
 let exclusive (se : SutilElement) =
     ()
@@ -43,9 +62,10 @@ let create (context : BuildContext) (se : SutilElement) : Node =
 
 let mount (context : BuildContext) (current : Node) (se : SutilElement) : Node =
     se
-    |> VirtualDom.fromSutil                 // SutilElement -> VirtualDom.Element
+    |> VirtualDom.fromSutil
+    |> logElement context current           // SutilElement -> VirtualDom.Element
     |> Patch.calculatePatch current         // Calculate patch for new element
-    // |> logPatch                             // Log the patch (debug)
+    |> logPatch context current             // Log the patch (debug)
     |> Patch.applyPatch context current     // Apply patch
     |> fun (result, node) ->
         notifyNewNodes (result,node)        // Notify new nodes
@@ -66,11 +86,8 @@ let unsubscribeOnUnmount (fns : (unit -> unit) seq ) =
     SutilElement.SideEffect(
         "unsubscribeOnUnmount",
         (fun context ->
-            DomHelpers.EventListeners.add
-                context.ParentElement
-                CustomEvent.Unmount
-                (fun _ -> fns |> Seq.iter (fun u -> u())) 
-            
+            Log.Console.log("unsubscribeOnUnmount: ", context.ParentElement.outerHTML )
+            fns |> Seq.iter ((Dispose.addUnsubscribe context.ParentElement)<<Unsubscribe)            
             EffectedNode context.ParentElement
         )
     )
@@ -80,11 +97,7 @@ let disposeOnUnmount (fns : (System.IDisposable) seq ) =
     SutilElement.SideEffect(
         "disposeOnUnmount",
         (fun context ->
-            DomHelpers.EventListeners.add
-                context.ParentElement
-                CustomEvent.Unmount
-                (fun _ -> fns |> Seq.iter (fun u -> u.Dispose())) 
-            
+            fns |> Seq.iter (Dispose.addDisposable context.ParentElement)            
             EffectedNode context.ParentElement
         )
     )
@@ -94,11 +107,51 @@ let hookParent (f : HTMLElement -> unit) =
     SutilElement.SideEffect(
         "hookParent",
         (fun context ->
-            DomHelpers.EventListeners.add
+            EventListeners.add
                 context.ParentElement
-                CustomEvent.Mount
-                (fun e -> (e.target :?> HTMLElement) |> f) 
+                Mount
+                (fun e -> (e.target :?> HTMLElement) |> f) |> ignore
             
             EffectedNode context.ParentElement
         )
     )
+
+module Sutil2 =
+    let attr (name,value) = 
+        SutilElement.Attribute( name, value )
+
+    let el (tag : string) (children : SutilElement seq) =
+        SutilElement.Element( tag, children |> Seq.toArray )
+
+    let text s = SutilElement.Text s
+
+    let listen event (target : EventTarget) fn = 
+        EventListeners.add target event fn
+
+    let once event node fn = EventListeners.once event node fn
+
+    let fragment children = SutilElement.Fragment (children |> Seq.toArray)
+
+    module Interop =
+        let get data name = 
+            JsMap.getKey data name
+
+        let set data name value =
+            JsMap.setKey data name value
+
+    let build (se : SutilElement) (ctx : BuildContext) =
+        mount ctx null se
+    
+    module Logging =
+        let error (s : string) = Log.Console.log("Error: " + s)
+
+    [<AutoOpen>]
+    module Ext =
+        type BuildContext with
+            member __.ParentNode = __.Parent
+            member __.Document = document
+
+    let documentOf (node : Node) = node.ownerDocument
+
+    type TransitionAttribute =
+        | NoAttribute

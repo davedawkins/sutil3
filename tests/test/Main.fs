@@ -11,7 +11,8 @@ ObservableTest.init()
 StoreTest.init()
 
 BrowserFramework.runAll( 
-    "*", 
-    "*" )
+    // "*", "*"
+    "*", "*" 
+    )
 
 #endif

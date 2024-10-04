@@ -8,7 +8,7 @@ open WebTestRunner
 
 open Sutil
 open Sutil.Core
-open Sutil.DomHelpers
+open Sutil.Dom
 open Sutil.Dsl
 open Bind
 
@@ -33,7 +33,7 @@ describe "DOM" <| fun () ->
         let counters = Array.zeroCreate 6
 
         let countMount i =
-            Ev.onMount (fun e -> counters.[i] <- counters.[i] + 1; log(sprintf "mount %d: %s" i (DomHelpers.Id.nodeStrShort (!!e.target))))
+            Ev.onMount (fun e -> counters.[i] <- counters.[i] + 1; log(sprintf "mount %d: %s" i (Id.nodeStrShort (!!e.target))))
 
         let app =
             Html.div [
@@ -286,13 +286,13 @@ describe "DOM" <| fun () ->
         mountTestApp app
 
         Expect.queryText "div>div:nth-child(1)" "Header"
-        Expect.queryText "div>div:nth-child(2)" "Footer"
+        Expect.queryText "div>div:nth-child(4)" "Footer"
 
         store1 |> Store.modify (cons "A")
 
         Expect.queryText "div>div:nth-child(1)" "Header"
         Expect.queryText "div>div:nth-child(2)" "A"
-        Expect.queryText "div>div:nth-child(3)" "Footer"
+        Expect.queryText "div>div:nth-child(4)" "Footer"
 
         store2 |> Store.modify (cons "X")
 
@@ -304,19 +304,19 @@ describe "DOM" <| fun () ->
         store1 |> Store.modify (cons "B")
 
         Expect.queryText "div>div:nth-child(1)" "Header"
-        Expect.queryText "div>div:nth-child(2)" "B"
-        Expect.queryText "div>div:nth-child(3)" "A"
-        Expect.queryText "div>div:nth-child(4)" "X"
-        Expect.queryText "div>div:nth-child(5)" "Footer"
+        Expect.queryText "div>div:nth-child(2)>div" "B"
+        Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+        Expect.queryText "div>div:nth-child(3)" "X"
+        Expect.queryText "div>div:nth-child(4)" "Footer"
 
         store2 |> Store.modify (cons "Y")
 
         Expect.queryText "div>div:nth-child(1)" "Header"
-        Expect.queryText "div>div:nth-child(2)" "B"
-        Expect.queryText "div>div:nth-child(3)" "A"
-        Expect.queryText "div>div:nth-child(4)" "Y"
-        Expect.queryText "div>div:nth-child(5)" "X"
-        Expect.queryText "div>div:nth-child(6)" "Footer"
+        Expect.queryText "div>div:nth-child(2)>div" "B"
+        Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+        Expect.queryText "div>div:nth-child(3)>div" "Y"
+        Expect.queryText "div>div:nth-child(3)>div:nth-child(2)" "X"
+        Expect.queryText "div>div:nth-child(4)" "Footer"
     }
 
     it "Separated each" <| fun () -> promise {
@@ -377,11 +377,12 @@ describe "DOM" <| fun () ->
             Bind.el( switch, fun flag ->
                 if flag then
                     Html.div [
+                        Html.text "Hello"
                         unsubscribeOnUnmount [
                             (fun _ -> unsubbed <- true)
                         ]
                         disposeOnUnmount [
-                         { new System.IDisposable with member _.Dispose() = disposed <- true }
+                            { new System.IDisposable with member _.Dispose() = disposed <- true }
                         ]
                     ]
                 else
@@ -390,13 +391,13 @@ describe "DOM" <| fun () ->
 
         mountTestApp app
 
-        Expect.areEqual( disposed, false )
-        Expect.areEqual( unsubbed, false )
+        Expect.areEqual( disposed, false, "disposed is false" )
+        Expect.areEqual( unsubbed, false, "unsubbed is false" )
 
         switch |> Store.modify not
 
-        Expect.areEqual( disposed, true )
-        Expect.areEqual( unsubbed, true )
+        Expect.areEqual( disposed, true ,"disposed is true" )
+        Expect.areEqual( unsubbed, true, "unsubbed is true" )
 
         return ()
     }
@@ -461,7 +462,7 @@ describe "DOM" <| fun () ->
         Expect.queryText "div" "node2"
         Expect.queryText "div>div" "node2"
 
-        DomHelpers.remove node2
+        DomEdit.remove node2
 
         Expect.queryText "div" ""
         Expect.areEqual(node2_unsubbed,true)
@@ -494,7 +495,7 @@ describe "DOM" <| fun () ->
         Expect.queryText "div" "node2"
         Expect.queryText "div>div" "node2"
 
-        DomHelpers.remove node2
+        DomEdit.remove node2
 
         Expect.queryText "div" ""
         Expect.areEqual(node2_fragment_unsubbed,1)
@@ -527,7 +528,7 @@ describe "DOM" <| fun () ->
         Expect.queryText "div" "node2"
         Expect.queryText "div>div" "node2"
 
-        DomHelpers.remove node2
+        DomEdit.remove node2
 
         Expect.queryText "div" ""
         Expect.areEqual(node2_fragment_unsubbed,1)

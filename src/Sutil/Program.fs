@@ -2,6 +2,7 @@ namespace Sutil
 
 open Core
 open CoreTypes
+open Sutil.Dom
 
 open Browser.Types
 
@@ -23,10 +24,10 @@ type Program() =
         Core.mount
             (BuildContext.Create()
                 .WithParentId(id)
-                .WithMount( fun parent node -> DomHelpers.clear parent; DomHelpers.append parent node ))
+                .WithMount( fun parent node -> DomEdit.clear parent; DomEdit.appendLabel "Program.mount" parent node ))
             null
             app
-        |> (fun node -> DomHelpers.Dispose.makeDisposable( fun () -> DomHelpers.remove node ) )
+        |> (fun node -> Dispose.makeDisposable( (fun () -> DomEdit.remove node) |> Types.Unsubscribe ) )
 
     ///<summary>
     /// Mount application on given HTMLElement. Existing children at that node will be removed. Return value can be disposed to unmount and clean up.
@@ -35,10 +36,10 @@ type Program() =
         Core.mount
             (BuildContext.Create()
                 .WithParent(host)
-                .WithMount( fun parent node -> DomHelpers.clear parent; DomHelpers.append parent node ))
+                .WithMount( fun parent node -> DomEdit.clear parent; DomEdit.appendLabel "Program.mount2" parent node ))
             null
             app
-        |> (fun node -> DomHelpers.Dispose.makeDisposable( fun () -> DomHelpers.remove node ) )
+        |> (fun node -> Dispose.makeDisposable(Types.Unsubscribe( fun () -> DomEdit.remove node ) ))
 
     ///<summary>
     /// Mount application on element with id "sutil-app". Existing children at that node will be removed. Return value is <c>unit</c>, so use alternate version <c>mount( id, app )</c>
@@ -63,12 +64,12 @@ type Program() =
             (BuildContext.Create()
                 .WithParent( prev.parentElement )
                 .WithMount( 
-                    fun parent node -> DomHelpers.insertAfter parent node prev
+                    fun parent node -> DomEdit.insertAfter parent node prev
                 ))
             null
             app
 
-        |> (fun node -> DomHelpers.Dispose.makeDisposable( fun () -> DomHelpers.remove node ) )
+        |> (fun node -> Dispose.makeDisposable( Types.Unsubscribe( fun () -> DomEdit.remove node ) ))
 
     ///<summary>
     /// Mount application at given element, appending as last child and preserving existing children. Return value can be disposed to unmount and clean up.
@@ -81,7 +82,7 @@ type Program() =
             null
             app
 
-        |> (fun node -> DomHelpers.Dispose.makeDisposable( fun () -> DomHelpers.remove node ) )
+        |> (fun node -> Dispose.makeDisposable( Types.Unsubscribe( fun () -> DomEdit.remove node )) )
 
     ///<summary>
     /// Remove this node, cleaning up all related Sutil resources. By design, it should be rare that you need to use this, but it provides
@@ -90,4 +91,4 @@ type Program() =
     /// the content and visibility of the modal.
     ///</summary>
     static member unmount( node : Node ) =
-        DomHelpers.remove node
+        DomEdit.remove node

@@ -1,7 +1,8 @@
 
 module Sutil.Style 
 
-open DomHelpers
+open Sutil.Dom
+open Sutil.Dom.TypeHelpers
 
 let private toLines (s : string) =
     s.Split( [| '\n' |] )
@@ -56,7 +57,7 @@ let withStyle (styleSheet : StyleSheet) (el : CoreTypes.SutilElement) =
     let addStyle ( context : CoreTypes.BuildContext )  =
 
         let el = Sutil.Core.mount context null el |> asElement
-        let elId = DomHelpers.Id.getId el
+        let elId = Id.getId el
 
         if elId = "" then 
             failwith "Not a sutil element"
