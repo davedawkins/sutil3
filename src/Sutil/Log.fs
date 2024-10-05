@@ -82,22 +82,22 @@ let enableSource (source : string) (enabled : bool) =
 let enableCategory (cat : string) (enabled : bool) =
     categories <- categories.Add(cat, enabled)
 
-let logmessage (m : LogMessage) =
+let private logmessage (m : LogMessage) =
     if categoryIsEnabled m.Category && sourceIsEnabled m.Source then
         if (m.Message.StartsWith("Error")) then
             Fable.Core.JS.debugger()
         Console.log(m.Category,m.Source,m.Message)
 
 /// Log message with a given source, category, message and context 
-let logm (src : string) (cat : string) (msg : string) (ctx : obj) =
+let private  logm (src : string) (cat : string) (msg : string) (ctx : obj) =
     LogMessage.Create(src, cat, msg, ctx) |> logmessage
 
 /// Log a simple string message
-let log(s : string) =
+let private log(s : string) =
     LogMessage.Create(s) |> logmessage
     
 /// Log a simple string message with a category (Error, Warning, 
-let logc (cat : LogCategory) (s : string) =
+let private logc (cat : LogCategory) (s : string) =
     LogMessage.Create(string cat,s) |> logmessage
 
 let inline private  fmt msg args =

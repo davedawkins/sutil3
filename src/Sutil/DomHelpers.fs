@@ -1,6 +1,13 @@
 
 namespace Sutil.Dom
 
+[<AutoOpen>]
+module private Locals =
+    let log = Sutil.Log.create "Dom"
+
+/// This doesn't belong in DOM. The current type is a way of helping the Core framework
+/// manage the (unit -> unit) unsubscribe idea that Svelte uses. We use IDisposable more
+/// in F# / .NET (eg in System.IObservable)
 module Types =
     open Fable.Core
 
@@ -12,6 +19,7 @@ module Types =
             member __.Value = let (Unsubscribe f) = __ in f
             member __.Invoke() = __.Value ()
         
+/// Helper functions for working with Node and its Element and Text subtypes
 module TypeHelpers =
 
     open Browser.Types
@@ -37,10 +45,7 @@ module TypeHelpers =
     let tryAsTextNode (node : Node) =
         if isTextNode node then Some (node :?> Browser.Types.Text) else None
 
-module Logging = 
-    let error (s) = Sutil.Log.Console.log("Error: " + s)
-    let  log (s : string) = Sutil.Log.Console.log("Error: " + s)
-
+/// JS interop. This doesn't belong in DomHelpers
 module JsHelpers =
     open Fable.Core
 
@@ -50,6 +55,7 @@ module JsHelpers =
     [<Emit("$0 == $1")>]
     let eq2 a b : bool = jsNative
 
+/// JS interop specifically for keyed JS objects
 module JsMap =
     open Fable.Core.JsInterop
     open Fable.Core
@@ -92,7 +98,7 @@ module JsMap =
             setKey node key newVal
             newVal
 
-
+/// Anaemic wrapper for JsMap, which can now be refactored away
 module NodeKey =
 
     open Fable.Core.JsInterop
@@ -117,7 +123,7 @@ module NodeKey =
     let getKeyWith (key : string)  (node : Node) (defaultValue : 't) : 't = 
         tryGetKey key node |> Option.defaultValue defaultValue
 
-
+/// Support for managing event listeners.
 module EventListeners =
     open Browser.Types
     open Types
@@ -160,7 +166,7 @@ module EventListeners =
 
         remove <- add (target :?> Node) event inner
 
-
+// Support for managing Sutil identifiers
 module Id =
     open NodeKey
     open Browser.Types
@@ -207,7 +213,7 @@ module Id =
             | TextNodeType -> $"text:\"{tc}\" #{svId node}"
             | _ -> $"?'{tc}'#{svId node}"
 
-
+/// Support for custom events in general and the custom events that Sutil uses
 module CustomEvents =
     open Fable.Core
     open Browser.Types
@@ -269,6 +275,7 @@ module CustomEvents =
         static member dispatch (target: EventTarget, name, data: 'T) =
             dispatchCustom<'T> (target) name (CustomDispatch.toCustomEvent<unit> ([ Detail data ]))
 
+/// Catch-all for DOM related helpers. Mostly query functions
 module DomHelpers =
     open TypeHelpers
     open Browser.Types
@@ -320,7 +327,7 @@ module DomHelpers =
             try
                 f t
             with
-            | x -> Logging.error $"raf: {x.Message}")
+            | x -> log.error $"raf: {x.Message}")
 
     /// Wrapper for Window.requestAnimationFrame, ignoring the timestamp.
     let rafu (f: unit -> unit) =
@@ -328,7 +335,7 @@ module DomHelpers =
             try
                 f ()
             with
-            | x -> Logging.error $"rafu: {x.Message}")
+            | x -> log.error $"rafu: {x.Message}")
         |> ignore
 
     /// Call handler every delayMs. Return value is a function that will cancel the timer.
@@ -345,10 +352,10 @@ module DomHelpers =
 
         fun () -> Fable.Core.JS.clearTimeout id
 
+/// Support for disposing of Node-related resources (subscriptions etc)
 module Dispose =
     open NodeKey
     open Browser.Types
-    open Sutil.Log
     open Types
     open DomHelpers
     
@@ -379,11 +386,10 @@ module Dispose =
 
     let internal disposeNode (node : Node) = 
         
-        Sutil.Log.Console.log( "Posting Unmount for ", node |>  outerHTML)
         CustomEvents.dispatchSimple node CustomEvents.Unmount
 
         let safeDispose (d : System.IDisposable) = 
-            try d.Dispose() with x -> log (sprintf "Error while disposing: %s" x.Message)
+            try d.Dispose() with x -> log.error (sprintf "Error while disposing: %s" x.Message)
 
         EventListeners.clear node
 
@@ -400,6 +406,7 @@ module Dispose =
 
     let internal dispose (node : Node) = disposeTree node
 
+/// Support for edits to the DOM: creating nodes, setting attributes etc
 module DomEdit =
 
     open Browser.Types
@@ -508,7 +515,7 @@ module DomEdit =
         titleEl.appendChild( doc.createTextNode(title) ) |> ignore
         head.appendChild(titleEl) |> ignore
 
-
+/// Support for editing classes
 module ClassHelpers =
     open System
     open Browser.Types
@@ -528,6 +535,7 @@ module ClassHelpers =
         e.classList.remove (classes |> splitBySpace)
 
 
+/// 
 [<AutoOpen>]
 module Extensions =
     open Browser.Types
