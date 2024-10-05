@@ -7,8 +7,7 @@ open DomHelpers
 open Browser.Types
 open System
 open Fable.Core
-open CoreTypes
-open Store
+open Sutil
 
 let private logEnabled() = false
 let private log s = Log.Console.log(s)
@@ -206,7 +205,7 @@ let bindSelected<'T when 'T : equality> (selection:IObservable<List<'T>>) (dispa
 
     )
 
-let bindSelectMultiple<'T when 'T : equality> (store:IStore<List<'T>>)  =
+let bindSelectMultiple<'T when 'T : equality> (store: IStore<List<'T>>)  =
     bindSelected store (fun sln -> store <~ sln)
 
 let bindSelectSingle<'T when 'T : equality> (store:IStore<'T>) : SutilElement =
@@ -222,7 +221,7 @@ let private isNullString (obj:obj) =
 
 let private getId (s : IStore<'T>) = s.GetHashCode()
 
-let bindGroup<'T> (store:Store<List<string>>) : SutilElement =
+let bindGroup<'T> (store:IStore<List<string>>) : SutilElement =
     SutilElement.Define( 
         "bindGroup",
         fun ctx ->
@@ -261,7 +260,7 @@ let bindGroup<'T> (store:Store<List<string>>) : SutilElement =
 // T can realistically only be numeric or a string. We're relying (I think!) on JS's ability
 // to turn a string into an int automatically in the Store.set call (maybe it's Fable doing that)
 //
-let bindRadioGroup<'T> (store:Store<'T>) : SutilElement =
+let bindRadioGroup<'T> (store:IStore<'T>) : SutilElement =
     SutilElement.Define( "bindRadioGroup",
     fun ctx ->
     let parent = ctx.ParentNode
@@ -392,7 +391,7 @@ let private convertObj<'T> (v:obj) : 'T  =
 let bindAttrStoreBoth<'T> (attrName:string) (store : IStore<'T>) =
     bindAttrConvert attrName store convertObj<'T>
 
-let bindAttrStoreOut<'T> (attrName:string) (store : Store<'T>) : SutilElement =
+let bindAttrStoreOut<'T> (attrName:string) (store : IStore<'T>) : SutilElement =
     SutilElement.Define( "bindAttrStoreOut",
     fun ctx ->
     let parent = ctx.ParentNode
@@ -422,7 +421,7 @@ let listenToProp<'T> (attrName:string) (dispatch: 'T -> unit) : SutilElement =
         rafu notify
     EffectedNode (ctx.ParentElement))
 
-let bindPropOut<'T> (attrName:string) (store : Store<'T>) : SutilElement =
+let bindPropOut<'T> (attrName:string) (store : IStore<'T>) : SutilElement =
     listenToProp attrName (Store.set store)
 
 type KeyedStoreItem<'T,'K> = {

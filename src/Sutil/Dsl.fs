@@ -5,10 +5,8 @@ open Browser.Types
 open Sutil.Dom
 
 open Core
-open CoreTypes
 open Feliz
 open Bind
-open Store
 
 open EventHelpers
 open Fable.Core.JsInterop
@@ -113,8 +111,7 @@ type SutilHtmlEngine() as this =
     //         ctx |> ContextHelpers.withParent (DomNode ctx.Document.body) |> buildChildren xs
     //         () )
 
-    //TODO
-    //member _.parse (html : string) = CoreElements.html html
+    member _.parse (html : string) = CoreElements.html html
 
     //TODO
     // member _.parent (selector:string) (xs: seq<SutilElement>) =
@@ -227,9 +224,11 @@ type SutilAttrEngine() =
     // member _.value<'T> (value: IObservable<'T>, dispatch: 'T -> unit) =
     //         bindAttrBoth "value" value dispatch
 
-    // member _.style (cssAttrs : (string*obj) seq) = cssAttrs |> style
+    member _.style (cssAttrs : (string*obj) seq) = 
+        _attr("style", cssAttrs |> Seq.map (fun (n,v) -> $"{n}: {v};") |> String.concat "")
+
     // member _.styleAppend (cssAttrs : (string*obj) seq) = cssAttrs |> styleAppend
-    // member _.style (cssAttrs : IObservable< #seq<string*obj> >) = Bind.style cssAttrs
+    member _.style (cssAttrs : IObservable< #seq<string*obj> >) = Bind.style cssAttrs
 
     // member _.setClass(className : string) = CoreElements.setClass className
     // member _.toggleClass(className : string) = CoreElements.toggleClass className

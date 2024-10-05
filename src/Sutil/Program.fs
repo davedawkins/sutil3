@@ -1,7 +1,6 @@
 namespace Sutil
 
 open Core
-open CoreTypes
 open Sutil.Dom
 
 open Browser.Types

@@ -4,7 +4,7 @@ module Sutil.Core
 open Browser.Dom
 open Browser.Types
 
-open Sutil.CoreTypes
+open Sutil
 open Sutil.Dom.DomHelpers
 open Sutil.Dom
 open Sutil.Dom.CustomEvents
@@ -82,40 +82,6 @@ let mountAsChild (parentElementId : string)  (se : SutilElement) =
     se 
     |> mount context null 
 
-let unsubscribeOnUnmount (fns : (unit -> unit) seq ) =
-    SutilElement.SideEffect(
-        "unsubscribeOnUnmount",
-        (fun context ->
-            Log.Console.log("unsubscribeOnUnmount: ", context.ParentElement.outerHTML )
-            fns |> Seq.iter ((Dispose.addUnsubscribe context.ParentElement)<<Unsubscribe)            
-            EffectedNode context.ParentElement
-        )
-    )
-
-
-let disposeOnUnmount (fns : (System.IDisposable) seq ) =
-    SutilElement.SideEffect(
-        "disposeOnUnmount",
-        (fun context ->
-            fns |> Seq.iter (Dispose.addDisposable context.ParentElement)            
-            EffectedNode context.ParentElement
-        )
-    )
-
-
-let hookParent (f : HTMLElement -> unit) =
-    SutilElement.SideEffect(
-        "hookParent",
-        (fun context ->
-            EventListeners.add
-                context.ParentElement
-                Mount
-                (fun e -> (e.target :?> HTMLElement) |> f) |> ignore
-            
-            EffectedNode context.ParentElement
-        )
-    )
-
 module Sutil2 =
     let attr (name,value) = 
         SutilElement.Attribute( name, value )
@@ -152,6 +118,3 @@ module Sutil2 =
             member __.Document = document
 
     let documentOf (node : Node) = node.ownerDocument
-
-    type TransitionAttribute =
-        | NoAttribute

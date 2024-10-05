@@ -1,11 +1,17 @@
 module Sutil.Elmish
 
+open Sutil
 open Sutil.Elmish.Cmd
 open System
-open Store
 open Browser.Dom
 open Browser.Types
 
+///  <exclude />
+type Update<'Model> = ('Model -> 'Model) -> unit // A store updater. Store updates by being passed a model updater
+
+type StoreCons<'Model, 'Store> = 
+    (unit -> 'Model) -> ('Model -> unit) -> 'Store * Update<'Model>
+        
 module internal Helpers =
     type CmdHandler<'Msg>(handler, ?dispose) =
         member _.Handle(cmd: Cmd<'Msg>): unit = handler cmd
@@ -30,8 +36,7 @@ module internal Helpers =
         new CmdHandler<_>(List.iter (fun cmd -> cmd mb.Post), fun _ -> cts.Cancel())
 #endif
 
-
-let makeElmishWithCons (init: 'Props -> 'Model * Cmd<'Msg>)
+let internal makeElmishWithCons (init: 'Props -> 'Model * Cmd<'Msg>)
                         (update: 'Msg -> 'Model -> 'Model * Cmd<'Msg>)
                         (dispose: 'Model -> unit)
                         (cons: StoreCons<'Model, 'Store>)
@@ -69,122 +74,119 @@ let makeElmishWithCons (init: 'Props -> 'Model * Cmd<'Msg>)
             _storeDispatch <- Some(store, dispatch)
             store, dispatch
 
-let makeElmishWithDocument (doc:Document) (init: 'Props -> 'Model * Cmd<'Msg>)
+let internal makeElmishWithDocument (doc:Document) (init: 'Props -> 'Model * Cmd<'Msg>)
                 (update: 'Msg -> 'Model -> 'Model * Cmd<'Msg>)
                 (dispose: 'Model -> unit)
                 : 'Props -> IStore<'Model> * Dispatch<'Msg> =
 
-    //Registry.initialise doc
-
     makeElmishWithCons init update dispose (fun i d ->
-        let s = makeStore i  d
+        let s = Store.makeStore i  d
         let u = (fun f -> s.Update(f))
         upcast s, u)
 
-let makeElmishSimpleWithDocument (doc:Document) (init: 'Props -> 'Model)
+let internal makeElmishSimpleWithDocument (doc:Document) (init: 'Props -> 'Model)
                 (update: 'Msg -> 'Model -> 'Model)
                 (dispose: 'Model -> unit)
                 : 'Props -> IStore<'Model> * Dispatch<'Msg> =
-
-    //Registry.initialise doc
-
     let init p = init p, []
     let update msg model = update msg model, []
     makeElmishWithCons init update dispose (fun i d ->
-        let s = makeStore i  d
+        let s = Store.makeStore i  d
         let u = (fun f -> s.Update(f))
         upcast s, u)
 
-///<summary>
-/// Creates a store and a dispatch method commonly used
-/// in elmish programs, this can be used to model more complex views that require better
-/// control flow and a predictable state.
-/// </summary>
-/// <example>
-/// <code>
-///     type State = { count: int }
-///     type Msg =
-///         | Increment
-///         | Decrement
-///         | Reset
-///     let init _ = { count = 0 }
-///
-///     let upddate msg state =
-///         match msg with
-///         | Increment -> { state = state.count + 1 }
-///         | Decrement -> { state = state.count - 1 }
-///         | Reset -> { state = 0 }
-///
-///     let view() =
-///         let state, dispatch = Store.makeElmishSimple init update ignore ()
-///
-///         Html.article [
-///             disposeOnUnmount [ state ]
-///             bindFragment state &lt;| fun state -> text $"Count: {state.count}"
-///
-///             Html.button [ text "Increment"; onClick (fun _ -> dispatch) [] ]
-///             Html.button [ text "Decrement"; onClick (fun _ -> dispatch) [] ]
-///             Html.button [ text "Reset"; onClick (fun _ -> dispatch Reset) [] ]
-///         ]
-/// </code>
-/// </example>
-let makeElmishSimple<'Props, 'Model, 'Msg>
-    (init: 'Props -> 'Model)
-    (update: 'Msg -> 'Model -> 'Model)
-    (dispose: 'Model -> unit)
-    =
-    makeElmishSimpleWithDocument document init update dispose
-///<summary>
-/// Creates a store and a dispatch function as <c>Store.makeElmishSimple</c>
-/// the difference being that this version handles [Elmish commands](https://elmish.github.io/elmish/index.html#Commands)
-/// as well, generally used in more complex UIs given that with commands you can also handle
-/// asynchronous code like fetching resources from a server or calling any
-/// function that returns a promise or async
-/// </summary>
-/// <example>
-/// <code>
-///     type State = { count: int }
-///     type Msg =
-///         | Increment
-///         | Decrement
-///         | Reset
-///         | AsyncIncrement
-///         | AsyncDecrement
-///     let init _ = { count = 0 }, Cmd.ofMsg AsyncIncrement
-///
-///     let wait1S () =
-///         async {
-///             do! Async.Sleep 1000
-///         }
-///
-///     let upddate msg state =
-///         match msg with
-///         | Increment -> { state = state.count + 1 }, Cmd.none
-///         | Decrement -> { state = state.count - 1 }, Cmd.none
-///         | AsyncIncrement ->
-///             state, Cmd.ofAsync.perform () wait1S Increment
-///         | AsyncDecrement->
-///             state, Cmd.ofAsync.perform () wait1S Decrement
-///         | Reset -> { state = 0 } Cmd.none
-///
-///     let view() =
-///         let state, dispatch = Store.makeElmish init update ignore ()
-///
-///         Html.article [
-///             disposeOnUnmount [ state ]
-///             bindFragment state &lt;| fun state -> text $"Count: {state.count}"
-///
-///             Html.button [ text "Increment"; onClick (fun _ -> dispatch Increment) [] ]
-///             Html.button [ text "Async Increment"; onClick (fun _ -> dispatch AsyncIncrement) [] ]
-///             Html.button [ text "Decrement"; onClick (fun _ -> dispatch Decrement) [] ]
-///             Html.button [ text "Async Decrement"; onClick (fun _ -> dispatch AsyncDecrement) [] ]
-///             Html.button [ text "Reset"; onClick (fun _ -> dispatch Reset) [] ]
-///         ]
-/// </code>
-/// </example>
-let makeElmish<'Props, 'Model, 'Msg>
-    (init: 'Props -> 'Model * Cmd<'Msg>)
-    (update: 'Msg -> 'Model -> 'Model * Cmd<'Msg>)
-    (dispose: 'Model -> unit)
-    =
-    makeElmishWithDocument document init update dispose
+[<RequireQualifiedAccess>]
+module Store = 
+    ///<summary>
+    /// Creates a store and a dispatch method commonly used
+    /// in elmish programs, this can be used to model more complex views that require better
+    /// control flow and a predictable state.
+    /// </summary>
+    /// <example>
+    /// <code>
+    ///     type State = { count: int }
+    ///     type Msg =
+    ///         | Increment
+    ///         | Decrement
+    ///         | Reset
+    ///     let init _ = { count = 0 }
+    ///
+    ///     let upddate msg state =
+    ///         match msg with
+    ///         | Increment -> { state = state.count + 1 }
+    ///         | Decrement -> { state = state.count - 1 }
+    ///         | Reset -> { state = 0 }
+    ///
+    ///     let view() =
+    ///         let state, dispatch = Store.makeElmishSimple init update ignore ()
+    ///
+    ///         Html.article [
+    ///             disposeOnUnmount [ state ]
+    ///             bindFragment state &lt;| fun state -> text $"Count: {state.count}"
+    ///
+    ///             Html.button [ text "Increment"; onClick (fun _ -> dispatch) [] ]
+    ///             Html.button [ text "Decrement"; onClick (fun _ -> dispatch) [] ]
+    ///             Html.button [ text "Reset"; onClick (fun _ -> dispatch Reset) [] ]
+    ///         ]
+    /// </code>
+    /// </example>
+    let makeElmishSimple<'Props, 'Model, 'Msg>
+        (init: 'Props -> 'Model)
+        (update: 'Msg -> 'Model -> 'Model)
+        (dispose: 'Model -> unit)
+        =
+        makeElmishSimpleWithDocument document init update dispose
+    ///<summary>
+    /// Creates a store and a dispatch function as <c>Store.makeElmishSimple</c>
+    /// the difference being that this version handles [Elmish commands](https://elmish.github.io/elmish/index.html#Commands)
+    /// as well, generally used in more complex UIs given that with commands you can also handle
+    /// asynchronous code like fetching resources from a server or calling any
+    /// function that returns a promise or async
+    /// </summary>
+    /// <example>
+    /// <code>
+    ///     type State = { count: int }
+    ///     type Msg =
+    ///         | Increment
+    ///         | Decrement
+    ///         | Reset
+    ///         | AsyncIncrement
+    ///         | AsyncDecrement
+    ///     let init _ = { count = 0 }, Cmd.ofMsg AsyncIncrement
+    ///
+    ///     let wait1S () =
+    ///         async {
+    ///             do! Async.Sleep 1000
+    ///         }
+    ///
+    ///     let upddate msg state =
+    ///         match msg with
+    ///         | Increment -> { state = state.count + 1 }, Cmd.none
+    ///         | Decrement -> { state = state.count - 1 }, Cmd.none
+    ///         | AsyncIncrement ->
+    ///             state, Cmd.ofAsync.perform () wait1S Increment
+    ///         | AsyncDecrement->
+    ///             state, Cmd.ofAsync.perform () wait1S Decrement
+    ///         | Reset -> { state = 0 } Cmd.none
+    ///
+    ///     let view() =
+    ///         let state, dispatch = Store.makeElmish init update ignore ()
+    ///
+    ///         Html.article [
+    ///             disposeOnUnmount [ state ]
+    ///             bindFragment state &lt;| fun state -> text $"Count: {state.count}"
+    ///
+    ///             Html.button [ text "Increment"; onClick (fun _ -> dispatch Increment) [] ]
+    ///             Html.button [ text "Async Increment"; onClick (fun _ -> dispatch AsyncIncrement) [] ]
+    ///             Html.button [ text "Decrement"; onClick (fun _ -> dispatch Decrement) [] ]
+    ///             Html.button [ text "Async Decrement"; onClick (fun _ -> dispatch AsyncDecrement) [] ]
+    ///             Html.button [ text "Reset"; onClick (fun _ -> dispatch Reset) [] ]
+    ///         ]
+    /// </code>
+    /// </example>
+    let makeElmish<'Props, 'Model, 'Msg>
+        (init: 'Props -> 'Model * Cmd<'Msg>)
+        (update: 'Msg -> 'Model -> 'Model * Cmd<'Msg>)
+        (dispose: 'Model -> unit)
+        =
+        makeElmishWithDocument document init update dispose

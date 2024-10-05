@@ -7,10 +7,10 @@ open WebTestRunner
 #endif
 
 open Sutil
-open Sutil.Core
 open Sutil.Dom
 open Sutil.Dsl
-open Bind
+open Sutil.Bind
+open Sutil.CoreElements
 
 let log s = Fable.Core.JS.console.log s
 
@@ -126,7 +126,7 @@ describe "DOM" <| fun () ->
     }
 
     it "Binding" <| fun () -> promise {
-        let store : Store.IStore<int> = Store.make 0
+        let store : IStore<int> = Store.make 0
         let app =
             Html.fragment [
                 Bind.el(store, Html.div)

@@ -1,23 +1,84 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <DefineConstants>$(DefineConstants);FABLE_COMPILER;</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="Markdown.fs" />
+    <Compile Include="Doc.fs" />
+    <Compile Include="Parsec.fs" />
+    <Compile Include="Parser.fs" />
+    <Compile Include="Helpers.fs" />
+
+    <Compile Include="HelloWorld.fs" />
+    <Compile Include="DynamicAttributes.fs" />
+    <Compile Include="Styling.fs" />
+    <Compile Include="Nested.fs" />
+    <Compile Include="NestedComponents.fs" />
+    <Compile Include="HtmlTags.fs" />
+
+    <!-- <Compile Include="AwaitBlocks.fs" />
+    <Compile Include="KeyedEachBlocks.fs" />
+    <Compile Include="EachBlocks.fs" />
+    <Compile Include="StaticEach.fs" />
+    <Compile Include="StaticEachWithIndex.fs" />
+    <Compile Include="Dimensions.fs" />
+    <Compile Include="FileInputs.fs" />
+    <Compile Include="LogicIf.fs" />
+    <Compile Include="LogicElse.fs" />
+    <Compile Include="LogicElseIf.fs" />
+    <Compile Include="NumericInputs.fs" />
+    <Compile Include="TextInputs.fs" />
+    <Compile Include="CheckboxInputs.fs" />
+    <Compile Include="TextArea.fs" />
+    <Compile Include="SelectBindings.fs" />
+    <Compile Include="SelectMultiple.fs" />
+    <Compile Include="GroupInputs.fs" />
+    <Compile Include="ReactiveStatements.fs" />
+    <Compile Include="ReactiveDeclarations.fs" />
+    <Compile Include="Modal.fs" />
+    <Compile Include="BarChart.fs" />
+    <Compile Include="CustomEvents.fs" />
+    <Compile Include="DomEvents.fs" />
+    <Compile Include="EventModifiers.fs" />
+    <Compile Include="Evaluator.fs" />
+    <Compile Include="Spreadsheet.fs" />
+    <Compile Include="Login.fs" />
+    <Compile Include="Cells.fs" />
+    <Compile Include="Transition.fs" />
+    <Compile Include="TransitionParameters.fs" />
+    <Compile Include="TransitionEvents.fs" />
+    <Compile Include="TransitionInOut.fs" />
+    <Compile Include="TransitionCustomCss.fs" />
+    <Compile Include="TransitionCustom.fs" />
+    <Compile Include="Counter.fs" />
+    <Compile Include="CounterWithTransition.fs" />
+    <Compile Include="Todos.fs" />
+    <Compile Include="TimerLogic.fs" />
+    <Compile Include="DragDropListSort.fs" />
+    <Compile Include="DataSim.fs" />
+    <Compile Include="WebComponents.fs" />
+    <Compile Include="Draw.fs" /> -->
+
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sutil\Sutil.fsproj" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Fable.Formatting.Markdown" Version="1.0.1" />
     <PackageReference Include="Feliz.Engine.Bulma" Version="1.*" />
-    <PackageReference Include="Feliz.Engine" Version="1.0.0-beta-004" />
-    <PackageReference Include="Feliz.Engine.Event" Version="1.0.0-beta-004" />
-    <PackageReference Include="Fable.Browser.Css" Version="2.*" />
-    <PackageReference Include="Fable.Browser.Dom" Version="2.*" />
-    <PackageReference Include="Fable.Browser.Event" Version="1.*" />
-    <PackageReference Include="Fable.Core" Version="3.*" />
-    <PackageReference Include="Fable.Promise" Version="3.*" />
-    <PackageReference Include="Fable.Browser.MediaQueryList" Version="1.*" />
+    <PackageReference Include="Fable.Fetch" Version="2.2.0" />
+    <PackageReference Include="Fable.ShadowStyles" Version="1.*" />
+    <PackageReference Include="Fable.SimpleXml" Version="3.*" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="5.0.2" />
+  </ItemGroup>
+  <Target Name="ReallyClean" AfterTargets="Clean">
+    <!-- Remove obj folder -->
+    <RemoveDir Directories="$(BaseIntermediateOutputPath)" />
+    <!-- Remove bin folder -->
+    <RemoveDir Directories="$(BaseOutputPath)" />
+  </Target>
 </Project>

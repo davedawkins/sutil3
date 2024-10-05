@@ -6,8 +6,6 @@ open System
 open Fable.Core
 
 open Core
-open CoreTypes
-open Store
 open Bindings
 
 /// <summary>
@@ -22,18 +20,18 @@ type Bind =
     /// For <c>input[type='radio']</c>
     /// Only the checkbox with store's current value will be checked at any one time.
     /// </summary>
-    static member radioValue<'T>( store : Store<'T> ) = Sutil.Bindings.bindRadioGroup store
+    static member radioValue<'T>( store : IStore<'T> ) = Sutil.Bindings.bindRadioGroup store
 
     /// <summary>
     /// For multiple input elements. The input elements are grouped explicitly by name, or will be implicitly grouped by
     /// the (internal) name of the binding store.
     /// Each checkbox in the group is checked if its value is contained in the current <c>string list</c>
     /// </summary>
-    static member checkboxGroup( store : Store<string list> ) = Sutil.Bindings.bindGroup store
+    static member checkboxGroup( store : IStore<string list> ) = Sutil.Bindings.bindGroup store
 
     static member selectMultiple<'T  when 'T : equality>( store : IStore<'T list> ) = Sutil.Bindings.bindSelectMultiple store
-    static member selectOptional<'T when 'T : equality>( store : Store<'T option> ) = Sutil.Bindings.bindSelectOptional store
-    static member selectSingle<'T when 'T : equality>( store : Store<'T> ) = Sutil.Bindings.bindSelectSingle store
+    static member selectOptional<'T when 'T : equality>( store : IStore<'T option> ) = Sutil.Bindings.bindSelectOptional store
+    static member selectSingle<'T when 'T : equality>( store : IStore<'T> ) = Sutil.Bindings.bindSelectSingle store
 
     static member selectSingle<'T when 'T : equality>( value : System.IObservable<'T>, dispatch : 'T -> unit ) =
         bindSelected (value .> List.singleton) (List.exactlyOne >> dispatch)
@@ -124,20 +122,11 @@ type Bind =
 
     // -- Simple cases: 'T -> view ---------------------------
 
-    /// Bind lists to a simple template, with transitions
-    static member each (items:IObservable<list<'T>>, view : 'T -> SutilElement, trans : Core.Sutil2.TransitionAttribute list) =
-        each (listWrapO items) view
-
     /// Bind lists to a simple template
     static member each (items:IObservable<list<'T>>, view : 'T -> SutilElement) =
         each (listWrapO items) view 
 
     // -- Keyed ----------------------------------------------
-
-    /// Bind keyed lists to a simple template, with transitions
-    /// Deprecated: Use a view template that takes IObservable<'T>
-    static member each (items:IObservable<list<'T>>, view : 'T -> SutilElement, key:'T -> 'K, trans : Core.Sutil2.TransitionAttribute list) : SutilElement =
-        eachk (listWrapO items) view key
 
     /// Bind keyed lists to a simple template
     /// Deprecated: Use a view template that takes IObservable<'T>
@@ -159,9 +148,6 @@ type Bind =
     //     eachiko (listWrapO items) (LiveStore view) (snd>>key) []
 
     // -- Indexed Lists --------------------------------------------
-
-    static member eachi (items:IObservable<list<'T>>, view : (int*'T) -> SutilElement, trans : Core.Sutil2.TransitionAttribute list) : SutilElement =
-        eachi (listWrapO items) view
 
     static member eachi (items:IObservable<list<'T>>, view : (int*'T) -> SutilElement ) : SutilElement =
         eachi (listWrapO items) view 
@@ -202,18 +188,9 @@ type Bind =
 /// </summary>
 type BindArray =
 
-    /// Bind arrays to a simple template, with transitions
-    static member each (items:IObservable<'T []>, view : 'T -> SutilElement, trans : Core.Sutil2.TransitionAttribute list) =
-        each (arrayWrapO items) view
-
     /// Bind arrays to a simple template
     static member each (items:IObservable<'T []>, view : 'T -> SutilElement) =
         each (arrayWrapO items) view
-
-    /// Bind keyed arrays to a simple template, with transitions
-    /// Deprecated: Use a view template that takes IObservable<'T>
-    static member each (items:IObservable<array<'T>>, view : 'T -> SutilElement, key:'T -> 'K, trans : Core.Sutil2.TransitionAttribute list) : SutilElement =
-        eachk (arrayWrapO items) view key
 
     /// Bind keyed arrays to a simple template
     /// Deprecated: Use a view template that takes IObservable<'T>
@@ -233,9 +210,6 @@ type BindArray =
     //     eachiko (arrayWrapO items) (LiveStore view) (snd>>key) []
 
     // -- Indexed Arrays --------------------------------------------
-
-    static member eachi (items:IObservable<array<'T>>, view : (int*'T) -> SutilElement, trans : Core.Sutil2.TransitionAttribute list) : SutilElement =
-        eachi (arrayWrapO items) view
 
     static member eachi (items:IObservable<array<'T>>, view : (int*'T) -> SutilElement ) : SutilElement =
         eachi (arrayWrapO items) view
@@ -265,78 +239,3 @@ module BindOperators =
     /// </code>
     /// </example>
     let (>/) a b = Bind.el( a , b)
-
-#if false
-// Simplest binding
-type Bind =
-    static member el( source : 'T observable, view : ('T -> SutilElement) ) =
-        SutilElement.SideEffect (
-            "bindEl",
-            fun context -> 
-
-                let context = context.WithMount BuildContext.DefaultMount
-
-                let mutable currentNode : Node =
-                    SutilElement.HiddenDiv
-                    |> mount context null
-
-                source.Subscribe( fun value ->
-
-                    currentNode <-
-                        value
-                        |> view 
-                        |> mount context currentNode
-
-                ) |> DomHelpers.Dispose.addDisposable (context.ParentElement) // FIXME: Put this in the disposals list
-
-                EffectedNode (context.ParentElement)
-        )    
-
-    static member elo<'T>( source : 'T observable, view : ('T observable -> SutilElement) ) =
-        SutilElement.SideEffect (
-            "bindEl",
-            fun context -> 
-
-                let context = context.WithMount BuildContext.DefaultMount
-
-                let mutable currentNode : Node =
-                    SutilElement.HiddenDiv
-                    |> mount context null
-
-                let currentValue : IStore<'T> = Store.make Unchecked.defaultof<_>
-
-                source.Subscribe( fun value ->
-                    ()
-                    // currentNode <-
-                    //     value
-                    //     |> view 
-                    //     |> mount context currentNode
-
-                ) |> DomHelpers.Dispose.addDisposable (context.ParentElement) // FIXME: Put this in the disposals list
-
-                EffectedNode (context.ParentElement)
-        )
-
-    static member each<'T,'K>( source : ('T list) observable, view : ('T -> SutilElement) ) =
-        Bind.el( source, (List.toArray >> Array.map view >>  SutilElement.Fragment) )
-
-    static member each<'T,'K>( source : ('T list) observable, view : ('T -> SutilElement), key: 'T -> 'K) =
-        Bind.el( source, (List.toArray >> Array.map view >>  SutilElement.Fragment) )
-
-    static member each<'T,'K>( source : ('T list) observable, view : ('T observable -> SutilElement), key: 'T -> 'K) =
-        Bind.elo<'T list>( 
-            source, 
-            (fun (view : ('T list) observable) -> SutilElement.HiddenDiv)
-        )
-
-type BindArray =
-    static member each<'T,'K>( source : ('T[]) observable, view : ('T -> SutilElement), key: 'T -> 'K) =
-        Bind.el( source, (Array.map view >>  SutilElement.Fragment) )
-
-    static member each<'T,'K>( source : ('T[]) observable, view : ('T observable -> SutilElement), key: 'T -> 'K) =
-        SutilElement.SideEffect (
-            "BindArray.each",
-            fun context -> 
-                EffectedNode (context.ParentElement)
-        )
-#endif

@@ -8,8 +8,11 @@
     "start": "dotnet fable watch src/App --verbose -o build --run vite",
     "preview": "vite preview",
     "clean": "dotnet fable clean -o build --yes"
-  },  
+  },
   "devDependencies": {
     "vite": "^5.1.4"
+  },
+  "dependencies": {
+    "lz-string": "^1.5.0"
   }
 }

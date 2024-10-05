@@ -1,4 +1,4 @@
-module Sutil.CoreTypes
+namespace Sutil
 
 open Browser.Types
 
@@ -16,6 +16,8 @@ type BuildContext =
         } 
 
     static member DefaultMount = Dom.DomEdit.appendLabel "DefaultMount"
+
+    member __.ParentNode = __.Parent
     
     member __.WithParentId( id : string ) = 
         __.WithParent( Browser.Dom.document.getElementById(id) )

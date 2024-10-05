@@ -9,7 +9,7 @@ open WebTestRunner
 
 open Sutil
 open Sutil.Dsl
-open Sutil.Core
+open Sutil.CoreElements
 open Sutil.Bind
 
 type Record = {
@@ -169,7 +169,7 @@ describe "Sutil.Binding" <| fun () ->
 
 
     it "Bind disposal nestx2" <| fun () ->promise {
-        let storeInner : Store.IStore<int> = Store.make 0
+        let storeInner : IStore<int> = Store.make 0
         let storeOuter = Store.make 0
         let mutable disposed = 0
         let app =

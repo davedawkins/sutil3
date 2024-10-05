@@ -126,7 +126,7 @@ let rec calculatePatch (existing : Node) (ve : VElement) : Action =
         ActionApplyEffect ve
 
 
-let rec applyPatch (context : CoreTypes.BuildContext) (current : Node) (action: Action) : (Result * Node) =
+let rec applyPatch (context : BuildContext) (current : Node) (action: Action) : (Result * Node) =
 
     let nodeChildren = 
         current |> DomHelpers.children |> Seq.toArray

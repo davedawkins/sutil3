@@ -34,6 +34,8 @@ module TypeHelpers =
 
     let tryAsElement (n : Node) = if isElementNode n then Some (asElement n) else None
 
+    let tryAsTextNode (node : Node) =
+        if isTextNode node then Some (node :?> Browser.Types.Text) else None
 
 module Logging = 
     let error (s) = Sutil.Log.Console.log("Error: " + s)
@@ -125,6 +127,11 @@ module EventListeners =
     type NamedHandler =  (string * (Event -> unit))
 
     let empty : NamedHandler [] = Array.empty
+
+    // /// Add event listener using e.addEventListener. Return value is a (unit -> unit) function that will remove the event listener
+    // let listen (event: string) (e: EventTarget) (fn: (Event -> unit)) : (unit -> unit) =
+    //     e.addEventListener (event, fn)
+    //     (fun () -> e.removeEventListener (event, fn) |> ignore)
 
     let add (node : EventTarget) (event : string) (f : Event -> unit) : Unsubscribable =
         JsMap.arrayAppendKey node Listeners (Array.singleton (event,f))
@@ -324,6 +331,20 @@ module DomHelpers =
             | x -> Logging.error $"rafu: {x.Message}")
         |> ignore
 
+    /// Call handler every delayMs. Return value is a function that will cancel the timer.
+    let interval handler (delayMs: int) =
+        let id =
+            Fable.Core.JS.setInterval handler delayMs
+
+        fun () -> Fable.Core.JS.clearInterval id
+
+    /// Call handler after delayMs. Return value is a function that will cancel the timeout (if it hasn't occurred yet)
+    let timeout handler (delayMs: int) =
+        let id =
+            Fable.Core.JS.setTimeout handler delayMs
+
+        fun () -> Fable.Core.JS.clearTimeout id
+
 module Dispose =
     open NodeKey
     open Browser.Types
@@ -457,6 +478,37 @@ module DomEdit =
     let removeAttribute (parent : HTMLElement) name =
         parent.removeAttribute(name)
 
+    let setHeadStylesheet (doc : Document) (url : string) =
+        let head = findElement doc "head"
+        let styleEl = doc.createElement("link")
+        head.appendChild( styleEl ) |> ignore
+        styleEl.setAttribute( "rel", "stylesheet" )
+        styleEl.setAttribute( "href", url ) |> ignore
+
+    let setHeadScript (doc : Document) (url : string)  =
+        let head = findElement doc "head"
+        let el = doc.createElement("script")
+        head.appendChild( el ) |> ignore
+        el.setAttribute( "src", url ) |> ignore
+
+    let setHeadEmbedScript (doc : Document) (source : string) =
+        let head = findElement doc "head"
+        let el = doc.createElement("script")
+        head.appendChild( el ) |> ignore
+        el.appendChild(doc.createTextNode(source)) |> ignore
+
+    let setHeadTitle (doc : Document) (title : string)  =
+        let head = findElement doc "head"
+        let existingTitle = findElement doc "head>title"
+
+        if not (isNull existingTitle) then
+            head.removeChild(existingTitle) |> ignore
+
+        let titleEl = doc.createElement("title")
+        titleEl.appendChild( doc.createTextNode(title) ) |> ignore
+        head.appendChild(titleEl) |> ignore
+
+
 module ClassHelpers =
     open System
     open Browser.Types
@@ -479,6 +531,14 @@ module ClassHelpers =
 [<AutoOpen>]
 module Extensions =
     open Browser.Types
+
+    type NodeList with
+        member __.toSeq() =
+            seq { for i in 0 .. (__.length-1) do yield __[i] }
+
+    type Node with 
+        member __.asTextNode = TypeHelpers.tryAsTextNode __
+        member __.asElement = TypeHelpers.tryAsElement __
 
     type EventTarget with
         member __.asElement : HTMLElement =

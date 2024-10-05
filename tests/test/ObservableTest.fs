@@ -7,8 +7,6 @@ open WebTestRunner
 #endif
 
 open Sutil
-open Sutil.Core
-open Store
 
 describe "Sutil.Observable" <| fun () ->
 

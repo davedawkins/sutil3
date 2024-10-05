@@ -1,9 +1,7 @@
 module Sutil.VirtualDom 
 
-open CoreTypes
+open Sutil
 open Sutil.Dom
-open Sutil.Dom.DomHelpers
-
 
 type EventHandler = (Browser.Types.Event -> unit)
 
