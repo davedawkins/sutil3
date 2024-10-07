@@ -3,7 +3,7 @@ namespace Sutil
 open System
 open Sutil
 open Sutil.CoreElements
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.Bind
 open Sutil.Styling
 open Fable.Core.JsInterop
@@ -16,7 +16,7 @@ open Browser
 type Media =
     /// <summary>
     /// </summary>
-    static member listenMedia (query:string, handler : bool -> unit) : Dom.Types.Unsubscribable =
+    static member listenMedia (query:string, handler : bool -> unit) : Unsubscriber =
         let mql = window.matchMedia( query )
         handler (mql.matches)
         Sutil.Dom.EventListeners.add mql "change" (fun e -> e?matches |> handler)
@@ -27,7 +27,7 @@ type Media =
         let s = Store.make false
         let u = Media.listenMedia(query,fun m -> s <~ m)
         Html.fragment [
-            unsubscribeOnUnmount [ u.Value ]
+            unsubscribeOnUnmount [ u ]
             disposeOnUnmount [ s ]
             Bind.el(s,view)
         ]
@@ -52,7 +52,7 @@ type Media =
         let s = Store.make false
         let u = Media.listenMedia(query,fun m -> s <~ m)
         Html.fragment [
-            unsubscribeOnUnmount [ u.Value ]
+            unsubscribeOnUnmount [ u ]
             disposeOnUnmount [ s ]
             s .> map |> app
         ]
@@ -69,10 +69,10 @@ type CssMedia =
     /// <summary>
     /// Create a <c>@media (min-width: &lt;nnn>)</c> CSS rule
     /// </summary>
-    static member minWidth (minWidth : Styles.ICssUnit, rules : StyleSheetDefinition list) =
+    static member minWidth (minWidth : Styles.ICssUnit, rules : Sutil.Styling.Types.SutilStyleSheetDefinition list) =
         Styling.makeMediaRule (sprintf "(min-width: %s)" (string minWidth)) rules
     /// <summary>
     /// Create a <c>@media (max-width: &lt;nnn>)</c> CSS rule
     /// </summary>
-    static member maxWidth (maxWidth : Styles.ICssUnit, rules : StyleSheetDefinition list) =
+    static member maxWidth (maxWidth : Styles.ICssUnit, rules :  Sutil.Styling.Types.SutilStyleSheetDefinition list) =
         Styling.makeMediaRule (sprintf "(max-width: %s)" (string maxWidth)) rules

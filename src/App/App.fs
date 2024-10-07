@@ -9,7 +9,7 @@ open Sutil.CoreElements
 open Browser.Types
 open Types
 open Sutil.Bind
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.Elmish
 open Sutil.Elmish.Cmd
 
@@ -48,55 +48,103 @@ open type Feliz.length
 //     http://host/#examples-hello-world?HelloWorld.fs
 //
 
+// ✅ ❌
+
+let [<Literal>] PASS_EMOJI = "✅"
+let [<Literal>] FAIL_EMOJI = "❌"
+
+let CompilationFailure() =
+    Html.div "Compilation failure :-("
+
+module CustomEvents = let view = CompilationFailure
+module EventModifiers = let view = CompilationFailure
+module TransitionParameters = let view = CompilationFailure
+module TransitionInOut = let view = CompilationFailure
+module TransitionCustomCss = let view = CompilationFailure
+module TransitionCustom = let view = CompilationFailure
+module TransitionEvents = let view = CompilationFailure
+module LoginExample = let view = CompilationFailure
+module SortableTimerList = let view = CompilationFailure
+module SAFE = let view = CompilationFailure
+module CRUD = let view = CompilationFailure
+module CheckboxInputs = let view = CompilationFailure
+module SelectBindings = let view = CompilationFailure
+module Dimensions = let view = CompilationFailure
+module BarChart = let view = CompilationFailure
+module Spreadsheet = let view = CompilationFailure
+module DataSim = let view = CompilationFailure
+module WebComponents = let view = CompilationFailure
+module SevenGuisCells = let view = CompilationFailure
 
 let allExamples = [
-        { Category = "Introduction";Title = "Hello World";  Link = AppLink (HelloWorld.view , ["HelloWorld.fs"])}
-        { Category = "Introduction";Title = "Dynamic attributes";  Link = AppLink (DynamicAttributes.view , ["DynamicAttributes.fs"])}
-        { Category = "Introduction";Title = "Styling";  Link = AppLink (StylingExample.view , ["Styling.fs"])}
-        { Category = "Introduction";Title = "Nested components";  Link = AppLink (NestedComponents.view , ["NestedComponents.fs"; "Nested.fs"])}
-        { Category = "Introduction";Title = "HTML tags";  Link = AppLink (HtmlTags.view , ["HtmlTags.fs"])}
-        // { Category = "Reactivity";Title = "Reactive assignments";  Link = AppLink (Counter.view , ["Counter.fs"])}
-        // { Category = "Reactivity";Title = "Reactive declarations";  Link = AppLink (ReactiveDeclarations.view , ["ReactiveDeclarations.fs"]) }
-        // { Category = "Reactivity";Title = "Reactive statements";  Link = AppLink (ReactiveStatements.view , ["ReactiveStatements.fs"]) }
-        // { Category = "Logic"; Title = "If blocks"; Link = AppLink (LogicIf.view, ["LogicIf.fs"])  }
-        // { Category = "Logic"; Title = "Else blocks"; Link = AppLink (LogicElse.view, ["LogicElse.fs"])  }
-        // { Category = "Logic"; Title = "Else-if blocks"; Link = AppLink (LogicElseIf.view, ["LogicElseIf.fs"])  }
-        // { Category = "Logic"; Title = "Static each blocks"; Link = AppLink (StaticEachBlocks.view, ["StaticEach.fs"])  }
-        // { Category = "Logic"; Title = "Static each with index"; Link = AppLink (StaticEachWithIndex.view, ["StaticEachWithIndex.fs"])  }
-        // { Category = "Logic"; Title = "Each blocks"; Link = AppLink (EachBlocks.view, ["EachBlocks.fs"])  }
-        // { Category = "Logic"; Title = "Keyed-each blocks"; Link = AppLink (KeyedEachBlocks.view, ["KeyedEachBlocks.fs"])  }
-        // { Category = "Logic"; Title = "Await blocks"; Link = AppLink (AwaitBlocks.view, ["AwaitBlocks.fs"])  }
-        // { Category = "Events"; Title = "DOM events"; Link = AppLink (DomEvents.view, ["DomEvents.fs"])  }
-        // { Category = "Events"; Title = "Custom events"; Link = AppLink (CustomEvents.view, ["CustomEvents.fs"])  }
-        // { Category = "Events"; Title = "Event modifiers"; Link = AppLink (EventModifiers.view, ["EventModifiers.fs"])  }
-        // { Category = "Transitions"; Title = "Transition"; Link = AppLink (Transition.view, ["Transition.fs"])  }
-        // { Category = "Transitions"; Title = "Adding parameters"; Link = AppLink (TransitionParameters.view, ["TransitionParameters.fs"])  }
-        // { Category = "Transitions"; Title = "In and out"; Link = AppLink (TransitionInOut.view, ["TransitionInOut.fs"])  }
-        // { Category = "Transitions"; Title = "Custom CSS"; Link = AppLink (TransitionCustomCss.view, ["TransitionCustomCss.fs"])  }
-        // { Category = "Transitions"; Title = "Custom Code"; Link = AppLink (TransitionCustom.view, ["TransitionCustom.fs"])  }
-        // { Category = "Transitions"; Title = "Transition events"; Link = AppLink (TransitionEvents.view, ["TransitionEvents.fs"])  }
-        // { Category = "Transitions"; Title = "Animation"; Link = AppLink (Todos.view, ["Todos.fs"])  }
-        // { Category = "Bindings";   Title = "Text inputs";  Link = AppLink (TextInputs.view , ["TextInputs.fs"]) }
-        // { Category = "Bindings";   Title = "Numeric inputs";  Link = AppLink (NumericInputs.view , ["NumericInputs.fs"]) }
-        // { Category = "Bindings";   Title = "Checkbox inputs";  Link = AppLink (CheckboxInputs.view , ["CheckboxInputs.fs"]) }
-        // { Category = "Bindings";   Title = "Group inputs";  Link = AppLink (GroupInputs.view , ["GroupInputs.fs"]) }
-        // { Category = "Bindings";   Title = "Textarea inputs";  Link = AppLink (TextArea.view , ["TextArea.fs"]) }
-        // { Category = "Bindings";   Title = "File inputs";  Link = AppLink (FileInputs.view , ["FileInputs.fs"]) }
-        // { Category = "Bindings";   Title = "Select bindings";  Link = AppLink (SelectBindings.view , ["SelectBindings.fs"]) }
-        // { Category = "Bindings";   Title = "Select multiple";  Link = AppLink (SelectMultiple.view , ["SelectMultiple.fs"]) }
-        // { Category = "Bindings";   Title = "Dimensions";  Link = AppLink (Dimensions.view , ["Dimensions.fs"]) }
-        // { Category = "Svg";   Title = "Bar chart";  Link = AppLink (BarChart.view , ["BarChart.fs"]) }
-        // { Category = "Miscellaneous";   Title = "Spreadsheet";  Link = AppLink (Spreadsheet.view , ["Spreadsheet.fs"; "Evaluator.fs"; "Parser.fs"]) }
-        // { Category = "Miscellaneous";   Title = "Modal";  Link = AppLink (Modal.view , ["Modal.fs"]) }
-        // { Category = "Miscellaneous";   Title = "Login";  Link = AppLink (LoginExample.view , ["LoginExample.fs"; "Login.fs"]) }
-        // { Category = "Miscellaneous";   Title = "Drag-sortable list";  Link = AppLink (SortableTimerList.view , ["SortableTimerList.fs"; "DragDropListSort.fs"; "TimerWithButton.fs"; "TimerLogic.fs"]) }
-        // { Category = "Miscellaneous";   Title = "SAFE client";  Link = AppLink (SAFE.view , ["SafeClient.fs"]) }
-        // { Category = "Miscellaneous";   Title = "Data Simulation";  Link = AppLink (DataSim.view , ["DataSim.fs"]) }
-        // { Category = "Miscellaneous";   Title = "Web Components";  Link = AppLink (WebComponents.view , ["WebComponents.fs"]) }
-        // { Category = "Miscellaneous";   Title = "Draw";  Link = AppLink (Draw.view , ["Draw.fs"]) }
-        // { Category = "Miscellaneous";   Title = "Fragment";  Link = AppLink (Fragment.view , ["Fragment.fs"]) }
-        // { Category = "7Guis";   Title = "Cells";  Link = AppLink (SevenGuisCells.view , ["Cells.fs"]) }
-        // { Category = "7Guis";   Title = "CRUD";  Link = AppLink (CRUD.view , ["CRUD.fs"]) }
+        { Pass = true; Category = "Introduction";Title = "Hello World";  Link = AppLink (HelloWorld.view , ["HelloWorld.fs"])}
+        { Pass = true; Category = "Introduction";Title = "Dynamic attributes";  Link = AppLink (DynamicAttributes.view , ["DynamicAttributes.fs"])}
+        { Pass = true; Category = "Introduction";Title = "Styling";  Link = AppLink (StylingExample.view , ["Styling.fs"])}
+        { Pass = true; Category = "Introduction";Title = "Nested components";  Link = AppLink (NestedComponents.view , ["NestedComponents.fs"; "Nested.fs"])}
+        { Pass = true; Category = "Introduction";Title = "HTML tags";  Link = AppLink (HtmlTags.view , ["HtmlTags.fs"])}
+        { Pass = true; Category = "Reactivity";  Title = "Reactive assignments";  Link = AppLink (Counter.view , ["Counter.fs"])}
+        { Pass = true; Category = "Reactivity";  Title = "Reactive declarations";  Link = AppLink (ReactiveDeclarations.view , ["ReactiveDeclarations.fs"]) }
+        { Pass = true; Category = "Reactivity";  Title = "Reactive statements";  Link = AppLink (ReactiveStatements.view , ["ReactiveStatements.fs"]) }
+        { Pass = false; Category = "Logic"; Title = "If blocks"; Link = AppLink (LogicIf.view, ["LogicIf.fs"])  }
+        { Pass = false; Category = "Logic"; Title = "Else blocks"; Link = AppLink (LogicElse.view, ["LogicElse.fs"])  }
+        { Pass = true; Category = "Logic"; Title = "Else-if blocks"; Link = AppLink (LogicElseIf.view, ["LogicElseIf.fs"])  }
+        { Pass = true; Category = "Logic"; Title = "Static each blocks"; Link = AppLink (StaticEachBlocks.view, ["StaticEach.fs"])  }
+        { Pass = true; Category = "Logic"; Title = "Static each with index"; Link = AppLink (StaticEachWithIndex.view, ["StaticEachWithIndex.fs"])  }
+        { Pass = true; Category = "Logic"; Title = "Each blocks"; Link = AppLink (EachBlocks.view, ["EachBlocks.fs"])  }
+        { Pass = false; Category = "Logic"; Title = "Keyed-each blocks"; Link = AppLink (KeyedEachBlocks.view, ["KeyedEachBlocks.fs"])  }
+        { Pass = false; Category = "Logic"; Title = "Await blocks"; Link = AppLink (AwaitBlocks.view, ["AwaitBlocks.fs"])  }
+        { Pass = false; Category = "Events"; Title = "DOM events"; Link = AppLink (DomEvents.view, ["DomEvents.fs"])  }
+        { Pass = false; Category = "Events"; Title = "Custom events"; Link = AppLink (CustomEvents.view, ["CustomEvents.fs"])  }
+        { Pass = false; Category = "Events"; Title = "Event modifiers"; Link = AppLink (EventModifiers.view, ["EventModifiers.fs"])  }
+        { Pass =false; Category = "Transitions"; Title = "Transition"; Link = AppLink (Transition.view, ["Transition.fs"])  }
+        { Pass =false; Category = "Transitions"; Title = "Adding parameters"; Link = AppLink (TransitionParameters.view, ["TransitionParameters.fs"])  }
+        { Pass =false; Category = "Transitions"; Title = "In and out"; Link = AppLink (TransitionInOut.view, ["TransitionInOut.fs"])  }
+        { Pass =false; Category = "Transitions"; Title = "Custom CSS"; Link = AppLink (TransitionCustomCss.view, ["TransitionCustomCss.fs"])  }
+        { Pass =false; Category = "Transitions"; Title = "Custom Code"; Link = AppLink (TransitionCustom.view, ["TransitionCustom.fs"])  }
+        { Pass =false; Category = "Transitions"; Title = "Transition events"; Link = AppLink (TransitionEvents.view, ["TransitionEvents.fs"])  }
+        { Pass =false; Category = "Transitions"; Title = "Animation"; Link = AppLink (Todos.view, ["Todos.fs"])  }
+
+        // Needs Bulma
+        { Pass =true; Category = "Bindings";   Title = "Text inputs";  Link = AppLink (TextInputs.view , ["TextInputs.fs"]) }
+
+        // Needs Bulma
+        { Pass =true; Category = "Bindings";   Title = "Numeric inputs";  Link = AppLink (NumericInputs.view , ["NumericInputs.fs"]) }
+
+        { Pass =false; Category = "Bindings";   Title = "Checkbox inputs";  Link = AppLink (CheckboxInputs.view , ["CheckboxInputs.fs"]) }
+
+        // Needs Bulma
+        { Pass =true; Category = "Bindings";   Title = "Group inputs";  Link = AppLink (GroupInputs.view , ["GroupInputs.fs"]) }
+
+        // Needs Bulma
+        { Pass =true; Category = "Bindings";   Title = "Textarea inputs";  Link = AppLink (TextArea.view , ["TextArea.fs"]) }
+        
+        // Needs Bulma
+        { Pass =true; Category = "Bindings";   Title = "File inputs";  Link = AppLink (FileInputs.view , ["FileInputs.fs"]) }
+
+        { Pass =false; Category = "Bindings";   Title = "Select bindings";  Link = AppLink (SelectBindings.view , ["SelectBindings.fs"]) }
+
+        // Needs Bulma
+        { Pass =true; Category = "Bindings";   Title = "Select multiple";  Link = AppLink (SelectMultiple.view , ["SelectMultiple.fs"]) }
+
+
+        { Pass =false; Category = "Bindings";   Title = "Dimensions";  Link = AppLink (Dimensions.view , ["Dimensions.fs"]) }
+
+        { Pass =false; Category = "Svg";   Title = "Bar chart";  Link = AppLink (BarChart.view , ["BarChart.fs"]) }
+
+        { Pass =false; Category = "Miscellaneous";   Title = "Spreadsheet";  Link = AppLink (Spreadsheet.view , ["Spreadsheet.fs"; "Evaluator.fs"; "Parser.fs"]) }
+        { Pass =true; Category = "Miscellaneous";   Title = "Modal";  Link = AppLink (Modal.view , ["Modal.fs"]) }
+        { Pass =false; Category = "Miscellaneous";   Title = "Login";  Link = AppLink (LoginExample.view , ["LoginExample.fs"; "Login.fs"]) }
+        { Pass =false; Category = "Miscellaneous";   Title = "Drag-sortable list";  Link = AppLink (SortableTimerList.view , ["SortableTimerList.fs"; "DragDropListSort.fs"; "TimerWithButton.fs"; "TimerLogic.fs"]) }
+        { Pass =false; Category = "Miscellaneous";   Title = "SAFE client";  Link = AppLink (SAFE.view , ["SafeClient.fs"]) }
+        { Pass =false; Category = "Miscellaneous";   Title = "Data Simulation";  Link = AppLink (DataSim.view , ["DataSim.fs"]) }
+        { Pass =false; Category = "Miscellaneous";   Title = "Web Components";  Link = AppLink (WebComponents.view , ["WebComponents.fs"]) }
+
+        // Not in Sutil 2
+        // { Pass =false; Category = "Miscellaneous";   Title = "Draw";  Link = AppLink (Draw.view , ["Draw.fs"]) }
+        // { Pass =false; Category = "Miscellaneous";   Title = "Fragment";  Link = AppLink (Fragment.view , ["Fragment.fs"]) }
+
+        { Pass =false; Category = "7Guis";   Title = "Cells";  Link = AppLink (SevenGuisCells.view , ["Cells.fs"]) }
+        { Pass =false; Category = "7Guis";   Title = "CRUD";  Link = AppLink (CRUD.view , ["CRUD.fs"]) }
     ]
 
 let initBooks = [
@@ -436,7 +484,10 @@ let Section (tab:Book) (name:string) = Html.fragment [
                         Attr.href <| makeHref tab.Title  page.Title ""
                     | Url url ->
                         Attr.href url
-                    text page.Title
+                    if tab.Title = "Examples" then
+                        text ((if page.Pass then PASS_EMOJI else FAIL_EMOJI) + " " + page.Title)
+                    else
+                        text page.Title
                 ]
             ]
         ]
@@ -527,7 +578,7 @@ let viewBook showContents (bookPageView : System.IObservable<BookPageView>) =
         Html.div [
             Attr.className "column is-one-quarter app-contents"
 
-            book.Pages |> pageCategories |> List.map (fun title -> Section book title) |> Html.fragment
+            book.Pages |> pageCategories |> List.map (fun title -> Section book title) |> Html.div
         ] //|> showContents
 
         viewPageWithHeader bookPageView
@@ -701,7 +752,7 @@ let appMain () =
     Html.div [
         Attr.className "app-main"
 
-        unsubscribeOnUnmount [ umedia.Value; upage ]
+        unsubscribeOnUnmount [ umedia; upage ]
         disposeOnUnmount [ model ]
 
         Html.div [
@@ -710,7 +761,7 @@ let appMain () =
                 Html.a [
                     Attr.href "https://sutil.dev"
                     Html.img [
-                        Attr.src "images/logo-wide.png"
+                        Attr.src "images/logo-wide.png" // Passion One font
                         Attr.style [ Css.height (px 25) ]
                         ]
                 ]
@@ -741,13 +792,15 @@ let appMain () =
                             Attr.src "https://img.shields.io/nuget/vpre/Sutil?color=rgb%2861%2C80%2C80%29&label=%20nuget&style=social"
                         ]
                     ]
-
                 ] 
+
                 //|> transition [] (model .> (not << isMobile))
             ]
 
             //transition [InOut fade] (model .> isMobile) <| 
+
             Html.a [
+                Attr.style [ Css.displayNone ]
                 Attr.className "show-contents-button"
                 Attr.href "#"
                 Html.i [ Attr.className "fa fa-bars" ]
@@ -762,15 +815,15 @@ let appMain () =
 
         let keyForView = function FrontPage -> "FrontPage" | PageView v -> v.Book.Title
 
-        Bind.el (model |> Store.map getView, keyForView, fun (view:System.IObservable<MainView>) ->
+        Bind.el (model |> Store.map getView, keyForView, fun keyedView ->
             // Because of key, only called when book changes or we transition to/from front page
             // We won't be called for any other model changes (such as the page or section changing)
 
             let pageView =
-                view
-                |> Store.map (function PageView pv -> pv|_ -> failwith "unreachable")
+                model
+                |> Store.map (fun m -> m.View |> function PageView pv -> pv|_ -> failwith "unreachable")
 
-            match (view |> Store.current) with
+            match (keyedView) with
             | FrontPage ->
                 viewFrontPage()
             | PageView _ ->

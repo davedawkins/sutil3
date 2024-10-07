@@ -11,7 +11,6 @@ open Browser.CssExtensions
 open System
 open Core.Sutil2
 open Sutil.Dom
-open Sutil.Dom.Types
 
 let isCrossOrigin = false // TODO
 
@@ -25,7 +24,7 @@ let [<Literal>] private ResizeObserverKey = "__sutil_resize"
 type ResizeObserver( el : HTMLElement ) =
     let mutable iframe : HTMLIFrameElement = Unchecked.defaultof<_>
     let mutable subId = 0
-    let mutable unsubscribe : (Unsubscribable) = Unchecked.defaultof<_>
+    let mutable unsubscribe : Unsubscriber = Unchecked.defaultof<_>
     let mutable subscribers = []
 
     let notify _ =
@@ -60,10 +59,10 @@ type ResizeObserver( el : HTMLElement ) =
         let sub = { Callback = callback; Id = subId }
         subId <- subId + 1
         subscribers <- sub :: subscribers
-        (fun () -> subscribers <- subscribers |> List.filter (fun s -> s.Id <> sub.Id)) |> Unsubscribe |>  Dispose.makeDisposable
+        (fun () -> subscribers <- subscribers |> List.filter (fun s -> s.Id <> sub.Id)) |>  Dispose.makeDisposable
 
     member _.Dispose() =
-        try unsubscribe.Invoke() with |_ -> ()
+        try unsubscribe() with |_ -> ()
         if not (isNull iframe) then
             iframe.parentNode.removeChild(iframe) |> ignore
 

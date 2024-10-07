@@ -7,7 +7,7 @@ open type Feliz.length
 open type Feliz.borderStyle
 open Sutil
 
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Bind
 

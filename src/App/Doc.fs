@@ -1,10 +1,8 @@
 module Doc
 
 open Sutil
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.Bind
-open type Feliz.length
-open Sutil.Core
 open Sutil.CoreElements
 
 open Fetch
@@ -13,6 +11,19 @@ open Types
 open Fable.Formatting.Markdown
 open Fable.Core.Util
 open Fable.Core
+
+[<RequireQualifiedAccess>]
+module Bulma =
+    let h1 (children : SutilElement seq) = 
+        Html.h1c "title is-1" children
+    let h2 (children : SutilElement seq) = 
+        Html.h2c "title is-2" children
+    let h3 (children : SutilElement seq) = 
+        Html.h3c "title is-3" children
+    let h4 (children : SutilElement seq) = 
+        Html.h4c "title is-4" children
+    let h5 (children : SutilElement seq) = 
+        Html.h5c "title is-5" children
 
 [<ImportAll("./highlight.min.js")>]
 let hljs : obj = jsNative;
@@ -236,14 +247,14 @@ type FoldType = {
 let seqOfNodeList<'T> (nodes: Browser.Types.NodeListOf<'T>) =
     seq {
         for i in [0..nodes.length-1] do
-            yield nodes.[i]
+            yield nodes[i]
     }
 
 //
 // Find all descendant nodes that match the given selector
 //
-let querySelectorAll selector (node : Browser.Types.HTMLElement) =
-    node.querySelectorAll(selector) |> seqOfNodeList
+let querySelectorAll (selector : string) (node : Browser.Types.HTMLElement) =
+    node.querySelectorAll(selector) |> seqOfNodeList |> Seq.toArray
 
 open Sutil.Dom
 
@@ -277,6 +288,8 @@ let processReplDirectives (preCode : Browser.Types.Element) : bool =
     |> Seq.contains false
     |> not
 
+
+open Sutil.Dom
 
 //
 // Find all "<pre><code>...</code></pre>" blocks
@@ -353,6 +366,7 @@ let addClasses (node : Browser.Types.HTMLElement) =
 // Add "Open in REPL" buttons to all <pre><code> example code blocks
 //
 let addReplButtons (markdown : Browser.Types.HTMLElement) =
+
     markdown
         |> addClasses
         |> findPreCode
@@ -366,13 +380,15 @@ let pageView title source () =
 
     Html.div [
         disposeOnUnmount [ content ]
-        Html.h2 [ text title ]
+        Bulma.h2 [ text title ]
         Html.div [
             Html.span [
                 Bind.el(
                     content,
                     fun t ->
-                        Html.parse $"{parse source t}" |> CoreElements.postProcessElements addReplButtons
+                        Html.parse $"{parse source t}" 
+                            |> CoreElements.postProcessElementsWithName "addReplButtons" addReplButtons
+                            //|> CoreElements.postProcessElementsWithName "addReplButtons" (fun node -> DomHelpers.timeout (fun () -> addReplButtons node) 3000 |> ignore)
                 )
             ] |> withStyle Markdown.style
         ]
@@ -392,6 +408,7 @@ let parseIndex (src:string) =
         | '-' ->
             let title, pageSrc = parseLink line.[1..]
             let page = {
+                    Pass = true;
                     Category = accum.Category;
                     Title = title;
                     Link =

@@ -8,7 +8,7 @@ open Sutil.Styling
 open Sutil.Elmish
 open Sutil.Bind
 open Sutil.CoreElements
-open Sutil.Dsl
+open Sutil.Html
 open Browser.Types
 
 open type Feliz.length

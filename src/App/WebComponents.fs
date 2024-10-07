@@ -2,7 +2,7 @@ module WebComponents
 
 open Sutil
 
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.Bind
 open Browser.Types
 open Sutil.Styling

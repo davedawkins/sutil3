@@ -2,7 +2,7 @@ namespace Sutil
 
 open Sutil
 open Browser.Types
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Bind
 open Core
@@ -72,7 +72,7 @@ type Navigable =
         Html.fragment [
             disposeOnUnmount [
                 store
-                Navigable.listenLocation(id,Store.set store) |> Sutil.Dom.Types.Unsubscribe |> Sutil.Dom.Dispose.makeDisposable
+                Navigable.listenLocation(id,Store.set store) |> Sutil.Dom.Dispose.makeDisposable
             ]
             Bind.el( store, view )
         ]

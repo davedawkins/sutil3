@@ -6,7 +6,7 @@ module Transition
 open Sutil
 
 open Sutil.Core
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Bind
 // open Sutil.Transition

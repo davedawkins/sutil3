@@ -1,17 +1,16 @@
 module Sutil.Bind
 
-open Browser.Types
 open System
-
 open Fable.Core
+open Browser.Types
 
-open Core
-open Bindings
+open Sutil.Core
+open Sutil.Bindings
 
 /// <summary>
 /// Bindings for observables and the Core. For example, use an <c>IObservable&lt;bool></c> to toggle an element's <c>class</c> attribute
 /// </summary>
-type Bind =
+type [<Erase>] Bind =
 
     // static member visibility( isVisible : IObservable<bool>) = Transition.transition [] isVisible
     // static member visibility( isVisible : IObservable<bool>,trans : TransitionAttribute list) = Transition.transition trans isVisible
@@ -103,8 +102,8 @@ type Bind =
     static member el<'T,'K when 'K : equality>  (value : IObservable<'T>, key:'T->'K, element: 'T -> SutilElement) : SutilElement =
         bindElementK value element key
 
-    static member el<'T,'K when 'K : equality>  (value : IObservable<'T>, key:'T->'K, element: IObservable<'T> -> SutilElement) : SutilElement =
-        bindElementKO value element key
+    // static member el<'T,'K when 'K : equality>  (value : IObservable<'T>, key:'T->'K, element: IObservable<'T> -> SutilElement) : SutilElement =
+    //     bindElementKO value element key
 
     /// Deprecated naming, use Bind.el
     static member fragment<'T>  (value : IObservable<'T>)  (element: 'T -> SutilElement) = bindElement value element

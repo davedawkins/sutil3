@@ -1,7 +1,7 @@
 module Sutil.Markdown
 
 open Sutil.Styling
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.Core
 open Sutil.CoreElements
 

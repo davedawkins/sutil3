@@ -8,7 +8,7 @@ open WebTestRunner
 #endif
 
 open Sutil
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Bind
 
@@ -262,6 +262,35 @@ describe "Sutil.Binding" <| fun () ->
         Expect.areEqual(storeOuter |> Store.countSubscribers,1,"1 outer sub after modify #3")
         Expect.areEqual(disposed,3,"disposed")
         Expect.areEqual(numRenders,2,"numRenders #4")
+    }
+
+    // Test the patcher to make sure it replaces a real element with an effect rather
+    // than just run the  effect
+    it "Binding to non-bind effect" <| fun _ -> promise {
+        let content = Store.make "Loading.."
+        let mutable renderCount = 0
+
+        let app() =
+            Html.span [
+                Bind.el(
+                    content,
+                    fun html ->
+                        do renderCount <- renderCount + 1
+                        Html.parse html
+                    )
+            ]
+
+        app() |> mountTestApp
+
+        Expect.queryText "span>div:nth-child(1)" "Loading.." 
+        Expect.queryNumChildren "span" 1
+
+        "Content" |> Store.set content
+
+        Expect.queryText "span>div:nth-child(1)" "Content" 
+        Expect.queryNumChildren "span" 1
+
+        return ()
     }
 
 let init() = ()

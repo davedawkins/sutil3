@@ -21,24 +21,22 @@ type Program() =
     ///</summary>
     static member mount (id : string, app : SutilElement) : IDisposable =
         Core.mount
-            (BuildContext.Create()
-                .WithParentId(id)
-                .WithMount( fun parent node -> DomEdit.clear parent; DomEdit.appendLabel "Program.mount" parent node ))
+            (BuildContext.Create(Browser.Dom.document.getElementById(id))
+                .WithAppendNode( fun parent node -> DomEdit.clear parent; DomEdit.appendLabel "Program.mount" parent node ))
             null
             app
-        |> (fun node -> Dispose.makeDisposable( (fun () -> DomEdit.remove node) |> Types.Unsubscribe ) )
+        |> (fun node -> Dispose.makeDisposable( fun () -> DomEdit.remove node) )
 
     ///<summary>
     /// Mount application on given HTMLElement. Existing children at that node will be removed. Return value can be disposed to unmount and clean up.
     ///</summary>
     static member mount (host : HTMLElement, app : SutilElement) : IDisposable=
         Core.mount
-            (BuildContext.Create()
-                .WithParent(host)
-                .WithMount( fun parent node -> DomEdit.clear parent; DomEdit.appendLabel "Program.mount2" parent node ))
+            (BuildContext.Create(host)
+                .WithAppendNode( fun parent node -> DomEdit.clear parent; DomEdit.appendLabel "Program.mount2" parent node ))
             null
             app
-        |> (fun node -> Dispose.makeDisposable(Types.Unsubscribe( fun () -> DomEdit.remove node ) ))
+        |> (fun node -> Dispose.makeDisposable(fun () -> DomEdit.remove node))
 
     ///<summary>
     /// Mount application on element with id "sutil-app". Existing children at that node will be removed. Return value is <c>unit</c>, so use alternate version <c>mount( id, app )</c>
@@ -60,15 +58,14 @@ type Program() =
     static member mountAfter (prev : HTMLElement, app : SutilElement) : IDisposable =
 
         Core.mount
-            (BuildContext.Create()
-                .WithParent( prev.parentElement )
-                .WithMount( 
+            (BuildContext.Create(prev.parentElement).WithLogEnabled()
+                .WithAppendNode( 
                     fun parent node -> DomEdit.insertAfter parent node prev
                 ))
             null
             app
 
-        |> (fun node -> Dispose.makeDisposable( Types.Unsubscribe( fun () -> DomEdit.remove node ) ))
+        |> (fun node -> Dispose.makeDisposable(fun () -> DomEdit.remove node))
 
     ///<summary>
     /// Mount application at given element, appending as last child and preserving existing children. Return value can be disposed to unmount and clean up.
@@ -76,12 +73,11 @@ type Program() =
     static member mountAppend (prev : HTMLElement, app : SutilElement) : IDisposable =
 
         Core.mount
-            (BuildContext.Create()
-                .WithParent( prev.parentElement ))
+            (BuildContext.Create( prev.parentElement))
             null
             app
 
-        |> (fun node -> Dispose.makeDisposable( Types.Unsubscribe( fun () -> DomEdit.remove node )) )
+        |> (fun node -> Dispose.makeDisposable( fun () -> DomEdit.remove node))
 
     ///<summary>
     /// Remove this node, cleaning up all related Sutil resources. By design, it should be rare that you need to use this, but it provides

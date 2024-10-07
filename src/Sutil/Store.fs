@@ -1,22 +1,5 @@
 namespace Sutil
 
-type 'T observable = System.IObservable<'T>
-
-open System
-open Microsoft.FSharp.Core
-
-///  <exclude />
-type IReadOnlyStore<'T> =
-    inherit IObservable<'T>
-    inherit IDisposable
-    abstract Value : 'T
-    abstract OnDispose: (unit -> unit) -> unit
-
-type IStore<'T> =
-    inherit IReadOnlyStore<'T>
-    abstract Update : f: ('T -> 'T) -> unit
-    abstract Name : string with get, set
-
 /// <summary>
 /// Helper functions for <c>IObservables</c>
 /// </summary>
@@ -25,7 +8,6 @@ module Observable =
 
     open System
     open Sutil.Dom
-    open Sutil.Dom.Types
 
     [<AbstractClass>]
     type BasicObserver<'T>() =
@@ -54,7 +36,7 @@ module Observable =
                 let disposeA = a.Subscribe(fun v -> valueA <- Some v; notify())
                 let disposeB = b.Subscribe(fun v -> valueB <- Some v; notify())
 
-                Dispose.makeDisposable(Unsubscribable.Of (fun _ -> disposeA.Dispose(); disposeB.Dispose()))
+                Dispose.makeDisposable(fun _ -> disposeA.Dispose(); disposeB.Dispose())
         }
 
     let zip<'A,'B> (a:IObservable<'A>) (b:IObservable<'B>) : IObservable<'A*'B> =
@@ -78,7 +60,7 @@ module Observable =
                 )
 
                 Dispose.makeDisposable ( 
-                    Unsubscribe (fun _ -> disposeA.Dispose()  )
+                    (fun _ -> disposeA.Dispose()  )
                 )
         }
 
@@ -103,7 +85,7 @@ module Observable =
 
                 notify()
 
-                Dispose.makeDisposable ( (fun _ -> disposeA.Dispose()) |> Unsubscribe )
+                Dispose.makeDisposable ( (fun _ -> disposeA.Dispose()) )
         }
 
 
@@ -116,7 +98,7 @@ module Observable =
                     try h.OnNext (predicate x)
                     with ex -> h.OnError ex
                 )
-                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()) |> Unsubscribe )
+                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()) )
         }
 
     /// Filters the observable elements of a sequence based on a predicate
@@ -127,7 +109,7 @@ module Observable =
                     try if predicate x then h.OnNext x
                     with ex -> h.OnError ex
                 )
-                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()) |> Unsubscribe )
+                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()) )
         }
 
     //let choose (f : 'T option -> 'R option) (source:IObservable<'T option>) : IObservable<'R> =
@@ -141,8 +123,8 @@ module Observable =
 
 [<RequireQualifiedAccess>]
 module Store =
+    open System
     open Sutil.Dom
-    open Sutil.Dom.Types
 
     let logEnabled() = false
     let log s = ()
@@ -207,10 +189,10 @@ module Store =
             // Sutil depends on an immediate callback
             observer.OnNext(model())
 
-            Dispose.makeDisposable( Unsubscribe ( fun () ->
+            Dispose.makeDisposable( fun () ->
                 if logEnabled() then log $"unsubscribe {id}"
                 subscribers.Remove(id) |> ignore
-            ))
+            )
 
         member this.Name with get() = name and set (v) = name <- v
 
@@ -512,7 +494,7 @@ module Store =
 
         (fun () ->
             unsuba.Dispose()
-            unsubb.Dispose()) |> Unsubscribe |> Dispose.makeDisposable
+            unsubb.Dispose()) |> Dispose.makeDisposable
 
 /// <summary>
 /// Operators for store functions

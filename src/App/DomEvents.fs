@@ -5,7 +5,7 @@ module DomEvents
 
 open Sutil
 open type Feliz.length
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.Bind
 open Sutil.CoreElements
 

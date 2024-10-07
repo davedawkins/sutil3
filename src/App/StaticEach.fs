@@ -3,7 +3,7 @@ module StaticEachBlocks
 // Adapted from
 // https://svelte.dev/examples
 
-open Sutil.Dsl
+open Sutil.Html
 
 type Cat = { Id : string; Name : string }
 

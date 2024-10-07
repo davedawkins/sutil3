@@ -6,7 +6,7 @@ module Draw
 
 open Sutil
 open Sutil.Dom
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.Styling
 
 open Browser.CssExtensions
@@ -379,8 +379,6 @@ module SvgCanvas =
         inherit Shape<GroupAttrs,Group>(attrs,style,events)
 
         let mutable _children : Viewable[] = [| |]
-
-        do ()
 
         member __.Nop( cx ) = __.Update( [ Nop cx], [], []); __
         member __.Children( children : Viewable seq ) = _children <- children |> Seq.toArray; __.Redraw(); __

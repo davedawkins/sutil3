@@ -4,7 +4,7 @@ module NestedComponents
 // https://svelte.dev/examples
 
 open Sutil.Styling
-open Sutil.Dsl
+open Sutil.Html
 open Nested
 
 open type Feliz.length

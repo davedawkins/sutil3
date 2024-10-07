@@ -1,7 +1,7 @@
 module SAFE
 
 open Sutil.CoreElements
-open Sutil.Dsl
+open Sutil.Html
 
 module Shared =
 

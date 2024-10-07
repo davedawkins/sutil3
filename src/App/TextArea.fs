@@ -6,7 +6,7 @@ module TextArea
 open Sutil
 open type Feliz.length
 
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Styling
 open Sutil.Bind

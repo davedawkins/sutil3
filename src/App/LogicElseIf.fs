@@ -4,7 +4,7 @@ module LogicElseIf
 // https://svelte.dev/examples
 
 open Sutil
-open Sutil.Dsl
+open Sutil.Html
 
 let x = 7;
 

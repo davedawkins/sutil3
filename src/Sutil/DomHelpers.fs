@@ -1,29 +1,16 @@
 
 namespace Sutil.Dom
 
+open Sutil
+
 [<AutoOpen>]
 module private Locals =
     let log = Sutil.Log.create "Dom"
-
-/// This doesn't belong in DOM. The current type is a way of helping the Core framework
-/// manage the (unit -> unit) unsubscribe idea that Svelte uses. We use IDisposable more
-/// in F# / .NET (eg in System.IObservable)
-module Types =
-    open Fable.Core
-
-    [<Erase>]
-    type Unsubscribable =
-        Unsubscribe of (unit -> unit)
-        with 
-            static member Of(f) = Unsubscribe f
-            member __.Value = let (Unsubscribe f) = __ in f
-            member __.Invoke() = __.Value ()
         
 /// Helper functions for working with Node and its Element and Text subtypes
 module TypeHelpers =
 
     open Browser.Types
-    open Fable.Core
 
     [<Literal>]
     let internal ElementNodeType = 1.0
@@ -126,9 +113,9 @@ module NodeKey =
 /// Support for managing event listeners.
 module EventListeners =
     open Browser.Types
-    open Types
+    open Fable.Core.JsInterop
 
-    let [<Literal>] Listeners = "__sutil_ev"
+    let [<Literal>] LISTENERS = "__sutil_ev"
 
     type NamedHandler =  (string * (Event -> unit))
 
@@ -139,8 +126,8 @@ module EventListeners =
     //     e.addEventListener (event, fn)
     //     (fun () -> e.removeEventListener (event, fn) |> ignore)
 
-    let add (node : EventTarget) (event : string) (f : Event -> unit) : Unsubscribable =
-        JsMap.arrayAppendKey node Listeners (Array.singleton (event,f))
+    let add (node : EventTarget) (event : string) (f : Event -> unit) : Unsubscriber =
+        JsMap.arrayAppendKey node LISTENERS (Array.singleton (event,f))
 
         node.addEventListener(event, f)
 
@@ -148,20 +135,20 @@ module EventListeners =
             node.removeEventListener( event, f )
             JsMap.arrayRemoveKey 
                 node 
-                Listeners 
-                (fun (name,fn) -> JsHelpers.eq3 fn f )) |> Unsubscribable.Of
+                LISTENERS 
+                (fun (name,fn) -> JsHelpers.eq3 fn f ))
 
     let clear (node : Node) =
-        NodeKey.getKeyWith Listeners node empty
+        NodeKey.getKeyWith LISTENERS node empty
             |> Array.iter (fun (name, f) -> node.removeEventListener(name,f))
-        NodeKey.deleteKey Listeners node
+        NodeKey.deleteKey LISTENERS node
 
     /// Listen for the given event, and remove the listener after the first occurrence of the evening firing.
     let once (event: string) (target: EventTarget) (fn: Event -> Unit) : unit =
-        let mutable remove : Unsubscribable = Unchecked.defaultof<_>
+        let mutable remove : Unsubscriber = Unchecked.defaultof<_>
 
         let rec inner e =
-            remove.Invoke()
+            remove()
             fn (e)
 
         remove <- add (target :?> Node) event inner
@@ -195,36 +182,19 @@ module Id =
         | true -> Some(JsMap.getKey map key)
         | _ -> None
 
-    let nodeStrShort (node: Node) =
-        let svId node = getId node
-        
-        if isNull node then
-            "null"
-        else
-            let mutable tc = node.textContent
-
-            if tc.Length > 16 then
-                tc <- tc.Substring(0, 16) + "..."
-
-            match node.nodeType with
-            | ElementNodeType ->
-                let e = node :?> HTMLElement
-                $"<{e.tagName.ToLower()}> #{svId node}"
-            | TextNodeType -> $"text:\"{tc}\" #{svId node}"
-            | _ -> $"?'{tc}'#{svId node}"
 
 /// Support for custom events in general and the custom events that Sutil uses
 module CustomEvents =
     open Fable.Core
     open Browser.Types
 
-    let [<Literal>] ElementReady = "sutil-element-ready"
-    let [<Literal>] Mount = "sutil-mount"
-    let [<Literal>] Unmount = "sutil-unmount"
-    let [<Literal>] Show = "sutil-show"
-    let [<Literal>] Hide = "sutil-hide"
-    let [<Literal>] Updated = "sutil-updated"
-    let [<Literal>] Connected = "sutil-connected"
+    let [<Literal>] ELEMENT_READY = "sutil-element-ready"
+    let [<Literal>] MOUNT = "sutil-mount"
+    let [<Literal>] UNMOUNT = "sutil-unmount"
+    let [<Literal>] SHOW = "sutil-show"
+    let [<Literal>] HIDE = "sutil-hide"
+    let [<Literal>] UPDATED = "sutil-updated"
+    let [<Literal>] CONNECTED = "sutil-connected"
 
     [<Emit("new CustomEvent($0, $1)")>]
     let customEvent name data = jsNative
@@ -241,6 +211,9 @@ module CustomEvents =
         if not (isNull target) then
             target.dispatchEvent (customEvent name init)
             |> ignore
+
+    let notifySutilUpdated (doc : EventTarget) = 
+        dispatchSimple doc UPDATED
 
     /// <summary>
     /// Custom events
@@ -286,7 +259,39 @@ module DomHelpers =
         |> Option.map _.outerHTML 
         |> Option.defaultValue (if isNull n then "<null node>" else n.textContent)
 
+
     let elementTag (n : Node) = if isElementNode n then (asElement n).tagName else ""
+
+    let toStringSummary (node: Node) =
+        let svId node = Id.getId node
+        
+        if isNull node then
+            "null"
+        else
+            let mutable tc = node.textContent
+
+            if tc.Length > 16 then
+                tc <- tc.Substring(0, 16) + "..."
+
+            let _s s f = if s = "" then "" else sprintf f s
+
+            match node.nodeType with
+            | ElementNodeType ->
+                let e = node :?> HTMLElement
+                let tn = (e.tagName.ToLower())
+                let cs = [ for i in 0..(e.classList.length-1) do e.classList[i] ] |> String.concat " "
+                sprintf "<%s%s%s>%s</%s>"  
+                    tn
+                    (_s (cs) " class='%s'")
+                    (_s (svId node) " sutil-id='%s'")
+                    tc //e.innerText
+                    tn
+
+            | TextNodeType -> 
+                sprintf "<text sutil-id='%A'>%s</text>"  
+                    (svId node)
+                    tc
+            | _ -> $"?'{tc}'#{svId node}"
 
     let private ifNotNull (f : 't -> unit) (n : 't) =
         if not (isNull n) then f n
@@ -315,7 +320,7 @@ module DomHelpers =
                 yield child
         }
 
-    let internal isConnected (node: Node) : bool = JsMap.getKey node "isConnected"
+    let isConnected (node: Node) : bool = JsMap.getKey node "isConnected"
 
     let findElement (doc : Document) selector = doc.querySelector(selector)
 
@@ -356,13 +361,12 @@ module DomHelpers =
 module Dispose =
     open NodeKey
     open Browser.Types
-    open Types
     open DomHelpers
     
     let [<Literal>] Disposables = "__sutil_ds"
 
-    let makeDisposable (f : Unsubscribable) =
-        { new System.IDisposable with member _.Dispose() = f.Invoke() }
+    let makeDisposable (f : Unsubscriber) =
+        { new System.IDisposable with member _.Dispose() = f() }
 
     let private hasDisposables (node: Node) : bool = 
         hasKey (Disposables) node
@@ -381,12 +385,12 @@ module Dispose =
         |> Array.append (getDisposables node)
         |> setDisposables node
 
-    let addUnsubscribe( node : Node) (f : Unsubscribable) =
+    let addUnsubscribe( node : Node) (f : Unsubscriber) =
         f |> makeDisposable |> addDisposable node
 
     let internal disposeNode (node : Node) = 
         
-        CustomEvents.dispatchSimple node CustomEvents.Unmount
+        CustomEvents.dispatchSimple node CustomEvents.UNMOUNT
 
         let safeDispose (d : System.IDisposable) = 
             try d.Dispose() with x -> log.error (sprintf "Error while disposing: %s" x.Message)
@@ -405,6 +409,37 @@ module Dispose =
         disposeNode node
 
     let internal dispose (node : Node) = disposeTree node
+
+
+/// Support for editing classes
+module ClassHelpers =
+    open System
+    open Browser.Types
+
+    let splitBySpace (s: string) =
+        s.Split([| ' ' |], StringSplitOptions.RemoveEmptyEntries)
+
+    let setClass (className: string) (e: HTMLElement) = e.className <- className
+
+    let toggleClass (className: string) (e: HTMLElement) =
+        e.classList.toggle (className) |> ignore
+
+    let setClassList (element : HTMLElement) (classes : string[]) =
+        setClass (classes |> String.concat " ") element
+        
+    let addToClasslist classes (e: HTMLElement) =
+        e.classList.add (classes |> splitBySpace)
+
+    let removeFromClasslist classes (e: HTMLElement) =
+        e.classList.remove (classes |> splitBySpace)
+
+    let toSeq (classes : DOMTokenList) : seq<string> = 
+        seq {
+            for i in 0..(classes.length-1) do yield classes[i]
+        }
+    
+    let toArray (classes : DOMTokenList) : string[] = classes |> toSeq |> Seq.toArray
+
 
 /// Support for edits to the DOM: creating nodes, setting attributes etc
 module DomEdit =
@@ -479,6 +514,8 @@ module DomEdit =
                 el.setAttribute (name, "")
             else
                 el.removeAttribute name
+        // elif (name.ToLower() = "class") then
+        //     ClassHelpers.addToClasslist svalue el
         else
             el.setAttribute(name, svalue)
 
@@ -514,26 +551,6 @@ module DomEdit =
         let titleEl = doc.createElement("title")
         titleEl.appendChild( doc.createTextNode(title) ) |> ignore
         head.appendChild(titleEl) |> ignore
-
-/// Support for editing classes
-module ClassHelpers =
-    open System
-    open Browser.Types
-
-    let private  splitBySpace (s: string) =
-        s.Split([| ' ' |], StringSplitOptions.RemoveEmptyEntries)
-
-    let setClass (className: string) (e: HTMLElement) = e.className <- className
-
-    let toggleClass (className: string) (e: HTMLElement) =
-        e.classList.toggle (className) |> ignore
-
-    let addToClasslist classes (e: HTMLElement) =
-        e.classList.add (classes |> splitBySpace)
-
-    let removeFromClasslist classes (e: HTMLElement) =
-        e.classList.remove (classes |> splitBySpace)
-
 
 /// 
 [<AutoOpen>]

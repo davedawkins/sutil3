@@ -7,7 +7,7 @@ open type Feliz.borderStyle
 open Sutil
 open Sutil.Styling
 
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.Bind
 open Sutil.Elmish
 open Fable.Core.JsInterop

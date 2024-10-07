@@ -3,7 +3,7 @@ module HtmlTags
 // Adapted from
 // https://svelte.dev/examples
 
-open Sutil.Dsl
+open Sutil.Html
 
 let stringOfHtml = "here's some <strong>HTML!!!</strong>"
 

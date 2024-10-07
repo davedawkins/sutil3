@@ -3,7 +3,7 @@ module DynamicAttributes
 // Adapted from
 // https://svelte.dev/examples
 
-open Sutil.Dsl
+open Sutil.Html
 
 let src = "https://i.gifer.com/K9s.gif"
 let name = "Minion"

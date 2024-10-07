@@ -3,7 +3,7 @@ module CustomEvents
 open Sutil
 open type Feliz.length
 open Sutil.CoreElements
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.Bind
 open Sutil.Dom.CustomEvents
 

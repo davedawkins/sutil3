@@ -10,81 +10,19 @@ New in Sutil 3
 
 # Modules and Namespaces
 
-Top level namespace is Sutil
+Notes from Maxime meeting Oct-5
 
-Namespaces:
+- Docs are detailed but hard to parse. Comapre with Fable.Form docs
+- Open in REPL is good!
+- Try not to mix use of namespace / module
+- What I Want to Work with . subgroup . helpers function
+- SideEffect -> SutilSideEffect
+- Dsl.fs into own package
+- Upper case for Literals
+- Prefix with SUTIL_
+- <| only in tests
+- Fable.Form fantomas settings
+- [<Erase>] can remove reflection *eg Bind - use on static types eg - when no instance needed
+- Use inline for 'rename' helpers
+- EasyBuild
 
-Sutil
-Sutil.Dom
-Sutil.Elmish
-Sutil.Dsl
-
-Modules are:
-
-Namespace : Sutil.Dom
-
-module Types =
-module TypeHelpers =
-module Logging = 
-module JsHelpers =
-module JsMap =
-module NodeKey =
-module EventListeners =
-module Id =
-module CustomEvents =
-module DomHelpers =
-module Dispose =
-module DomEdit =
-module ClassHelpers =
-module Extensions =
-
-Bind.fs:module BindOperators =
-
-
-Internal
-
-Bindings.fs:module internal Sutil.Bindings
-
-namespace Sutil.Elmish
-
-Cmd.fs:module Sutil.Elmish.Cmd
-Cmd.fs:// TODO: Refactor this into Sutil.Elmish module
-Cmd.fs:module internal Timer =
-Cmd.fs:module OfFunc =
-Cmd.fs:module OfAsyncWith =
-Cmd.fs:module OfAsync =
-Cmd.fs:module OfAsyncImmediate =
-Cmd.fs:module OfPromise =
-Cmd.fs:module OfTask =
-Core.fs:module Sutil.Core
-Core.fs:module Sutil2 =
-Core.fs:    module Interop =
-Core.fs:    module Logging =
-Core.fs:    module Ext =
-CoreTypes.fs:module Sutil.CoreTypes
-CoreTypes.fs:module CollectionWrapperExt =
-CoreTypes.fs:module internal CollectionWrapper =
-Dsl.fs:module Sutil.Dsl
-Dsl.fs:module Html =
-Dsl.fs:module EngineHelpers =
-Dsl.fs:module PseudoCss =
-Elmish.fs:module Sutil.Elmish
-Elmish.fs:module internal Helpers =
-EventHelpers.fs:module Sutil.EventHelpers
-Helpers.fs:module Sutil.Helpers
-Log.fs:module Sutil.Log
-Patch.fs:module Sutil.Patch 
-ResizeObserver.fs:module Sutil.ResizeObserver
-
-Store.fs:module Sutil.Store 
-Store.fs:module Observable =
-Store.fs:module StoreOperators =
-Store.fs:module StoreExtensions =
-Store.fs:module ObservablePromise =
-Style.fs:module Sutil.Style 
-StyleDomHelpers.js.fs:module Sutil.StyleDomHelpers 
-VirtualDom.fs:module Sutil.VirtualDom 
-
-DomHelpers.fs:namespace Sutil.Dom
-Dsl.fs:    /// own namespace. For example
-Program.fs:namespace Sutil

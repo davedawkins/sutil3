@@ -9,6 +9,72 @@ open System
 open Fable.Core
 open Sutil
 
+/// <exclude/>
+type internal ICollectionWrapper<'T> =
+    abstract member ToList : unit -> List<'T>
+    abstract member ToArray : unit -> 'T array
+    abstract member Length : int
+    abstract member Mapi : (int -> 'T -> 'R) -> ICollectionWrapper<'R>
+    abstract member Map : ('T -> 'R) -> ICollectionWrapper<'R>
+    abstract member Exists : ('T -> bool) -> bool
+    abstract member TryFind : ('T -> bool) -> 'T option
+    inherit System.Collections.Generic.IEnumerable<'T>
+
+///  <exclude />
+[<AutoOpen>]
+module internal CollectionWrapperExt =
+
+    type private ListW<'T>(list: 'T list) =
+        interface ICollectionWrapper<'T> with
+            member _.ToList() = list
+            member _.ToArray() = list |> Array.ofList
+            member _.Length = list.Length
+            member _.Mapi(f: (int -> 'T -> 'R)) = upcast ListW((list |> List.mapi f))
+            member _.Map(f: ('T -> 'R)) = upcast ListW(list |> List.map f)
+            member _.Exists(p: 'T -> bool) = list |> List.exists p
+            member _.TryFind(p: 'T -> bool) = list |> List.tryFind p
+
+        interface System.Collections.IEnumerable with
+            member _.GetEnumerator() =
+                upcast (list |> Seq.ofList).GetEnumerator()
+
+        interface System.Collections.Generic.IEnumerable<'T> with
+            member _.GetEnumerator() =
+                upcast (list |> Seq.ofList).GetEnumerator()
+
+    type private ArrayW<'T>(a: 'T array) =
+        interface ICollectionWrapper<'T> with
+            member _.ToList() = a |> List.ofArray
+            member _.ToArray() = a
+            member _.Length = a.Length
+            member _.Mapi(f: (int -> 'T -> 'R)) = upcast ArrayW((a |> Array.mapi f))
+            member _.Map(f: ('T -> 'R)) = upcast ArrayW(a |> Array.map f)
+            member _.Exists(p: 'T -> bool) = a |> Array.exists p
+            member _.TryFind(p: 'T -> bool) = a |> Array.tryFind p
+
+        interface System.Collections.IEnumerable with
+            member _.GetEnumerator() =
+                upcast (a |> Seq.ofArray).GetEnumerator()
+
+        interface System.Collections.Generic.IEnumerable<'T> with
+            member _.GetEnumerator() =
+                upcast (a |> Seq.ofArray).GetEnumerator()
+
+    type List<'T> with
+        member internal __.ToCollectionWrapper() : ICollectionWrapper<'T> = upcast ListW(__)
+
+    type 'T ``[]`` with
+        member internal __.ToCollectionWrapper() : ICollectionWrapper<'T> = upcast ArrayW(__)
+
+///  <exclude />
+module internal CollectionWrapper =
+    let length (c: ICollectionWrapper<'T>) = c.Length
+    let mapi (f: (int -> 'T -> 'R)) (c: ICollectionWrapper<'T>) = c.Mapi f
+    let map (f: ('T -> 'R)) (c: ICollectionWrapper<'T>) = c.Map f
+    let exists f (c: ICollectionWrapper<'T>) = c.Exists(f)
+    let tryFind f (c: ICollectionWrapper<'T>) = c.TryFind(f)
+
+
 let private logEnabled() = false
 let private log s = Log.Console.log(s)
 let logEachEnabled key = false //Logging.isEnabled key
@@ -19,7 +85,7 @@ let bindSub<'T> (source : IObservable<'T>) (handler : BuildContext -> 'T -> unit
     fun ctx ->
     let unsub = source.Subscribe( handler ctx )
     SutilEffect.RegisterDisposable(ctx.Parent,unsub)
-    EffectedNode (ctx.ParentElement)
+    DomEffect
     )
 
 open Sutil2
@@ -36,7 +102,9 @@ let bindElementC<'T>  (source : IObservable<'T>) (view: 'T -> SutilElement) (com
             "bindElementC",
             fun context -> 
 
-                let context = context.WithMount BuildContext.DefaultMount
+                //Log.Console.log("bind", context.Mount)
+
+                //let context = context.WithAppendNode BuildContext.DefaultAppendNode
 
                 let mutable currentNode : Node =
                     SutilElement.HiddenDiv
@@ -57,36 +125,36 @@ let bindElementC<'T>  (source : IObservable<'T>) (view: 'T -> SutilElement) (com
 
                 ) |> Dispose.addDisposable (context.ParentElement) // FIXME: Put this in the disposals list
 
-                EffectedNode (context.ParentElement)
+                DomEffect
         )   
 
-let bindElementCO<'T>  (source : IObservable<'T>) (view: IObservable<'T> -> SutilElement) (compare : 'T -> 'T -> bool)=
-        SutilElement.SideEffect (
-            "bindElementCO",
-            fun context -> 
+// let bindElementCO<'T>  (source : IObservable<'T>) (view: IObservable<'T> -> SutilElement) (compare : 'T -> 'T -> bool)=
+//         SutilElement.SideEffect (
+//             "bindElementCO",
+//             fun context -> 
 
-                let context = context.WithMount BuildContext.DefaultMount
+//                 let context = context.WithMount BuildContext.DefaultMount
 
-                let mutable currentNode : Node =
-                    SutilElement.HiddenDiv
-                    |> mount context null
+//                 let mutable currentNode : Node =
+//                     SutilElement.HiddenDiv
+//                     |> mount context null
 
-                source|> Observable.distinctUntilChangedCompare compare |> Store.subscribe( fun value ->
-                    try
-                        currentNode <-
-                            source
-                            |> view 
-                            |> mount context currentNode
-                    with
-                    | x ->
-                        JS.console.error(x)
-                        currentNode <- 
-                            (elementFromException x) 
-                            |> mount context currentNode
-                ) |> Dispose.addDisposable (context.ParentElement) // FIXME: Put this in the disposals list
+//                 source|> Observable.distinctUntilChangedCompare compare |> Store.subscribe( fun value ->
+//                     try
+//                         currentNode <-
+//                             source
+//                             |> view 
+//                             |> mount context currentNode
+//                     with
+//                     | x ->
+//                         JS.console.error(x)
+//                         currentNode <- 
+//                             (elementFromException x) 
+//                             |> mount context currentNode
+//                 ) |> Dispose.addDisposable (context.ParentElement) // FIXME: Put this in the disposals list
 
-                EffectedNode (context.ParentElement)
-        )   
+//                 DomEffect
+//         )   
 
 // let __bindElementCO<'T>  (store : IObservable<'T>) (element: IObservable<'T> -> SutilElement) (compare : 'T -> 'T -> bool)=
 //     SutilElement.Define( "bindElementCO",
@@ -115,7 +183,7 @@ let bindElementCO<'T>  (source : IObservable<'T>) (view: IObservable<'T> -> Suti
 //         )
 
 let bindElement<'T>  (store : IObservable<'T>)  (element: 'T -> SutilElement) : SutilElement=
-    bindElementCO store (Store.current >> element) (fun _ _-> false)
+    bindElementC store element (fun _ _-> false)
 
 /// Backwards compatibility
 let bindFragment = bindElement
@@ -136,12 +204,12 @@ let bindElement2<'A,'B> (a : IObservable<'A>) (b : IObservable<'B>)  (view: ('A*
                 | x -> Logging.error $"Exception in bind: {x.Message}"
             ) |> Dispose.addDisposable ctx.ParentElement
 
-            EffectedNode (ctx.ParentElement)
+            DomEffect
     )
 
-let bindElementKO<'T,'K when 'K : equality> (store : IObservable<'T>) (element: IObservable<'T> -> SutilElement) (key : 'T -> 'K) : SutilElement =
-    let compare a b = key a = key b
-    bindElementCO store element compare
+// let bindElementKO<'T,'K when 'K : equality> (store : IObservable<'T>) (element: IObservable<'T> -> SutilElement) (key : 'T -> 'K) : SutilElement =
+//     let compare a b = key a = key b
+//     bindElementCO store element compare
 
 let bindElementK<'T,'K when 'K : equality> (store : IObservable<'T>) (element: 'T -> SutilElement) (key : 'T -> 'K) : SutilElement =
     let compare a b = key a = key b
@@ -196,12 +264,12 @@ let bindSelected<'T when 'T : equality> (selection:IObservable<List<'T>>) (dispa
 
             // We need to finalize checked status after all attrs have been processed for input,
             // in case 'value' hasn't been set yet
-            EventListeners.once CustomEvents.ElementReady selectElement <| fun _ ->
+            EventListeners.once CustomEvents.ELEMENT_READY selectElement <| fun _ ->
                 let unsub = selection |> Store.subscribe (updateSelected)
                 SutilEffect.RegisterDisposable(ctx.Parent, unsub)
 
             SutilEffect.RegisterUnsubscribe(ctx.Parent,unsubInput)
-            EffectedNode (ctx.ParentElement)
+            DomEffect
 
     )
 
@@ -246,7 +314,7 @@ let bindGroup<'T> (store:IStore<List<string>>) : SutilElement =
 
             // We need to finalize checked status after all attrs have been processed for input,
             // in case 'value' hasn't been set yet
-            once CustomEvents.ElementReady parent <| fun _ ->
+            once CustomEvents.ELEMENT_READY parent <| fun _ ->
                 store |> Store.get |> updateChecked
 
             // When store changes make sure check status is synced
@@ -254,7 +322,7 @@ let bindGroup<'T> (store:IStore<List<string>>) : SutilElement =
 
             SutilEffect.RegisterDisposable(ctx.Parent,unsub)
             SutilEffect.RegisterUnsubscribe(ctx.Parent,unsubInput)
-            EffectedNode (ctx.ParentElement)
+            DomEffect
     )
 
 // T can realistically only be numeric or a string. We're relying (I think!) on JS's ability
@@ -279,7 +347,7 @@ let bindRadioGroup<'T> (store:IStore<'T>) : SutilElement =
 
     // We need to finalize checked status after all attrs have been processed for input,
     // in case 'value' hasn't been set yet
-    once CustomEvents.ElementReady parent <| fun _ ->
+    once CustomEvents.ELEMENT_READY parent <| fun _ ->
         store |> Store.get |> updateChecked
 
     // When store changes make sure check status is synced
@@ -288,7 +356,7 @@ let bindRadioGroup<'T> (store:IStore<'T>) : SutilElement =
     SutilEffect.RegisterDisposable(ctx.Parent,unsub)
     SutilEffect.RegisterUnsubscribe(ctx.Parent,inputUnsub)
 
-    EffectedNode (ctx.ParentElement) )
+    DomEffect )
 
 let bindClassToggle (toggle:IObservable<bool>) (classesWhenTrue:string) (classesWhenFalse:string) =
     bindSub toggle <| fun ctx active ->
@@ -327,7 +395,7 @@ let bindAttrIn<'T> (attrName:string) (store : IObservable<'T>) : SutilElement =
         else
             store |> Store.subscribe (DomEdit.setAttribute ctx.ParentElement attrName)
     SutilEffect.RegisterDisposable(ctx.Parent,unsub)
-    EffectedNode (ctx.ParentElement))
+    DomEffect)
 
 let bindAttrOut<'T> (attrName:string) (onchange : 'T -> unit) : SutilElement =
     SutilElement.Define( "bindAttrOut",
@@ -336,7 +404,7 @@ let bindAttrOut<'T> (attrName:string) (onchange : 'T -> unit) : SutilElement =
     let unsubInput = listen "input" parent <| fun _ ->
         Interop.get parent attrName |> onchange
     SutilEffect.RegisterUnsubscribe(ctx.Parent,unsubInput)
-    EffectedNode (ctx.ParentElement) )
+    DomEffect )
 
 // Bind a scalar value to an element attribute. Listen for onchange events and dispatch the
 // attribute's current value to the given function. This form is useful for view templates
@@ -349,7 +417,7 @@ let attrNotify<'T> (attrName:string) (value :'T) (onchange : 'T -> unit) : Sutil
         Interop.get parent attrName |> onchange
     Interop.set parent attrName value
     SutilEffect.RegisterUnsubscribe(ctx.Parent, unsubInput)
-    EffectedNode (ctx.ParentElement) )
+    DomEffect )
 
 // Bind an observable value to an element attribute. Listen for onchange events and dispatch the
 // attribute's current value to the given function
@@ -367,7 +435,7 @@ let bindListen<'T> (attrName:string) (store : IObservable<'T>) (event:string) (h
     let unsubB = store |> Store.subscribe ( Interop.set parent attrName )
     SutilEffect.RegisterUnsubscribe(ctx.Parent,unsubA)
     SutilEffect.RegisterDisposable(ctx.Parent,unsubB)
-    EffectedNode (ctx.ParentElement) )
+    DomEffect )
 
 // Bind a store value to an element attribute. Listen for onchange events write the converted
 // value back to the store
@@ -381,7 +449,7 @@ let private bindAttrConvert<'T> (attrName:string) (store : IStore<'T>) (convert 
     let unsub = store |> Store.subscribe ( Interop.set parent attrName )
     SutilEffect.RegisterUnsubscribe(parent,unsubInput)
     SutilEffect.RegisterDisposable(parent,unsub)
-    EffectedNode (ctx.ParentElement) )
+    DomEffect )
 
 // Unsure how to safely convert Element.getAttribute():string to 'T
 let private convertObj<'T> (v:obj) : 'T  =
@@ -399,7 +467,7 @@ let bindAttrStoreOut<'T> (attrName:string) (store : IStore<'T>) : SutilElement =
         Interop.get parent attrName |> convertObj<'T> |> Store.set store
     //(asEl parent).addEventListener("input", (fun _ -> Interop.get parent attrName |> convertObj<'T> |> Store.set store ))
     SutilEffect.RegisterUnsubscribe(ctx.Parent,unsubInput)
-    EffectedNode (ctx.ParentElement)
+    DomEffect
     )
 
 let private attrIsSizeRelated  (attrName:string) =
@@ -412,14 +480,14 @@ let listenToProp<'T> (attrName:string) (dispatch: 'T -> unit) : SutilElement =
     let parent = ctx.ParentNode
     let notify() = Interop.get parent attrName |> convertObj<'T> |> dispatch
 
-    once CustomEvents.ElementReady parent <| fun _ ->
+    once CustomEvents.ELEMENT_READY parent <| fun _ ->
         if attrIsSizeRelated attrName then
             SutilEffect.RegisterDisposable(parent,(ResizeObserver.getResizer (downcast parent)).Subscribe( notify ))
         else
             SutilEffect.RegisterUnsubscribe(parent, listen "input" parent (fun _ -> notify()))
 
         rafu notify
-    EffectedNode (ctx.ParentElement))
+    DomEffect)
 
 let bindPropOut<'T> (attrName:string) (store : IStore<'T>) : SutilElement =
     listenToProp attrName (Store.set store)
@@ -512,7 +580,7 @@ let bindStyle<'T> (value : IObservable<'T>) (f : CSSStyleDeclaration -> 'T -> un
     let style = ctx.ParentElement.style
     let unsub = value.Subscribe(f style)
     SutilEffect.RegisterDisposable( ctx.Parent, unsub )
-    EffectedNode (ctx.ParentElement) )
+    DomEffect )
 
 let bindElementEffect<'T, 'E when 'E :> HTMLElement> (value : IObservable<'T>) (f : 'E -> 'T -> unit) =
     SutilElement.Define( "bindElementEffect",
@@ -520,7 +588,7 @@ let bindElementEffect<'T, 'E when 'E :> HTMLElement> (value : IObservable<'T>) (
     let el = ctx.ParentElement :?> 'E
     let unsub = value.Subscribe(f el)
     SutilEffect.RegisterDisposable( ctx.Parent, unsub )
-    EffectedNode (ctx.ParentElement) )
+    DomEffect )
 
 let bindWidthHeight (wh: IObservable<float*float>) =
     bindStyle wh (fun style (w,h) ->

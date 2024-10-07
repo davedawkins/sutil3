@@ -1,8 +1,8 @@
 module Sutil.CoreElements
 
 open Sutil
+open Sutil.Core
 open Sutil.Dom
-open Sutil.Dom.Types
 open Browser.Types
 open Sutil.Dom.CustomEvents
 open Sutil.Dom.TypeHelpers
@@ -11,9 +11,8 @@ let unsubscribeOnUnmount (fns : (unit -> unit) seq ) =
     SutilElement.SideEffect(
         "unsubscribeOnUnmount",
         (fun context ->
-            Log.Console.log("unsubscribeOnUnmount: ", context.ParentElement.outerHTML )
-            fns |> Seq.iter ((Dispose.addUnsubscribe context.ParentElement)<<Unsubscribe)            
-            EffectedNode context.ParentElement
+            fns |> Seq.iter ((Dispose.addUnsubscribe context.ParentElement))            
+            DomEffect
         )
     )
 
@@ -23,7 +22,7 @@ let disposeOnUnmount (fns : (System.IDisposable) seq ) =
         "disposeOnUnmount",
         (fun context ->
             fns |> Seq.iter (Dispose.addDisposable context.ParentElement)            
-            EffectedNode context.ParentElement
+            DomEffect
         )
     )
 
@@ -34,10 +33,10 @@ let hookParent (f : HTMLElement -> unit) =
         (fun context ->
             EventListeners.add
                 context.ParentElement
-                Mount
+                MOUNT
                 (fun e -> (e.target :?> HTMLElement) |> f) |> ignore
             
-            EffectedNode context.ParentElement
+            DomEffect
         )
     )
 
@@ -49,33 +48,27 @@ let html (text : string) : SutilElement =
     SutilElement.Define( "html",
     fun ctx ->
         ctx.Parent.asElement 
-        |> Option.iter (fun el ->
-            el.innerHTML <- text.Trim()
+        |> Option.map (fun el ->
+            let host = ctx.CreateElement "div"
 
-            // Fix me
-            // ctx.Class
-            // |> Option.iter (fun cls -> visitElementChildren el (fun ch -> ClassHelpers.addToClasslist cls ch ))
+            // Parse HTML and add to new node
+            host.innerHTML <- text.Trim()
 
-            // match JsMap.getKey (ctx.ParentElement) (NodeKey.StyleClass) with
-            // | None -> ()
-            // | Some styleClass ->
-            //     visitElementChildren el (fun ch ->
-            //         ClassHelpers.addToClasslist styleClass ch
-            //         //applyCustomRules ns ch
-            //     )
+            // Tell Patcher that no point in trying repair this section
+            host.setAttribute( "data-sutil-imported", "html")
 
-            // Event.notifyUpdated ctx.Document
+            // Add into the DOM
+            ctx.AppendNode el host
+
+            // Let styling know that a new node needs marking up
+            ctx.OnImportedNode host
+
+            // Let code highligher (index.html) know that new code needs marking up
+            Sutil.Dom.CustomEvents.notifySutilUpdated (host.ownerDocument)
+
+            CreatedNode host
         )
-
-        let nodes = ctx.ParentNode.childNodes.toSeq() |> Seq.toArray
-
-        if nodes.Length = 1 then
-            nodes[0] |> CreatedNode
-        else
-            failwith "Expected single root node"
-            // let group = SutilEffect.MakeGroup( "html", ctx.Parent, ctx.Previous )
-            // nodes |> Seq.iter (fun n -> group.AddChild(DomNode n))
-            // group |> Group |> sutilResult
+        |> Option.defaultValue (SutilEffectResult.DomEffect)
     )
 
 // let postProcess (f : SutilEffect -> SutilEffect) (view : SutilElement) : SutilElement =
@@ -84,7 +77,12 @@ let html (text : string) : SutilElement =
 let postProcessElementsWithName (name : string) (f : HTMLElement -> unit) (se : SutilElement) : SutilElement =
 
     let run ( context : BuildContext )  =
-        let el = Sutil.Core.mount context null se |> asElement
+        let el = 
+            se 
+            |> Sutil.Core.mount 
+                    context //(context.WithLogEnabled()) 
+                    null 
+            |> asElement
         f el
         CreatedNode el
 
@@ -93,33 +91,32 @@ let postProcessElementsWithName (name : string) (f : HTMLElement -> unit) (se : 
 let postProcessElements (f : HTMLElement -> unit) (se : SutilElement) : SutilElement =
     postProcessElementsWithName ("postProcessElement") f se 
 
-
 open Core.Sutil2
 
 let headStylesheet (url : string) : SutilElement =
     SutilElement.Define( "headStyleSheet",
         fun ctx -> 
             DomEdit.setHeadStylesheet ctx.Document url 
-            EffectedNode (ctx.ParentElement)
+            DomEffect
     )
 
 let headScript (url : string) : SutilElement =
     SutilElement.Define( "headScript",
         fun ctx -> 
             DomEdit.setHeadScript ctx.Document url 
-            EffectedNode (ctx.ParentElement)
+            DomEffect
     )
 
 let headEmbedScript (source : string) : SutilElement =
     SutilElement.Define( "headEmbedScript",
         fun ctx -> 
             DomEdit.setHeadEmbedScript ctx.Document source 
-            EffectedNode (ctx.ParentElement)
+            DomEffect
     )
 
 let headTitle (title : string) : SutilElement =
     SutilElement.Define( "headTitle",
         fun ctx -> 
             DomEdit.setHeadTitle ctx.Document title
-            EffectedNode (ctx.ParentElement)
+            DomEffect
     )

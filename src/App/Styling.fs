@@ -4,7 +4,7 @@ module StylingExample
 // https://svelte.dev/examples
 
 open Sutil.Styling
-open Sutil.Dsl
+open Sutil.Html
 open type Feliz.length
 
 let css = [

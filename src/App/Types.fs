@@ -19,6 +19,7 @@ type Page = {
     Title : string
     Category : string
     Link : PageLink
+    Pass : bool
     // Create : (unit -> SutilElement)
     // Sections : string list
 }

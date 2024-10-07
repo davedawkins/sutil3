@@ -1,4 +1,4 @@
-module Sutil.Dsl
+module Sutil.Html
 
 open System
 open Browser.Types
@@ -11,15 +11,10 @@ open Bind
 open EventHelpers
 open Fable.Core.JsInterop
 
-let private _element tag children = SutilElement.Element (tag, children |> Seq.toArray)
-let private _fragment children = SutilElement.Fragment (children |> Seq.toArray)
-let private _text s = SutilElement.Text s
-let private _attr(n, v) = SutilElement.Attribute(n,v)
-
-/// <exclude/>
-[<Obsolete("Use \"open Sutil\" instead", true)>]
-module Html =
-    do ()
+let inline private _element tag children = SutilElement.Element (tag, children |> Seq.toArray)
+let inline private _fragment children = SutilElement.Fragment (children |> Seq.toArray)
+let inline private _text s = SutilElement.Text s
+let inline private _attr(n, v) = SutilElement.Attribute(n,v)
 
 // Dummy type to avoid problems with overload resolution in HtmlEngine
 ///<exclude/>
@@ -42,17 +37,16 @@ type SutilEventEngine() =
     )
 
     member __.onMount( handler ) =
-        SutilElement.Event( CustomEvents.Mount, handler )
+        SutilElement.Event( CustomEvents.MOUNT, handler )
 
     member __.onUnmount( handler ) =
-        SutilElement.Event( CustomEvents.Unmount, handler )
+        SutilElement.Event( CustomEvents.UNMOUNT, handler )
 
     member __.onInputT( handler : TypedEvent<HTMLInputElement> -> unit)=
         SutilElement.Event( 
             "input", 
             !!handler 
         )
-
 
 /// <summary>
 /// Functions for building DOM elements.
@@ -98,9 +92,6 @@ type SutilHtmlEngine() as this =
             )
 
     let _clsch cls ch = [ _attr("class",cls); yield! ch ]
-
-    do ()
-
 
     // member _.app (xs : seq<SutilElement>) : SutilElement = _fragment xs
 

@@ -4,7 +4,7 @@ module SelectMultiple
 // https://svelte.dev/examples
 
 open Sutil
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.Bind
 open Sutil.CoreElements
 

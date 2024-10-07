@@ -6,10 +6,9 @@ module Sutil.Patch
 
 open Browser.Types
 open Sutil.Dom
-open Sutil.Dom.DomHelpers
 open Sutil.Dom.TypeHelpers
-
-type VElement = VirtualDom.Element
+type VElement = VirtualElement
+open VirtualDom
 
 type PatchAction =
     | SetAttr of string * string
@@ -19,11 +18,6 @@ type PatchAction =
     | SetInnerText of string
     | ApplyEffect of VElement
     | ChildAction of (int * Action)
-    // override __.ToString (): string = 
-    //     match __ with
-    //     | Patch (actions) ->
-    //         sprintf "Patch: [%s]" (actions |> Array.map (_.ToString()) |> String.concat ",")
-    //     | _ -> sprintf "%A" __
 
 // What we're going to do to an existing (node, vnode) pair
 and Action =
@@ -38,7 +32,7 @@ and Action =
         | Patch (actions) ->
             sprintf "Patch: [%s]" (actions |> Array.map (_.ToString()) |> String.concat ",")
         | ReplaceNew _ -> "ReplaceNew"
-        | AppendNew e -> "AppendNew " + e.ToString()
+        | AppendNew e -> "AppendNew " + e.AsString()
         | Remove  -> "Remove"
         | ActionApplyEffect _ -> "Effect"
         | AsIs  -> "AsIs"
@@ -80,7 +74,18 @@ let diffAttributes (a : NamedNodeMap) (attrs : (string * string)[]) =
             | _ -> ()
     |]
 
-let rec calculatePatch (existing : Node) (ve : VElement) : Action =
+let [<Literal>] SUTIL_IMPORTED = "sutil-imported"
+
+let tryGetData (name : string) ( el : HTMLElement )  : string option =
+    if Fable.Core.JsInterop.isIn name el.dataset then
+        Some (el.dataset[name])
+    else
+        None
+
+let getImportedBy (el : HTMLElement) : string option =
+    el |> tryGetData SUTIL_IMPORTED
+
+let rec private calculatePatch (existing : Node) (ve : VElement) : Action =
     //Fable.Core.JS.console.log("calculate patch: ", (if isNull existing then "null" :> obj else existing), ve )
 
     if isTextNode existing && ve.IsTextNode then
@@ -88,6 +93,17 @@ let rec calculatePatch (existing : Node) (ve : VElement) : Action =
             Patch [| SetInnerText ve.InnerText |]
         else 
             AsIs
+    elif (existing.asElement |> Option.bind getImportedBy).IsSome then
+        if  (existing.asElement 
+            |> Option.bind getImportedBy
+            |> Option.map (fun importedBy -> 
+                    match ve.Type with
+                    | SideEffectNode (name, _) -> name = importedBy
+                    | _ -> false)
+            |> Option.defaultValue false) then
+            AsIs
+        else
+            Remove
     elif isElementNode existing && ve.IsElementNode && ve.Tag = (asElement existing).tagName.ToLower() then
         [|
             yield! (diffAttributes (existing.attributes) (ve.Attributes) )
@@ -96,18 +112,43 @@ let rec calculatePatch (existing : Node) (ve : VElement) : Action =
             // Always add the events, we clear them out first
             yield! (ve.Events |> Array.map AddEvent)
 
-            yield! Helpers.pairOptionals (DomHelpers.children existing) (ve.DomChildren)
-            |> Seq.mapi (fun i (x, y) ->
-                match (x, y) with   
-                | Some x, Some y -> 
-                    ChildAction (i,calculatePatch x y)
-                | Some x, None -> 
-                    ChildAction (i, Remove)
-                | None, Some x -> 
-                    ChildAction (i, AppendNew x)
-                | _ -> failwith "Internal error"
-            )
-            |> Seq.filter (function ChildAction(_,AsIs) -> false| _ -> true)
+            let pairs = 
+                Helpers.pairOptionals (DomHelpers.children existing) (ve.DomChildren) 
+                //|> Seq.rev 
+                |> Seq.toArray
+
+            let childPatches =
+                pairs
+                |> Array.mapi (fun i (x, y) ->
+                    //let i = pairs.Length - i - 1
+                    match (x, y) with   
+                    | Some x, Some y -> 
+                        ChildAction (i,calculatePatch x y)
+                    | Some x, None -> 
+                        Log.Console.log("Should remove: ", x, " parent: ", x.parentElement)
+                        ChildAction (i, Remove)
+                    | None, Some x -> 
+                        ChildAction (i, AppendNew x)
+                    | _ -> failwith "Internal error"
+                )
+
+            // Do these first:
+            // - ReplaceNew
+            // - Patch (change attributes, change children etc)
+            yield!
+                childPatches 
+                |> Seq.filter (function 
+                    | ChildAction(_,AsIs)
+                    | ChildAction(_,Remove) -> false
+                    | _ -> true)
+
+            // Do removals last, in reverse order so that indexing works
+            yield!
+                childPatches 
+                |> Array.filter (function 
+                    | ChildAction(_,Remove) -> true
+                    | _ -> false)
+                |> Array.rev
 
             yield! (ve.EffectChildren |> Array.map (ApplyEffect))
         |]
@@ -120,55 +161,68 @@ let rec calculatePatch (existing : Node) (ve : VElement) : Action =
             AppendNew ve
         else
             ReplaceNew ve
+    elif (ve.IsEffectNode) then 
+        if isNull existing then
+           ActionApplyEffect ve
+        else
+            ReplaceNew ve
     else
-        if not (ve.IsEffectNode) then 
-            failwith "Unexpected virtual node"
-        ActionApplyEffect ve
+        failwith "Unexpected virtual node"
 
+let calculate (existing : Node) (ve : VElement) : Action =
+    calculatePatch existing ve
 
-let rec applyPatch (context : BuildContext) (current : Node) (action: Action) : (Result * Node) =
+let rec private applyPatchAction (context : BuildContext) (a : PatchAction) : (Result * Node) option=
+    // Fable.Core.JS.console.log(sprintf "apply: %A" a)
+    let current = context.Parent
 
     let nodeChildren = 
         current |> DomHelpers.children |> Seq.toArray
 
     let nodeChild ix =
-        if ix < nodeChildren.Length then nodeChildren[ix] else null
+        if ix >= 0 && ix < nodeChildren.Length then nodeChildren[ix] else null
 
-    let apply (a : PatchAction) : (Result * Node) option=
-        // Fable.Core.JS.console.log(sprintf "apply: %A" a)
-        match a with
-        | SetAttr (name,value) -> 
-            DomEdit.setAttribute (asElement current) name value
+    match a with
+    | SetAttr (name,value) -> 
+        DomEdit.setAttribute (asElement current) name value
+        None
+
+    | RemoveAttr (name,_) -> 
+        DomEdit.removeAttribute (asElement current) name
+        None
+
+    | AddEvent(name,value) -> 
+        EventListeners.add current name value |> ignore
+        None
+
+    | RemoveEvent (name,value) -> 
+        (asElement current).removeEventListener(name,value)
+        None
+
+    | SetInnerText text ->
+        current.textContent <- text
+        None
+
+    | ChildAction (ix, action) ->
+        applyAction 
+            (context.WithAppendNode( 
+                    fun parent node -> DomEdit.insertAfter parent node (nodeChild (ix-1))
+                )
+            )
+            (nodeChild ix) 
+            action 
+            |> Some
+
+    | ApplyEffect ve ->
+        match ve.Type with
+        | SideEffectNode (name, effect) ->
+            if isNull current then failwith "Cannot apply effect to null node"
+//                Log.Console.log("Applying effect", name, " to ", context.ParentElement.outerHTML)
+            let result = effect context
             None
+        | _ -> failwith "Not a side-effect"
 
-        | RemoveAttr (name,_) -> 
-            DomEdit.removeAttribute (asElement current) name
-            None
-
-        | AddEvent(name,value) -> 
-            EventListeners.add current name value |> ignore
-            None
-
-        | RemoveEvent (name,value) -> 
-            (asElement current).removeEventListener(name,value)
-            None
-
-        | SetInnerText text ->
-            current.textContent <- text
-            None
-
-        | ChildAction (ix, action) ->
-            applyPatch (context.WithParent(current)) (nodeChild ix) action |> Some
-
-        | ApplyEffect ve ->
-            match ve.Type with
-            | VirtualDom.SideEffectNode (name, effect) ->
-                if isNull current then failwith "Cannot apply effect to null node"
-                Log.Console.log("Applying effect", name, " to ", context.ParentElement.outerHTML)
-                let result = effect (context.WithParent current)
-                None
-            | _ -> failwith "Not a side-effect"
-
+and  private applyAction (context : BuildContext) (current : Node) (action: Action) : (Result * Node) =
 
     match action with
     | AsIs ->
@@ -186,7 +240,7 @@ let rec applyPatch (context : BuildContext) (current : Node) (action: Action) : 
     | AppendNew ve ->
         let de = VirtualDom.toDom context ve
         if not (de.isSameNode(context.ParentElement)) then
-            context.Mount context.ParentElement de
+            context.AppendNode context.ParentElement de
         Appended, de
 
     | ActionApplyEffect ve ->
@@ -194,9 +248,12 @@ let rec applyPatch (context : BuildContext) (current : Node) (action: Action) : 
 
     | Patch patches ->
         if not (isNull current) then 
-            Log.Console.log(
-                "Patch: Disposing event listeners and side-effects\n", 
-                outerHTML current )
+            // Log.Console.log(
+            //     "Patch: Disposing event listeners and side-effects\n", 
+            //     outerHTML current )
             Dispose.disposeNode (current) // Cleanup event listeners and disposables
-        let result = patches |> Array.choose apply
+        let result = patches |> Array.choose (applyPatchAction (context.WithParent(current).WithAppendNode(DomEdit.append)))
         Patched result, current
+
+let apply (context : BuildContext) (current : Node) (action: Action) : (Result * Node) =
+    applyAction context current action

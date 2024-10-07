@@ -4,7 +4,7 @@ module BarChart
 // https://svelte.dev/examples#bar-chart
 
 open Sutil
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.Bind
 open Sutil.Elmish
 open Sutil.CoreElements

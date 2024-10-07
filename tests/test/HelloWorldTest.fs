@@ -7,7 +7,7 @@ open WebTestRunner
 #endif
 
 open Sutil
-open Sutil.Dsl
+open Sutil.Html
 
 describe "Hello World" <| fun () ->
     it "says hello" <| fun () -> promise {

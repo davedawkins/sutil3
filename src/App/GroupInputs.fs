@@ -4,7 +4,7 @@ module GroupInputs
 // https://svelte.dev/examples
 
 open Sutil
-open Sutil.Dsl
+open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Bind
 

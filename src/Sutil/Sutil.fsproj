@@ -12,8 +12,8 @@
   <ItemGroup>
     <Compile Include="Helpers.fs" />
     <Compile Include="Log.fs" />
+    <Compile Include="Types.fs" />
     <Compile Include="DomHelpers.fs" />
-    <Compile Include="CoreTypes.fs" />
     <Compile Include="StyleDomHelpers.js.fs" />
     <Compile Include="EventHelpers.fs" />
     <Compile Include="Cmd.fs" />
@@ -27,7 +27,7 @@
     <Compile Include="Bindings.fs" />
     <Compile Include="Bind.fs" />
     <Compile Include="Styling.fs" />
-    <Compile Include="Dsl.fs" />
+    <Compile Include="Html.fs" />
     <Compile Include="Media.fs" />
     <Compile Include="Navigable.fs" />
     <Compile Include="Program.fs" />
