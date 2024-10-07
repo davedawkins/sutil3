@@ -10,8 +10,8 @@ open Sutil.Bind
 
 let view() =
     let user = Store.make {| loggedIn = false |}
-
-    let toggle _ =
+ 
+    let toggle _ =  
         user |> Store.modify (fun u -> {| u with loggedIn = not u.loggedIn |})
 
     Html.div [
@@ -21,14 +21,15 @@ let view() =
             Html.div [
                 if u.loggedIn then
                     Html.button [
-                        Ev.onClick toggle 
+                        Ev.onClick toggle
                         text "Log out"
                     ]
 
                 if not u.loggedIn then
                     Html.button [
-                        Ev.onClick toggle 
+                        Ev.onClick toggle
                         text "Log in"
                     ]
-            ])
+            ]  
+        ) 
     ]

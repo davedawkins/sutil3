@@ -3,7 +3,6 @@ module LogicElseIf
 // Adapted from
 // https://svelte.dev/examples
 
-open Sutil
 open Sutil.Html
 
 let x = 7;

@@ -18,7 +18,7 @@ let view() =
         disposeOnUnmount [ name ]
 
         Bind.el( name, fun value -> 
-            Html.input [
+            Bulma.inputText [
                 Attr.value value
                 Attr.placeholder "Enter your name"
                 Ev.onInput( fun e ->

@@ -12,18 +12,6 @@ open Fable.Formatting.Markdown
 open Fable.Core.Util
 open Fable.Core
 
-[<RequireQualifiedAccess>]
-module Bulma =
-    let h1 (children : SutilElement seq) = 
-        Html.h1c "title is-1" children
-    let h2 (children : SutilElement seq) = 
-        Html.h2c "title is-2" children
-    let h3 (children : SutilElement seq) = 
-        Html.h3c "title is-3" children
-    let h4 (children : SutilElement seq) = 
-        Html.h4c "title is-4" children
-    let h5 (children : SutilElement seq) = 
-        Html.h5c "title is-5" children
 
 [<ImportAll("./highlight.min.js")>]
 let hljs : obj = jsNative;

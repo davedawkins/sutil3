@@ -7,6 +7,18 @@ open Browser.Types
 open Sutil.Dom.CustomEvents
 open Sutil.Dom.TypeHelpers
 
+
+let debug (se : SutilElement) =
+    SutilElement.SideEffect(
+        "debug",
+        (fun context ->
+            se
+            |> Sutil.Core.mount (context.WithLogEnabled()) null
+            |> CreatedNode
+        )
+    )
+
+
 let unsubscribeOnUnmount (fns : (unit -> unit) seq ) =
     SutilElement.SideEffect(
         "unsubscribeOnUnmount",

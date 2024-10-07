@@ -110,49 +110,6 @@ module NodeKey =
     let getKeyWith (key : string)  (node : Node) (defaultValue : 't) : 't = 
         tryGetKey key node |> Option.defaultValue defaultValue
 
-/// Support for managing event listeners.
-module EventListeners =
-    open Browser.Types
-    open Fable.Core.JsInterop
-
-    let [<Literal>] LISTENERS = "__sutil_ev"
-
-    type NamedHandler =  (string * (Event -> unit))
-
-    let empty : NamedHandler [] = Array.empty
-
-    // /// Add event listener using e.addEventListener. Return value is a (unit -> unit) function that will remove the event listener
-    // let listen (event: string) (e: EventTarget) (fn: (Event -> unit)) : (unit -> unit) =
-    //     e.addEventListener (event, fn)
-    //     (fun () -> e.removeEventListener (event, fn) |> ignore)
-
-    let add (node : EventTarget) (event : string) (f : Event -> unit) : Unsubscriber =
-        JsMap.arrayAppendKey node LISTENERS (Array.singleton (event,f))
-
-        node.addEventListener(event, f)
-
-        (fun () ->
-            node.removeEventListener( event, f )
-            JsMap.arrayRemoveKey 
-                node 
-                LISTENERS 
-                (fun (name,fn) -> JsHelpers.eq3 fn f ))
-
-    let clear (node : Node) =
-        NodeKey.getKeyWith LISTENERS node empty
-            |> Array.iter (fun (name, f) -> node.removeEventListener(name,f))
-        NodeKey.deleteKey LISTENERS node
-
-    /// Listen for the given event, and remove the listener after the first occurrence of the evening firing.
-    let once (event: string) (target: EventTarget) (fn: Event -> Unit) : unit =
-        let mutable remove : Unsubscriber = Unchecked.defaultof<_>
-
-        let rec inner e =
-            remove()
-            fn (e)
-
-        remove <- add (target :?> Node) event inner
-
 // Support for managing Sutil identifiers
 module Id =
     open NodeKey
@@ -389,13 +346,14 @@ module Dispose =
         f |> makeDisposable |> addDisposable node
 
     let internal disposeNode (node : Node) = 
-        
+        log.info("disposeNode: ", node)
+
         CustomEvents.dispatchSimple node CustomEvents.UNMOUNT
 
         let safeDispose (d : System.IDisposable) = 
             try d.Dispose() with x -> log.error (sprintf "Error while disposing: %s" x.Message)
 
-        EventListeners.clear node
+        // EventListeners.clear node
 
         getDisposables node |> Array.iter safeDispose
         clearDisposables node
@@ -551,6 +509,59 @@ module DomEdit =
         let titleEl = doc.createElement("title")
         titleEl.appendChild( doc.createTextNode(title) ) |> ignore
         head.appendChild(titleEl) |> ignore
+
+
+/// Support for managing event listeners.
+module EventListeners =
+    open Browser.Types
+    open Fable.Core.JsInterop
+
+    // let nextListenerId = Helpers.createIdGenerator()
+
+    // let [<Literal>] LISTENERS = "__sutil_ev"
+
+    // type NamedHandler =  (string * int * Unsubscriber)
+
+    // let empty : NamedHandler [] = Array.empty
+
+    let add (node : EventTarget) (event : string) (handler : Event -> unit) : Unsubscriber =
+        let f = handler
+
+        node.addEventListener(event, f)
+
+        let remove =
+            (fun () ->
+                node.removeEventListener( event, f )
+                // JsMap.arrayRemoveKey 
+                //     node 
+                //     LISTENERS 
+                //     (fun (name, n, remove) -> n = lid)
+            )
+
+        remove |> Dispose.addUnsubscribe (node :?> Node)
+
+        //JsMap.arrayAppendKey node LISTENERS (Array.singleton (event, lid, remove))
+        
+        remove
+
+//     let clear (node : Node) =
+// //         NodeKey.getKeyWith LISTENERS node empty
+// //             |> Array.iter (fun (name, lid, remove) -> 
+// //                     log.info("removing event listener ", name, " id ", lid, " from " , node)
+// //                     remove()
+// // //                    node.removeEventListener(name,f)
+// //                 )
+//         NodeKey.deleteKey LISTENERS node
+
+    /// Listen for the given event, and remove the listener after the first occurrence of the evening firing.
+    let once (event: string) (target: EventTarget) (fn: Event -> Unit) : unit =
+        let mutable remove : Unsubscriber = Unchecked.defaultof<_>
+
+        let rec inner e =
+            remove()
+            fn (e)
+
+        remove <- add (target :?> Node) event inner
 
 /// 
 [<AutoOpen>]

@@ -85,8 +85,8 @@ let allExamples = [
         { Pass = true; Category = "Reactivity";  Title = "Reactive assignments";  Link = AppLink (Counter.view , ["Counter.fs"])}
         { Pass = true; Category = "Reactivity";  Title = "Reactive declarations";  Link = AppLink (ReactiveDeclarations.view , ["ReactiveDeclarations.fs"]) }
         { Pass = true; Category = "Reactivity";  Title = "Reactive statements";  Link = AppLink (ReactiveStatements.view , ["ReactiveStatements.fs"]) }
-        { Pass = false; Category = "Logic"; Title = "If blocks"; Link = AppLink (LogicIf.view, ["LogicIf.fs"])  }
-        { Pass = false; Category = "Logic"; Title = "Else blocks"; Link = AppLink (LogicElse.view, ["LogicElse.fs"])  }
+        { Pass = true; Category = "Logic"; Title = "If blocks"; Link = AppLink (LogicIf.view, ["LogicIf.fs"])  }
+        { Pass = true; Category = "Logic"; Title = "Else blocks"; Link = AppLink (LogicElse.view, ["LogicElse.fs"])  }
         { Pass = true; Category = "Logic"; Title = "Else-if blocks"; Link = AppLink (LogicElseIf.view, ["LogicElseIf.fs"])  }
         { Pass = true; Category = "Logic"; Title = "Static each blocks"; Link = AppLink (StaticEachBlocks.view, ["StaticEach.fs"])  }
         { Pass = true; Category = "Logic"; Title = "Static each with index"; Link = AppLink (StaticEachWithIndex.view, ["StaticEachWithIndex.fs"])  }

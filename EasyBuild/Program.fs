@@ -48,7 +48,7 @@ type PackCommand() = inherit CommandNameArgs( "dotnet", "pack -c Release src/Sut
 
 type DeployCommand() = inherit CommandNameArgs( 
     "bash", 
-    "deployToLinode.sh ./public sutil '' deploy@213.52.129.104 /home/deploy/apps" )
+    "deployToLinode.sh ./public sutil3 '' deploy@213.52.129.104 /home/deploy/apps" )
 
 type SutilXmlCommand() = inherit CommandFn( fun _ ->
         Command.Run("dotnet", 
