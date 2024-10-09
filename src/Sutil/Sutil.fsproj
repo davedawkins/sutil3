@@ -16,7 +16,6 @@
     <Compile Include="Types.fs" />
     <Compile Include="StyleDomHelpers.js.fs" />
     <Compile Include="EventHelpers.fs" />
-    <Compile Include="Cmd.fs" />
     <Compile Include="Store.fs" />
     <Compile Include="Elmish.fs" />
     <Compile Include="VirtualDom.fs" />

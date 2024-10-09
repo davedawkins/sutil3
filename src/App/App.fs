@@ -713,7 +713,7 @@ let viewFrontPage() =
                     Html.p [
                         Attr.className "title is-size-1"
                         Html.img [
-                            Attr.src "/images/logo-wide3.png"
+                            Attr.src "images/logo-wide3.png"
                             Attr.style [
                                 Css.width (px 300)
                             ]
@@ -755,7 +755,7 @@ let appMain () =
             Attr.className "app-heading"
             Html.span [
                 Html.a [
-                    Attr.href "https://sutil.dev"
+                    Attr.href "https://sutil.dev/sutil3"
                     Html.img [
                         Attr.src "images/logo-wide3.png" // Passion One font #1b4c51
                         Attr.style [ Css.height (px 25) ]

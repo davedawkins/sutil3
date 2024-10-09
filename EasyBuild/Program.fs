@@ -34,7 +34,7 @@ module Utils =
         copyFileOverwrite (sprintf "%s-dotnet%d" globalJson v) globalJson
 
 type CleanCommand() = inherit CommandFn( fun _ -> 
-        Command.Run("dotnet", "fable clean --yes")
+        Command.Run("dotnet", "fable clean --yes -o build")
         Command.Run("dotnet", "clean")
     )
 
@@ -48,7 +48,7 @@ type PackCommand() = inherit CommandNameArgs( "dotnet", "pack -c Release src/Sut
 
 type DeployCommand() = inherit CommandNameArgs( 
     "bash", 
-    "deployToLinode.sh ./public sutil3 '' deploy@213.52.129.104 /home/deploy/apps" )
+    "deployToLinode.sh ./dist sutil3 '' deploy@213.52.129.104 /home/deploy/apps" )
 
 type SutilXmlCommand() = inherit CommandFn( fun _ ->
         Command.Run("dotnet", 
@@ -61,9 +61,9 @@ let dependencies =
     [
         "deploy:linode", 
             [
-            "samples"
-            "build:app"
-            "fsdocs"
+            // "samples"
+            // "build:app"
+            // "fsdocs"
             ]
 
         "publish:package",  [ "clean" ]
