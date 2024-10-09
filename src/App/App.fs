@@ -148,7 +148,7 @@ let initBooks = [
 //    { Title = "Documentation"; Pages = allDocs }
 ]
 
-let urlBase = "https://raw.githubusercontent.com/davedawkins/Sutil/main/src/App"
+let urlBase = "https://raw.githubusercontent.com/davedawkins/Sutil3/main/src/App"
 
 // View as specified by the URL
 type ViewRequest = {
