@@ -22,7 +22,6 @@ type Program() =
     static member mount (id : string, app : SutilElement) : IDisposable =
 
         let append parent node =
-            Log.Console.log("CLEARING: ", parent |> Internal.DomHelpers.toString )
             DomEdit.clear parent
             DomEdit.appendLabel "Program.mount" parent node 
 
