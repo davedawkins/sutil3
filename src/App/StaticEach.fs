@@ -15,7 +15,7 @@ let cats = [
 
 let view() =
     Html.div [
-        Html.h4 [ text "The Famous Cats of YouTube" ]
+        Bulma.h4 [ text "The Famous Cats of YouTube" ]
         Html.ul [
 
             // Simplest "each" case, but one-time generation only, and no index.

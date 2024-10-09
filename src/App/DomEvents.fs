@@ -9,23 +9,25 @@ open Sutil.Html
 open Sutil.Bind
 open Sutil.CoreElements
 
-open Sutil.Styling
 open Browser.Types
 
 let view() =
+    let mouseXY = Store.make (0.0,0.0)
+
+    let handleMousemove (e:MouseEvent) =
+        mouseXY <~ (e.clientX, e.clientY)
+
     Html.div [
-        let m = Store.make (0.0,0.0)
+        Attr.style [ 
+            Css.width (percent 100)
+            Css.height (percent 100)
+        ]
 
-        let handleMousemove (e:MouseEvent) =
-            m <~ (e.clientX, e.clientY)
-
-        disposeOnUnmount [m]
+        disposeOnUnmount [mouseXY]
 
         Ev.onMouseMove handleMousemove 
-        Bind.el(m,fun (x,y) -> text $"The mouse position is {x} x {y}")
-    ] |> withStyle [
-        rule "div" [
-            Css.width (vw 100)
-            Css.height (vh 100)
-        ]
-    ]
+
+        Bind.el( mouseXY,
+            fun (x,y) -> text $"The mouse position is {x} x {y}"
+        )
+    ] 

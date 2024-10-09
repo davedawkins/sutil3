@@ -9,7 +9,7 @@ open Sutil.Core
 open Sutil.CoreElements
 open Sutil.Transition
 open Browser.Types
-open Sutil.DomHelpers
+open Sutil.Internal.DomHelpers
 
 let typewriter (userProps : TransitionProp list) (node: HTMLElement) = fun _ ->
     let valid = node.childNodes.length = 1 && isTextNode(node.childNodes.[0])

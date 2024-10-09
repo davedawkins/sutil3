@@ -97,10 +97,16 @@ type [<Erase>] Bind =
     /// Binding from value to a DOM fragment. Each change in value replaces the current DOM fragment
     /// with a new one.
     static member el<'T>  (value : IObservable<'T>, element: 'T -> SutilElement) : SutilElement =
-        bindElement value element
+        bindElement value element (fun _ _ -> false)
+
+    static member el<'T>  (name : string, value : IObservable<'T>, element: 'T -> SutilElement) : SutilElement =
+        bindElementWithName name value element (fun _ _ -> false)
+
+    static member el<'T,'K when 'K : equality> (name : string, value : IObservable<'T>, key:'T->'K, element: 'T -> SutilElement) : SutilElement =
+        bindElementK name value element key
 
     static member el<'T,'K when 'K : equality>  (value : IObservable<'T>, key:'T->'K, element: 'T -> SutilElement) : SutilElement =
-        bindElementK value element key
+        bindElementK "bindElementK" value element key
 
     // static member el<'T,'K when 'K : equality>  (value : IObservable<'T>, key:'T->'K, element: IObservable<'T> -> SutilElement) : SutilElement =
     //     bindElementKO value element key
@@ -166,21 +172,38 @@ type [<Erase>] Bind =
     //     //eachiko (listWrapO items) view key []
     //     eachiko (listWrapO items) (LiveIndexed view) key []
 
+    static member promises (name : string, items : IObservable<JS.Promise<'T>>, view : 'T  -> SutilElement, waiting: SutilElement, error : Exception -> SutilElement) =
+        Bind.el( name, items, fun p -> Bind.promise(name, p, view, waiting, error) )
+
     static member promises (items : IObservable<JS.Promise<'T>>, view : 'T  -> SutilElement, waiting: SutilElement, error : Exception -> SutilElement)=
         Bind.el( items, fun p -> Bind.promise(p, view, waiting, error) )
 
-    static member promise (p : JS.Promise<'T>, view : 'T  -> SutilElement, waiting: SutilElement, error : Exception -> SutilElement)=
-        Bind.el(  p.ToObservable(), fun state ->
-            match state with
-            | PromiseState.Waiting -> waiting
-            | PromiseState.Error x -> error x
-            | PromiseState.Result r ->  view r
-        )
+    static member promise (name : string, p : JS.Promise<'T>, view : 'T  -> SutilElement, waiting: SutilElement, error : Exception -> SutilElement)=
+        let pob = p.ToObservable()
 
-    static member promise (p : JS.Promise<'T>, view : 'T  -> SutilElement) =
+        // Wow. Even if I do say so myself. I was wondering how to dispose of pob, and then I realized I could just
+        // wrap the Bind.el in a fragment, include a disposeOnUmount and let Sutil deal with it.
+        
+        SutilElement.Fragment( [|
+            Bind.el( name, pob, fun state ->
+                match state with
+                | PromiseState.Waiting -> waiting
+                | PromiseState.Error x -> error x
+                | PromiseState.Result r ->  view r
+            )
+            CoreElements.disposeOnUnmount [ pob ]
+            |] )
+
+    static member promise (p : JS.Promise<'T>, view : 'T  -> SutilElement, waiting: SutilElement, error : Exception -> SutilElement)=
+        Bind.promise( "promise", p, view, waiting, error )
+
+    static member promise (name : string, p : JS.Promise<'T>, view : 'T  -> SutilElement) =
         let w = Core.Sutil2.el "div" [ Sutil2.attr( "class", "promise-waiting"); Core.Sutil2.text "waiting..."]
         let e (x : Exception) = Core.Sutil2.el "div" [ Sutil2.attr( "class", "promise-error" ); Core.Sutil2.text x.Message ]
-        Bind.promise(p, view, w, e )
+        Bind.promise(name, p, view, w, e )
+
+    static member promise (p : JS.Promise<'T>, view : 'T  -> SutilElement) =
+        Bind.promise("promise", p, view );
 
 /// <summary>
 /// Bindings for array observables and the Core. For example, <c>IObservable&lt;int[]></c>. The <c>Bind</c> class already handles lists. <c>BindArray</c> exists to eliminate compilation errors related to overloading of the <c>each</c> method.

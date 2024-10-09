@@ -52,7 +52,7 @@ let openSutil = """open Sutil
 open Sutil.Styling
 open Sutil.Core
 open Sutil.CoreElements
-open Sutil.DomHelpers
+open Sutil.Internal.DomHelpers
 
 open Feliz
 open type Feliz.length"""
@@ -244,7 +244,7 @@ let seqOfNodeList<'T> (nodes: Browser.Types.NodeListOf<'T>) =
 let querySelectorAll (selector : string) (node : Browser.Types.HTMLElement) =
     node.querySelectorAll(selector) |> seqOfNodeList |> Seq.toArray
 
-open Sutil.Dom
+open Sutil.Internal
 
 //
 // Handle //[no]repl directives
@@ -277,7 +277,7 @@ let processReplDirectives (preCode : Browser.Types.Element) : bool =
     |> not
 
 
-open Sutil.Dom
+open Sutil.Internal
 
 //
 // Find all "<pre><code>...</code></pre>" blocks

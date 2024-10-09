@@ -37,18 +37,17 @@ let view() =
 
         Html.divc "block" [
             Html.labelc "file-label" [ Attr.for' "avatar"; text "Upload a picture:" ]
-            Html.input [
+            Bulma.inputFile [
                 Attr.accept "image/png, image/jpeg"
                 Bind.attr("files",files)
                 Attr.id "avatar"
                 Attr.name "avatar"
-                Attr.typeFile
             ]
         ]
 
         Html.divc "block" [
             Html.labelc "file-label" [Attr.for' "many";text "Upload multiple files of any type:" ]
-            Html.input [
+            Bulma.inputFile [
                 Bind.attr("files",files)
                 Attr.id "many"
                 Attr.multiple true
@@ -58,7 +57,7 @@ let view() =
 
         Bind.el(fileSeq, fun _files ->
                                 Html.divc "control" [
-                                    Html.h3 [ text "Selected files" ]
+                                    Bulma.h3 [ text "Selected files" ]
                                     for file in _files do
                                         Html.p [ text $"{file.name} ({file.size} bytes)" ]
                                 ])

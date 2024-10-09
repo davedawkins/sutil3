@@ -5,10 +5,10 @@ open Sutil
 open Sutil.CoreElements
 open Sutil.Html
 open Sutil.Bind
-open Sutil.Styling
 open Fable.Core.JsInterop
 open Feliz
 open Browser
+open Sutil.Internal
 
 /// <summary>
 /// Helpers for listening and reacting to media changes
@@ -19,7 +19,7 @@ type Media =
     static member listenMedia (query:string, handler : bool -> unit) : Unsubscriber =
         let mql = window.matchMedia( query )
         handler (mql.matches)
-        Sutil.Dom.EventListeners.add mql "change" (fun e -> e?matches |> handler)
+        Sutil.Internal.EventListeners.add mql "change" (fun e -> e?matches |> handler)
 
     /// <summary>
     /// </summary>

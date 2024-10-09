@@ -11,8 +11,7 @@ ObservableTest.init()
 StoreTest.init()
 
 BrowserFramework.runAll( 
-    // "*", "*"
-    "*", "Binding to non-bind effect" 
+    "*", "*"
     )
 
 #endif

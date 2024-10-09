@@ -2,45 +2,44 @@ module Sutil.CoreElements
 
 open Sutil
 open Sutil.Core
-open Sutil.Dom
+open Sutil.Internal
 open Browser.Types
-open Sutil.Dom.CustomEvents
-open Sutil.Dom.TypeHelpers
-
+open Sutil.Internal.CustomEvents
 
 let debug (se : SutilElement) =
-    SutilElement.SideEffect(
+    Log.Console.log("debug: Adding element")
+    SutilElement.BuildMap( 
+        (fun ctx -> 
+            Log.Console.log("debug: Mapping build context to enable logging")
+            ctx.WithLogEnabled()),  
+        se 
+    )
+
+let __debug (se : SutilElement) =
+    SutilElement.Define(
         "debug",
         (fun context ->
             se
             |> Sutil.Core.mount (context.WithLogEnabled()) null
-            |> CreatedNode
         )
     )
-
 
 let unsubscribeOnUnmount (fns : (unit -> unit) seq ) =
-    SutilElement.SideEffect(
+    SutilElement.Define(
         "unsubscribeOnUnmount",
         (fun context ->
-            fns |> Seq.iter ((Dispose.addUnsubscribe context.ParentElement))            
-            DomEffect
+            fns |> Seq.iter ((Dispose.addUnsubscribe context.ParentElement "unsubscribeOnUnmount"))            
         )
     )
-
 
 let disposeOnUnmount (fns : (System.IDisposable) seq ) =
-    SutilElement.SideEffect(
+    SutilElement.Define(
         "disposeOnUnmount",
-        (fun context ->
-            fns |> Seq.iter (Dispose.addDisposable context.ParentElement)            
-            DomEffect
-        )
+        (fun ctx -> fns |> Seq.iter (Dispose.addDisposable ctx.ParentElement "disposeOnUmount"))
     )
 
-
 let hookParent (f : HTMLElement -> unit) =
-    SutilElement.SideEffect(
+    SutilElement.Define(
         "hookParent",
         (fun context ->
             EventListeners.add
@@ -48,7 +47,7 @@ let hookParent (f : HTMLElement -> unit) =
                 MOUNT
                 (fun e -> (e.target :?> HTMLElement) |> f) |> ignore
             
-            DomEffect
+            SutilResult.Of( SutilResultType.Effected "hookParent", context.ParentElement )
         )
     )
 
@@ -76,11 +75,25 @@ let html (text : string) : SutilElement =
             ctx.OnImportedNode host
 
             // Let code highligher (index.html) know that new code needs marking up
-            Sutil.Dom.CustomEvents.notifySutilUpdated (host.ownerDocument)
+            Sutil.Internal.CustomEvents.notifySutilUpdated (host.ownerDocument)
 
-            CreatedNode host
+            SutilResult.Of( Appended, host )
         )
-        |> Option.defaultValue (SutilEffectResult.DomEffect)
+        |> Option.defaultWith (fun _ -> failwith "Not an element")
+    )
+
+
+let listenToResize (dispatch: HTMLElement -> unit) : SutilElement =
+    SutilElement.Define( 
+        "listenToResize",
+        fun ctx ->
+            let parent : HTMLElement = ctx.ParentElement
+            let notify() = dispatch parent
+
+            EventListeners.once CustomEvents.MOUNT parent (fun _ ->
+                SutilEffect.RegisterDisposable(parent, "listenToResize", (ResizeObserver.getResizer parent).Subscribe( notify ))
+                DomHelpers.rafu notify) |> ignore
+        
     )
 
 // let postProcess (f : SutilEffect -> SutilEffect) (view : SutilElement) : SutilElement =
@@ -89,16 +102,11 @@ let html (text : string) : SutilElement =
 let postProcessElementsWithName (name : string) (f : HTMLElement -> unit) (se : SutilElement) : SutilElement =
 
     let run ( context : BuildContext )  =
-        let el = 
-            se 
-            |> Sutil.Core.mount 
-                    context //(context.WithLogEnabled()) 
-                    null 
-            |> asElement
-        f el
-        CreatedNode el
+        let result =  se  |> Sutil.Core.mount context null 
+        result.Node.asElement |> Option.iter f
+        result        
 
-    SutilElement.SideEffect (name, run)
+    SutilElement.Define (name, run)
 
 let postProcessElements (f : HTMLElement -> unit) (se : SutilElement) : SutilElement =
     postProcessElementsWithName ("postProcessElement") f se 
@@ -109,26 +117,22 @@ let headStylesheet (url : string) : SutilElement =
     SutilElement.Define( "headStyleSheet",
         fun ctx -> 
             DomEdit.setHeadStylesheet ctx.Document url 
-            DomEffect
     )
 
 let headScript (url : string) : SutilElement =
     SutilElement.Define( "headScript",
         fun ctx -> 
             DomEdit.setHeadScript ctx.Document url 
-            DomEffect
     )
 
 let headEmbedScript (source : string) : SutilElement =
     SutilElement.Define( "headEmbedScript",
         fun ctx -> 
             DomEdit.setHeadEmbedScript ctx.Document source 
-            DomEffect
     )
 
 let headTitle (title : string) : SutilElement =
     SutilElement.Define( "headTitle",
         fun ctx -> 
             DomEdit.setHeadTitle ctx.Document title
-            DomEffect
     )

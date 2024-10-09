@@ -1,7 +1,7 @@
 namespace Sutil
 
 open Core
-open Sutil.Dom
+open Sutil.Internal
 
 open Browser.Types
 
@@ -20,12 +20,18 @@ type Program() =
     /// Mount application on element with given id. Existing children at that node will be removed. Return value can be disposed to unmount and clean up.
     ///</summary>
     static member mount (id : string, app : SutilElement) : IDisposable =
+
+        let append parent node =
+            Log.Console.log("CLEARING: ", parent |> Internal.DomHelpers.toString )
+            DomEdit.clear parent
+            DomEdit.appendLabel "Program.mount" parent node 
+
         Core.mount
             (BuildContext.Create(Browser.Dom.document.getElementById(id))
-                .WithAppendNode( fun parent node -> DomEdit.clear parent; DomEdit.appendLabel "Program.mount" parent node ))
+                .WithAppendNode( append ))
             null
             app
-        |> (fun node -> Dispose.makeDisposable( fun () -> DomEdit.remove node) )
+        |> (fun result -> Dispose.makeDisposable( fun () -> DomEdit.remove result.Node) )
 
     ///<summary>
     /// Mount application on given HTMLElement. Existing children at that node will be removed. Return value can be disposed to unmount and clean up.
@@ -36,7 +42,7 @@ type Program() =
                 .WithAppendNode( fun parent node -> DomEdit.clear parent; DomEdit.appendLabel "Program.mount2" parent node ))
             null
             app
-        |> (fun node -> Dispose.makeDisposable(fun () -> DomEdit.remove node))
+        |> (fun result -> Dispose.makeDisposable(fun () -> DomEdit.remove result.Node))
 
     ///<summary>
     /// Mount application on element with id "sutil-app". Existing children at that node will be removed. Return value is <c>unit</c>, so use alternate version <c>mount( id, app )</c>
@@ -65,7 +71,7 @@ type Program() =
             null
             app
 
-        |> (fun node -> Dispose.makeDisposable(fun () -> DomEdit.remove node))
+        |> (fun result -> Dispose.makeDisposable(fun () -> DomEdit.remove result.Node))
 
     ///<summary>
     /// Mount application at given element, appending as last child and preserving existing children. Return value can be disposed to unmount and clean up.
@@ -77,7 +83,7 @@ type Program() =
             null
             app
 
-        |> (fun node -> Dispose.makeDisposable( fun () -> DomEdit.remove node))
+        |> (fun result -> Dispose.makeDisposable( fun () -> DomEdit.remove result.Node))
 
     ///<summary>
     /// Remove this node, cleaning up all related Sutil resources. By design, it should be rare that you need to use this, but it provides

@@ -32,14 +32,6 @@ let appStyle = [
     ]
 ]
 
-let input children = Html.input [ Attr.className "input"; yield! children ]
-let form children = Html.form [ Attr.className "block"; yield! children ]
-let button children = Html.button [ Attr.className "button"; yield! children ]
-let h2 children = Html.h2 [ Attr.className "title is-2"; yield! children ]
-
-// HTML helpers
-let block children = Html.div [ Attr.className "block"; yield! children ]
-
 let view() =
     let answer   = Store.make("")
     let selected : IStore<Question> = Store.make( questions |> List.head )
@@ -53,33 +45,32 @@ let view() =
     Html.div [
         disposeOnUnmount [ answer; selected ]
 
-        h2 [ text "Health Check" ]
+        Bulma.h2 [ text "Health Check" ]
 
-        form [
+        Bulma.form [
             Ev.onSubmit handleSubmit
 
             Html.div [
                 Attr.className "select block"
                 Html.select [
                     Bind.selected selected
-                    Ev.onChange(fun _ -> Store.set answer "")
+                    //Ev.onChange(fun (value:string) -> Store.set answer "")
                     for question in questions do
                         Html.option [
-                            Attr.value question // FIXME: Add obj overload for value
+                            Attr.value (question) // FIXME: Add obj overload for value
                             text question.Text
                         ]
                 ]
             ]
 
-            block [
-                input [
-                    Attr.typeText
+            Bulma.block [
+                Bulma.inputText [
                     Bind.attr ("value",answer)
                 ]
             ]
 
-            block [
-                button [
+            Bulma.block [
+                Bulma.button [
                     Bind.attr ("disabled",answer |> Store.map (fun a -> a = ""))
                     Attr.typeSubmit
                     text "Submit"
@@ -87,7 +78,7 @@ let view() =
             ]
         ]
 
-        block [
+        Bulma.block [
             Bind.el( selected, fun q ->
                 Html.p [
                     text $"Selected question {q.Id}"

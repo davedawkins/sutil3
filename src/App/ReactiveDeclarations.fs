@@ -20,7 +20,8 @@ let view() =
     Html.div [
         disposeOnUnmount [ count ]
 
-        Html.buttonc "block" [
+        Bulma.button [
+            Attr.className "block"
             Ev.onClick handleClick 
             Bind.el( count, fun n -> text $"Count: {n}")
         ]

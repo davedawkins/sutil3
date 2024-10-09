@@ -18,12 +18,12 @@ let view() =
 
         Html.div [
             Attr.className "block"
-            Html.button [
+            Bulma.button [
                 Ev.onClick (fun _ -> count <~= (fun n -> n-1))
                 text "-"
             ]
 
-            Html.button [
+            Bulma.button [
                 Ev.onClick (fun _ -> count <~= (fun n -> n+1))
                 text "+"
             ]

@@ -9,7 +9,7 @@ open type Feliz.length
 open Sutil.Core
 open Sutil.CoreElements
 open Sutil.Elmish
-open Sutil.Dom.DomHelpers
+open Sutil.Internal.DomHelpers
 open System
 
 type Model = {

@@ -145,10 +145,12 @@ describe "Sutil.Binding" <| fun () ->
     it "Bind dispose div" <| fun () ->promise {
         let store = Store.make 0
         let mutable disposed = 0
+        let mutable mounted = 0
         let app =
             Html.divc "A" [
                 Bind.el(store, fun n ->
                     Html.divc "B" [
+                        Ev.onMount (fun _ -> mounted <- mounted + 1)
                         unsubscribeOnUnmount [ (fun _ -> disposed <- disposed + 1) ]
                         text (n.ToString())
                     ]
@@ -157,6 +159,9 @@ describe "Sutil.Binding" <| fun () ->
 
         mountTestApp app
 
+        Expect.areEqual( mounted - disposed, 1, "#1: mounted and disposed count differ by 1")
+        Expect.areEqual( mounted, 1, "#1: mounted only once")
+
         Expect.queryText "div>div" "0"
         Expect.assertTrue (disposed = 0) "Not yet disposed"
         Log.Console.log("MODIFY STORE")
@@ -164,6 +169,8 @@ describe "Sutil.Binding" <| fun () ->
         store |> Store.modify ((+)1)
 
         Expect.areEqual(disposed, 1, "Element was disposed")
+        Expect.areEqual( mounted - disposed, 1, "#2: mounted and disposed count differ by 1")
+        Expect.areEqual( mounted, 2, "#2: mounted only once")
         Expect.queryText "div>div" "1"
     }
 
@@ -172,20 +179,27 @@ describe "Sutil.Binding" <| fun () ->
         let storeInner : IStore<int> = Store.make 0
         let storeOuter = Store.make 0
         let mutable disposed = 0
+        let mutable mounted = 0
+
         let app =
             Html.div [
-                Bind.el(storeOuter, fun n ->
+                Bind.el(storeOuter, fun n1 ->
                     Html.div [
-                        Bind.el(storeInner, fun n ->
+                        Bind.el(storeInner, fun n2 ->
                             Html.div [
-                                unsubscribeOnUnmount [ (fun _ -> disposed <- disposed + 1) ]
-                                text (n.ToString())
+                                Ev.onMount (fun _ -> 
+                                    mounted <- mounted + 1)
+                                unsubscribeOnUnmount [ (fun _ ->  
+                                    disposed <- disposed + 1) ]
+                                text (n2.ToString())
                             ]
                         )
                     ])
             ]
 
         mountTestApp app
+        Expect.areEqual( mounted - disposed, 1, "#1: mounted and disposed count differ by 1")
+        Expect.areEqual( mounted, 1, "#1: mounted only once")
 
         Expect.areEqual(Store.countSubscribers storeInner,1, "1 inner subscriber before store update")
         Expect.areEqual(Store.countSubscribers storeOuter,1, "1 outer subscriber before store update")
@@ -194,7 +208,10 @@ describe "Sutil.Binding" <| fun () ->
 
         Expect.areEqual(Store.countSubscribers storeInner,1, "1 inner subscriber after store update")
         Expect.areEqual(Store.countSubscribers storeOuter,1, "1 outer subscriber after store update")
-        Expect.areEqual(disposed,1, "inner was disposed")
+
+        Expect.areEqual( mounted - disposed, 1, "#2: mounted and disposed count differ by 1")
+
+        Expect.areEqual( disposed,1, "inner was disposed exactly once")
     }
 
     it "Bind disposal nestx3" <| fun () ->promise {

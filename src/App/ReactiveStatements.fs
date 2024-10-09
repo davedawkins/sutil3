@@ -25,7 +25,7 @@ let view() =
     let handleClick _ =
         count <~= inc   // or: Store.modify count inc
 
-    Html.button [
+    Bulma.button [
         disposeOnUnmount [count; unsub ]
 
         Ev.onClick handleClick

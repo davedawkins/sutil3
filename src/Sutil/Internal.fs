@@ -1,6 +1,8 @@
 
 namespace Sutil.Internal
 
+// /(Patch:|toDom|Mount)/
+
 /// Type of function returned from effecting functions, that allow
 /// the effect to be reversed. So, a subscribe() function returns a
 /// function that unsubscribes; listen() function will return  a
@@ -12,7 +14,8 @@ open Sutil
 [<AutoOpen>]
 module private Locals =
     let log = Sutil.Log.create "Dom"
-        
+    log.enabled <- false
+    
 /// Helper functions for working with Node and its Element and Text subtypes
 module TypeHelpers =
 
@@ -98,7 +101,7 @@ module NodeKey =
     open Fable.Core
     open Browser.Types
 
-    [<Emit("delete $0[$1]")>]
+    [<Emit("delete $1[$0]")>]
     let deleteKey (key : string) (node : Node) = jsNative
         
     let hasKey (key : string) (node : Node) =
@@ -151,8 +154,9 @@ module CustomEvents =
     open Fable.Core
     open Browser.Types
 
-    let [<Literal>] ELEMENT_READY = "sutil-element-ready"
+    //let [<Literal>] ELEMENT_READY = "sutil-element-ready"
     let [<Literal>] MOUNT = "sutil-mount"
+    let [<Literal>] ELEMENT_READY = MOUNT
     let [<Literal>] UNMOUNT = "sutil-unmount"
     let [<Literal>] SHOW = "sutil-show"
     let [<Literal>] HIDE = "sutil-hide"
@@ -177,6 +181,8 @@ module CustomEvents =
 
     let notifySutilUpdated (doc : EventTarget) = 
         dispatchSimple doc UPDATED
+
+    type EventOption = Once
 
     /// <summary>
     /// Custom events
@@ -222,11 +228,10 @@ module DomHelpers =
         |> Option.map _.outerHTML 
         |> Option.defaultValue (if isNull n then "<null node>" else n.textContent)
 
-
     let elementTag (n : Node) = if isElementNode n then (asElement n).tagName else ""
 
     let toStringSummary (node: Node) =
-        let svId node = Id.getId node
+        let _id node = Id.getId node
         
         if isNull node then
             "null"
@@ -246,18 +251,16 @@ module DomHelpers =
                 sprintf "<%s%s%s>%s</%s>"  
                     tn
                     (_s (cs) " class='%s'")
-                    (_s (svId node) " sutil-id='%s'")
-                    tc //e.innerText
+                    (_s (_id node) " sutil-id='%s'")
+                    tc
                     tn
 
             | TextNodeType -> 
                 sprintf "<text sutil-id='%A'>%s</text>"  
-                    (svId node)
+                    (_id node)
                     tc
-            | _ -> $"?'{tc}'#{svId node}"
+            | _ -> $"?'{tc}'#{_id node}"
 
-    let private ifNotNull (f : 't -> unit) (n : 't) =
-        if not (isNull n) then f n
 
     let children (node: Node) =
         let rec visit (child: Node) =
@@ -269,6 +272,64 @@ module DomHelpers =
 
         if isNull node then Seq.empty else visit node.firstChild
 
+    let rec toString (node: Node) =
+        let _id node = Id.getId node
+        
+        if isNull node then
+            "null"
+        else
+
+            //if tc.Length > 16 then
+            //    tc <- tc.Substring(0, 16) + "..."
+
+            let _s s f = if s = "" then "" else sprintf f s
+
+            match node.nodeType with
+            | ElementNodeType ->
+                let mutable tc =
+                    children node |> Seq.map toString |> String.concat ""
+                let e = node :?> HTMLElement
+                let tn = (e.tagName.ToLower())
+                let cs = [ for i in 0..(e.classList.length-1) do e.classList[i] ] |> String.concat " "
+                sprintf "<%s%s%s>%s</%s>"  
+                    tn
+                    (_s (cs) " class='%s'")
+                    (_s (_id node) " sutil-id='%s'")
+                    tc
+                    tn
+
+            | TextNodeType -> node.textContent
+            | _ -> $"?'{node.textContent}'#{_id node}"
+
+    let rec toStringOutline (node: Node) =
+        let _id node = Id.getId node
+        
+        if isNull node then
+            "null"
+        else
+
+            //if tc.Length > 16 then
+            //    tc <- tc.Substring(0, 16) + "..."
+
+            let _s s f = if s = "" then "" else sprintf f s
+
+            match node.nodeType with
+            | ElementNodeType ->
+                let mutable tc =
+                    children node |> Seq.map toStringOutline |> String.concat ""
+                let e = node :?> HTMLElement
+                let tn = (e.tagName.ToLower())
+                let cs = [ for i in 0..(e.classList.length-1) do e.classList[i] ] |> String.concat " "
+                sprintf "<%s%s%s>%s</%s>"  
+                    tn
+                    (_s (cs) " class='%s'")
+                    (_s (_id node) " '%s'")
+                    tc
+                    tn
+
+            | TextNodeType -> if node.textContent <> "" then ".." else ""
+            | _ -> $"?'{node.textContent}'#{_id node}"
+
     let rec descendants (node: Node) =
         seq {
             for child in children node do
@@ -279,6 +340,13 @@ module DomHelpers =
     let rec internal descendantsDepthFirst (node: Node) =
         seq {
             for child in children node do
+                yield! descendants child
+                yield child
+        }
+
+    let rec internal descendantsDepthFirstReverse (node: Node) =
+        seq {
+            for child in Seq.rev(children node) do
                 yield! descendants child
                 yield child
         }
@@ -339,20 +407,31 @@ module Dispose =
 
     let private clearDisposables (node: Node) : unit = 
         deleteKey Disposables node 
+        if (hasDisposables node) then
+            failwith "Internal error"
 
     let setDisposables (node : Node) (ds : System.IDisposable[]) =
         setKey (Disposables) node ds
 
-    let addDisposable (node : Node) (d : System.IDisposable) =
+    let addDisposable (node : Node) (name : string) (d : System.IDisposable) =
+        log.info("disposeNode: adding disposable '" + name + "' to ", node |> DomHelpers.toStringOutline)
         Array.singleton d
         |> Array.append (getDisposables node)
         |> setDisposables node
 
-    let addUnsubscribe( node : Node) (f : Unsubscriber) =
-        f |> makeDisposable |> addDisposable node
+    let addUnsubscribe( node : Node) (name : string) (f : Unsubscriber) =
+        f |> makeDisposable |> addDisposable node name
+
+    let mutable _disposeId = 0
 
     let internal disposeNode (node : Node) = 
-        // log.info("disposeNode: ", node)
+        let _id = _disposeId
+        _disposeId <- _disposeId + 1
+        let text = node |> DomHelpers.toStringOutline
+        log.info("disposeNode: ", _id, text )
+
+        let disposables = getDisposables node |> Array.copy
+        clearDisposables node
 
         CustomEvents.dispatchSimple node CustomEvents.UNMOUNT
 
@@ -361,12 +440,13 @@ module Dispose =
 
         // EventListeners.clear node
 
-        getDisposables node |> Array.iter safeDispose
-        clearDisposables node
+        disposables |> Array.iter safeDispose
+        log.info("EXIT: disposeNode: ", _id, text )
+
 
     let rec internal disposeTree (node : Node) = 
 
-        descendantsDepthFirst node
+        descendantsDepthFirstReverse node
         |> Array.ofSeq
         |> Array.iter disposeNode
 
@@ -404,7 +484,6 @@ module ClassHelpers =
     
     let toArray (classes : DOMTokenList) : string[] = classes |> toSeq |> Seq.toArray
 
-
 /// Support for edits to the DOM: creating nodes, setting attributes etc
 module DomEdit =
 
@@ -432,7 +511,11 @@ module DomEdit =
             remove current
         with
         | x ->
-
+            Log.Console.error("replace: ", x.Message)
+            Log.Console.info("current: ", current |> DomHelpers.toStringOutline )
+            Log.Console.info("node   : ", node |> DomHelpers.toStringOutline )
+            Log.Console.info("parent : ", parent |> DomHelpers.toStringOutline )
+            
     let insertBefore (parent: Node) (child: Node) (refNode: Node) =
         parent.insertBefore (child, refNode) |> ignore
 
@@ -483,8 +566,15 @@ module DomEdit =
                 el.setAttribute (name, "")
             else
                 el.removeAttribute name
+
+        // The  (SutilElement -> VirtualElement) fn will collate all the classes into
+        // into a single class attribute, so that we don't need to addToClassList here
+
         // elif (name.ToLower() = "class") then
         //     ClassHelpers.addToClasslist svalue el
+        elif name = "value" then
+            JsMap.setKey el "__value" value
+            el.setAttribute(name, svalue)
         else
             el.setAttribute(name, svalue)
 
@@ -525,47 +615,19 @@ module DomEdit =
 /// Support for managing event listeners.
 module EventListeners =
     open Browser.Types
-    open Fable.Core.JsInterop
-
-    // let nextListenerId = Helpers.createIdGenerator()
-
-    // let [<Literal>] LISTENERS = "__sutil_ev"
-
-    // type NamedHandler =  (string * int * Unsubscriber)
-
-    // let empty : NamedHandler [] = Array.empty
 
     let add (node : EventTarget) (event : string) (handler : Event -> unit) : Unsubscriber =
-        let f = handler
-
-        node.addEventListener(event, f)
+        node.addEventListener(event, handler)
 
         let remove =
-            (fun () ->
-                node.removeEventListener( event, f )
-                // JsMap.arrayRemoveKey 
-                //     node 
-                //     LISTENERS 
-                //     (fun (name, n, remove) -> n = lid)
-            )
+            (fun () -> node.removeEventListener( event, handler ))
 
-        remove |> Dispose.addUnsubscribe (node :?> Node)
+        remove |> Dispose.addUnsubscribe (node :?> Node) event
 
-        //JsMap.arrayAppendKey node LISTENERS (Array.singleton (event, lid, remove))
-        
         remove
 
-//     let clear (node : Node) =
-// //         NodeKey.getKeyWith LISTENERS node empty
-// //             |> Array.iter (fun (name, lid, remove) -> 
-// //                     log.info("removing event listener ", name, " id ", lid, " from " , node)
-// //                     remove()
-// // //                    node.removeEventListener(name,f)
-// //                 )
-//         NodeKey.deleteKey LISTENERS node
-
     /// Listen for the given event, and remove the listener after the first occurrence of the evening firing.
-    let once (event: string) (target: EventTarget) (fn: Event -> Unit) : unit =
+    let once (event: string) (target: EventTarget) (fn: Event -> Unit) : Unsubscriber =
         let mutable remove : Unsubscriber = Unchecked.defaultof<_>
 
         let rec inner e =
@@ -573,6 +635,7 @@ module EventListeners =
             fn (e)
 
         remove <- add (target :?> Node) event inner
+        remove
 
 /// 
 [<AutoOpen>]

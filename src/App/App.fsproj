@@ -27,9 +27,9 @@
     <Compile Include="EachBlocks.fs" />
     <Compile Include="KeyedEachBlocks.fs" />
     <Compile Include="AwaitBlocks.fs" />
-    <!-- <Compile Include="CustomEvents.fs" /> -->
+    <Compile Include="CustomEvents.fs" />
     <Compile Include="DomEvents.fs" />
-    <!-- <Compile Include="EventModifiers.fs" /> -->
+    <Compile Include="EventModifiers.fs" />
     <Compile Include="Transition.fs" />
     <!-- <Compile Include="TransitionParameters.fs" /> -->
     <!-- <Compile Include="TransitionEvents.fs" /> -->
@@ -41,12 +41,12 @@
     <Compile Include="FileInputs.fs" />
     <Compile Include="NumericInputs.fs" />
     <Compile Include="TextInputs.fs" />
-    <!-- <Compile Include="CheckboxInputs.fs" /> -->
+    <Compile Include="CheckboxInputs.fs" />
     <Compile Include="GroupInputs.fs" />
     <Compile Include="TextArea.fs" />
-    <!-- <Compile Include="SelectBindings.fs" /> -->
+    <Compile Include="SelectBindings.fs" />
     <Compile Include="SelectMultiple.fs" />
-    <!-- <Compile Include="Dimensions.fs" /> -->
+    <Compile Include="Dimensions.fs" />
     <!-- <Compile Include="BarChart.fs" /> -->
     <Compile Include="Modal.fs" />
     <Compile Include="Evaluator.fs" />

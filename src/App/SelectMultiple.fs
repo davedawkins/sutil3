@@ -57,8 +57,7 @@ let view() =
             scoopMenu |> List.mapi (fun i scoopChoice ->
                 controlLabel [
                     Attr.className "radio"
-                    Html.input [
-                        Attr.typeRadio
+                    Bulma.inputRadio [
                         Bind.radioValue scoops
                         i+1 |> string |> Attr.value
                     ]

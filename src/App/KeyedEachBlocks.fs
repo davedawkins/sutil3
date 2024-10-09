@@ -58,7 +58,7 @@ let view() =
     Html.div [
         disposeOnUnmount [things]
 
-        Html.button [
+        Bulma.button [
             Ev.onClick handleClick
             text "Remove first thing"
         ]
@@ -67,12 +67,12 @@ let view() =
             Attr.style [ Css.displayGrid; Css.gridTemplateColumns [fr 1; fr 1]; Css.gap (em 1) ]
 
             Html.div [
-                Html.h2 [ text "Keyed" ]
+                Bulma.h2 [ text "Keyed" ]
                 Bind.each( things, makeThing, Id )
             ]
 
             Html.div [
-                Html.h2 [ text "Unkeyed" ]
+                Bulma.h2 [ text "Unkeyed" ]
                 Bind.each( things, makeThing )
             ]
         ]

@@ -4,7 +4,7 @@ Sutil 2.0 refactors the Sutil.DOM module into
 
 - Sutil.Core
 - Sutil.CoreElements
-- Sutil.DomHelpers
+- Sutil.Internal.DomHelpers
 
 Most (if not all) existing Sutil code will work with the following edits:
 
@@ -16,7 +16,7 @@ Most (if not all) existing Sutil code will work with the following edits:
 //open Sutil.Attr   // Removed in Sutil 2.x
 open Sutil.Core
 open Sutil.CoreElements
-open Sutil.DomHelpers
+open Sutil.Internal.DomHelpers
 ```
 
 - Fix qualified function calls

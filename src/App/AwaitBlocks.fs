@@ -35,15 +35,13 @@ let randomNames = getRandomName() |> Store.make
 
 let view() =
     Html.div [
-        Html.button [
-            Attr.className "block"
+        Bulma.button [
             Ev.onClick (fun _ -> getRandomName() |> Store.set randomNames)
             text "generate random name"
         ]
 
-        Html.div [
-            Attr.className "block"
-            Bind.promises( randomNames,
+        Bulma.block [
+            Bind.promises( "randomNames", randomNames,
                 (fun n -> text $"Please welcome {n}"),
                 (text "...waiting"),
                 (fun x ->
@@ -54,4 +52,4 @@ let view() =
                 )
             )
         ]
-    ]
+    ] |> CoreElements.debug

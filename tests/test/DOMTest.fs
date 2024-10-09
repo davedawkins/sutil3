@@ -7,7 +7,7 @@ open WebTestRunner
 #endif
 
 open Sutil
-open Sutil.Dom
+open Sutil.Internal
 open Sutil.Html
 open Sutil.Bind
 open Sutil.CoreElements
@@ -33,7 +33,7 @@ describe "DOM" <| fun () ->
         let counters = Array.zeroCreate 6
 
         let countMount i =
-            Ev.onMount (fun e -> counters.[i] <- counters.[i] + 1; log(sprintf "mount %d: %s" i (Sutil.Dom.DomHelpers.toStringSummary (!!e.target))))
+            Ev.onMount (fun e -> counters.[i] <- counters.[i] + 1; log(sprintf "mount %d: %s" i (Sutil.Internal.DomHelpers.toStringSummary (!!e.target))))
 
         let app =
             Html.div [
@@ -613,6 +613,29 @@ describe "DOM" <| fun () ->
         return ()
     }
 
+    it "bind initialization" <| fun _ -> promise {
+        let view() =
+            let name = Store.make("Bob")
+
+            Html.div [
+                Bind.el( name, fun value -> 
+                    Html.span [ text ("Enter your name: " + value) ]
+                )
+
+                Html.p [
+                    Bind.el(name, text)
+                ]
+            ]
+
+        view() |> mountTestApp
+
+        Expect.queryIsElement "div>*:nth-child(1)" "span"
+        Expect.queryIsElement "div>*:nth-child(2)" "p"
+        Expect.queryText "div>span" "Enter your name: Bob"
+        Expect.queryText "div>p" "Bob"
+
+        return ()
+    }
 
     //testCaseP "400ms" <| fun () ->
     //    promise {

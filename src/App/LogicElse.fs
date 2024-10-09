@@ -21,12 +21,12 @@ let view() =
         Bind.el(user, fun u ->
             Html.div [
                 if u.loggedIn then
-                    Html.button [
+                    Bulma.button [
                         Ev.onClick toggle
                         text "Log out"
                     ]
                 else
-                    Html.button [
+                    Bulma.button [
                         Ev.onClick toggle
                         text "Log in"
                     ]

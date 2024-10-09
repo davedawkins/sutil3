@@ -81,7 +81,7 @@ let internal makeElmishWithDocument (doc:Document) (init: 'Props -> 'Model * Cmd
 
     makeElmishWithCons init update dispose (fun i d ->
         let s = Store.makeStore i  d
-        let u = (fun f -> s.Update(f); Sutil.Dom.CustomEvents.notifySutilUpdated doc)
+        let u = (fun f -> s.Update(f); Sutil.Internal.CustomEvents.notifySutilUpdated doc)
         upcast s, u)
 
 let internal makeElmishSimpleWithDocument (doc:Document) (init: 'Props -> 'Model)
@@ -92,7 +92,7 @@ let internal makeElmishSimpleWithDocument (doc:Document) (init: 'Props -> 'Model
     let update msg model = update msg model, []
     makeElmishWithCons init update dispose (fun i d ->
         let s = Store.makeStore i  d
-        let u = (fun f -> s.Update(f); Sutil.Dom.CustomEvents.notifySutilUpdated doc)
+        let u = (fun f -> s.Update(f); Sutil.Internal.CustomEvents.notifySutilUpdated doc)
         upcast s, u)
 
 [<RequireQualifiedAccess>]

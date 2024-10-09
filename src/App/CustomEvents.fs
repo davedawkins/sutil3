@@ -5,7 +5,7 @@ open type Feliz.length
 open Sutil.CoreElements
 open Sutil.Html
 open Sutil.Bind
-open Sutil.Dom.CustomEvents
+open Sutil.Internal.CustomEvents
 
 open Browser.Types
 open System
@@ -17,7 +17,7 @@ let customDispatchButton() =
         let props: CustomDispatch<string> list = [Bubbles true; Detail($"Hello there! %i{r.Next(1000)}")]
         CustomDispatch.dispatch<string>(e,"on-custom-click", props)
 
-    Html.button [
+    Bulma.button [
         Ev.onClick clickHandler
         text "I will dispatch an 'on-custom-click' event"
     ]
@@ -28,10 +28,10 @@ let view() =
 
         disposeOnUnmount [m]
 
-        onCustomEvent<string>
-            "on-custom-click"
+        Ev.onCustomEvent<string>(
+            "on-custom-click",
             (fun (e: CustomEvent<string>) -> e.detail |> Option.defaultValue "" |> Store.set m)
-            []
+        )
 
         Html.div [
             customDispatchButton()

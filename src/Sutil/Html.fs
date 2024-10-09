@@ -2,7 +2,7 @@ module Sutil.Html
 
 open System
 open Browser.Types
-open Sutil.Dom
+open Sutil.Internal
 
 open Core
 open Feliz
@@ -15,6 +15,8 @@ let inline private _element tag children = SutilElement.Element (tag, children |
 let inline private _fragment children = SutilElement.Fragment (children |> Seq.toArray)
 let inline private _text s = SutilElement.Text s
 let inline private _attr(n, v) = SutilElement.Attribute(n,v)
+let inline private _ev( e, f ) = SutilElement.Event( e, f, Array.empty )
+let inline private _evx( e, f, o ) = SutilElement.Event( e, f, o )
 
 // Dummy type to avoid problems with overload resolution in HtmlEngine
 ///<exclude/>
@@ -33,20 +35,35 @@ type [<Fable.Core.Erase>] NodeAttr = NodeAttr of SutilElement
 type SutilEventEngine() =
     inherit EventEngine<SutilElement>( 
         fun (event:string) handler ->
-            SutilElement.Event( event, handler )
+            _ev( event, handler )
     )
 
+    member __.onCustomEvent<'T> (event: string, handler: CustomEvent<'T> -> unit)  =
+        _ev( event, !!handler )
+
+    member __.onMouseMove( handler : MouseEvent -> unit ) =
+        _ev( "mousemove", !!handler )
+
+    member __.onMouseOver( handler : MouseEvent -> unit ) =
+        _ev( "mouseover", !!handler )
+
     member __.onMount( handler ) =
-        SutilElement.Event( CustomEvents.MOUNT, handler )
+        _ev( CustomEvents.MOUNT, handler )
 
     member __.onUnmount( handler ) =
-        SutilElement.Event( CustomEvents.UNMOUNT, handler )
+        _ev( CustomEvents.UNMOUNT, handler )
 
     member __.onInputT( handler : TypedEvent<HTMLInputElement> -> unit)=
-        SutilElement.Event( 
+        _ev( 
             "input", 
             !!handler 
         )
+
+    member __.once( event : string, handler : Event -> unit ) =
+        _evx(
+            event, handler, [| Internal.CustomEvents.Once |]
+        )
+
 
 /// <summary>
 /// Functions for building DOM elements.
@@ -206,10 +223,10 @@ type SutilAttrEngine() =
 
     // member _.disabled<'T> (value: IObservable<'T>) = bindAttrIn "disabled" value
 
-    // member _.value(value:obj)   = attr("value",value)
-    // member _.value(value:int)   = attr("value",value)
-    // member _.value(value:float) = attr("value",value)
-    // member _.value(value:bool)  = attr("value",value)
+    member _.value(value:obj)   = _attr("value",value)
+    member _.value(value:int)   = _attr("value",value)
+    member _.value(value:float) = _attr("value",value)
+    member _.value(value:bool)  = _attr("value",value)
 
     // member _.value<'T> (value: IObservable<'T>) = bindAttrIn "value" value
     // member _.value<'T> (value: IObservable<'T>, dispatch: 'T -> unit) =

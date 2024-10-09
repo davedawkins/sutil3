@@ -1,8 +1,8 @@
 
 module Sutil.Styling
 
-open Sutil.Dom
-open Sutil.Dom.TypeHelpers
+open Sutil.Internal
+open Sutil.Internal.TypeHelpers
 
 let [<Literal>] private  MODULE_NAME = "Styling"
 
@@ -54,7 +54,6 @@ module Types =
 
 open Types
 
-
 module internal Renderer =
 
     open System
@@ -101,7 +100,7 @@ module internal Renderer =
     //     el.setAttribute( "style", getStyleAttr el |> filterStyleAttr name )
 
     // let newStyleElement (doc : Document)=
-    //     let head = "head" |> Sutil.Dom.DomHelpers.findElement doc
+    //     let head = "head" |> Sutil.Internal.DomHelpers.findElement doc
     //     let style = doc.createElement("style")
     //     head.appendChild(style :> Node) |> ignore
     //     style
@@ -292,8 +291,9 @@ let private addScopeForNode (scopeName : string) (node : Node) : unit =
 
     run scopeName node
 
-let withStyle (rules : SutilStyleRule seq) (sutilElement : SutilElement) =
+open Core
 
+let withStyle (rules : SutilStyleRule seq) (sutilElement : SutilElement) =
     let addStyle ( context : BuildContext )  =
 
         let scopeName = sprintf "%s-%d" SUTIL_SCOPE (context.NextId())
@@ -307,11 +307,12 @@ let withStyle (rules : SutilStyleRule seq) (sutilElement : SutilElement) =
 
         let context2 = 
             context
+                .WithAppendNode( DomEdit.append )
                 .WithVirtualElementMapperPre( addScope scopeName )
                 .WithOnImportedNode( addScopeForNode scopeName )
- 
+                //.WithLogEnabled()
+
         sutilElement
         |> Sutil.Core.mount context2 null
-        |> CreatedNode
 
-    SutilElement.SideEffect ( WITH_STYLE, addStyle )
+    SutilElement.Define ( WITH_STYLE, addStyle )

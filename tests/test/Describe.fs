@@ -99,6 +99,11 @@ type Expect =
         Expect.assertTrue (not(isNull el)) ("queryText: Query failed: " + query)
         Expect.textContains(el.innerText, expected, "queryTextContains")
 
+    static member queryIsElement (query: string) (expectedTag: string) =
+        let el = currentEl.querySelector(":scope " + query) :?> HTMLElement
+        Expect.assertTrue (not(isNull el)) ("isElement '"  + expectedTag + "': not found: " + query)
+        Expect.areEqual( el.tagName.ToLower(), expectedTag.ToLower(), ("isElement '"  + expectedTag + "' <> '" + (el.tagName.ToLower()) + "' : " + query))
+        
     static member getInnerHtml() = currentEl.innerHTML
     static member getInnerText() = currentEl.innerText
 

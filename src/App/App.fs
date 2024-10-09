@@ -56,8 +56,7 @@ let [<Literal>] FAIL_EMOJI = "❌"
 let CompilationFailure() =
     Html.div "Compilation failure :-("
 
-module CustomEvents = let view = CompilationFailure
-module EventModifiers = let view = CompilationFailure
+// module EventModifiers = let view = CompilationFailure
 module TransitionParameters = let view = CompilationFailure
 module TransitionInOut = let view = CompilationFailure
 module TransitionCustomCss = let view = CompilationFailure
@@ -67,9 +66,6 @@ module LoginExample = let view = CompilationFailure
 module SortableTimerList = let view = CompilationFailure
 module SAFE = let view = CompilationFailure
 module CRUD = let view = CompilationFailure
-module CheckboxInputs = let view = CompilationFailure
-module SelectBindings = let view = CompilationFailure
-module Dimensions = let view = CompilationFailure
 module BarChart = let view = CompilationFailure
 module Spreadsheet = let view = CompilationFailure
 module DataSim = let view = CompilationFailure
@@ -92,10 +88,10 @@ let allExamples = [
         { Pass = true; Category = "Logic"; Title = "Static each with index"; Link = AppLink (StaticEachWithIndex.view, ["StaticEachWithIndex.fs"])  }
         { Pass = true; Category = "Logic"; Title = "Each blocks"; Link = AppLink (EachBlocks.view, ["EachBlocks.fs"])  }
         { Pass = false; Category = "Logic"; Title = "Keyed-each blocks"; Link = AppLink (KeyedEachBlocks.view, ["KeyedEachBlocks.fs"])  }
-        { Pass = false; Category = "Logic"; Title = "Await blocks"; Link = AppLink (AwaitBlocks.view, ["AwaitBlocks.fs"])  }
-        { Pass = false; Category = "Events"; Title = "DOM events"; Link = AppLink (DomEvents.view, ["DomEvents.fs"])  }
-        { Pass = false; Category = "Events"; Title = "Custom events"; Link = AppLink (CustomEvents.view, ["CustomEvents.fs"])  }
-        { Pass = false; Category = "Events"; Title = "Event modifiers"; Link = AppLink (EventModifiers.view, ["EventModifiers.fs"])  }
+        { Pass = true; Category = "Logic"; Title = "Await blocks"; Link = AppLink (AwaitBlocks.view, ["AwaitBlocks.fs"])  }
+        { Pass = true; Category = "Events"; Title = "DOM events"; Link = AppLink (DomEvents.view, ["DomEvents.fs"])  }
+        { Pass = true; Category = "Events"; Title = "Custom events"; Link = AppLink (CustomEvents.view, ["CustomEvents.fs"])  }
+        { Pass = true; Category = "Events"; Title = "Event modifiers"; Link = AppLink (EventModifiers.view, ["EventModifiers.fs"])  }
         { Pass =false; Category = "Transitions"; Title = "Transition"; Link = AppLink (Transition.view, ["Transition.fs"])  }
         { Pass =false; Category = "Transitions"; Title = "Adding parameters"; Link = AppLink (TransitionParameters.view, ["TransitionParameters.fs"])  }
         { Pass =false; Category = "Transitions"; Title = "In and out"; Link = AppLink (TransitionInOut.view, ["TransitionInOut.fs"])  }
@@ -110,7 +106,7 @@ let allExamples = [
         // Needs Bulma
         { Pass =true; Category = "Bindings";   Title = "Numeric inputs";  Link = AppLink (NumericInputs.view , ["NumericInputs.fs"]) }
 
-        { Pass =false; Category = "Bindings";   Title = "Checkbox inputs";  Link = AppLink (CheckboxInputs.view , ["CheckboxInputs.fs"]) }
+        { Pass =true; Category = "Bindings";   Title = "Checkbox inputs";  Link = AppLink (CheckboxInputs.view , ["CheckboxInputs.fs"]) }
 
         // Needs Bulma
         { Pass =true; Category = "Bindings";   Title = "Group inputs";  Link = AppLink (GroupInputs.view , ["GroupInputs.fs"]) }
@@ -121,13 +117,13 @@ let allExamples = [
         // Needs Bulma
         { Pass =true; Category = "Bindings";   Title = "File inputs";  Link = AppLink (FileInputs.view , ["FileInputs.fs"]) }
 
-        { Pass =false; Category = "Bindings";   Title = "Select bindings";  Link = AppLink (SelectBindings.view , ["SelectBindings.fs"]) }
+        { Pass =true; Category = "Bindings";   Title = "Select bindings";  Link = AppLink (SelectBindings.view , ["SelectBindings.fs"]) }
 
         // Needs Bulma
         { Pass =true; Category = "Bindings";   Title = "Select multiple";  Link = AppLink (SelectMultiple.view , ["SelectMultiple.fs"]) }
 
 
-        { Pass =false; Category = "Bindings";   Title = "Dimensions";  Link = AppLink (Dimensions.view , ["Dimensions.fs"]) }
+        { Pass =true; Category = "Bindings";   Title = "Dimensions";  Link = AppLink (Dimensions.view , ["Dimensions.fs"]) }
 
         { Pass =false; Category = "Svg";   Title = "Bar chart";  Link = AppLink (BarChart.view , ["BarChart.fs"]) }
 
@@ -717,7 +713,7 @@ let viewFrontPage() =
                     Html.p [
                         Attr.className "title is-size-1"
                         Html.img [
-                            Attr.src "https://sutil.dev/images/logo-wide.png"
+                            Attr.src "/images/logo-wide3.png"
                             Attr.style [
                                 Css.width (px 300)
                             ]
@@ -761,14 +757,14 @@ let appMain () =
                 Html.a [
                     Attr.href "https://sutil.dev"
                     Html.img [
-                        Attr.src "images/logo-wide.png" // Passion One font
+                        Attr.src "images/logo-wide3.png" // Passion One font #1b4c51
                         Attr.style [ Css.height (px 25) ]
                         ]
                 ]
             ]
 
             Html.span [
-                Bind.el (model .> books,fun books ->
+                Bind.el ("tab-menu", model .> books,fun books ->
                     Html.span [
                         Attr.className "app-tab-menu"
                         books |> List.map (fun bk -> Html.a [ Attr.href <| makeBookHref bk; text bk.Title ]) |> Html.fragment
@@ -815,7 +811,7 @@ let appMain () =
 
         let keyForView = function FrontPage -> "FrontPage" | PageView v -> v.Book.Title
 
-        Bind.el (model |> Store.map getView, keyForView, fun keyedView ->
+        Bind.el("page", model |> Store.map getView, keyForView, fun keyedView ->
             // Because of key, only called when book changes or we transition to/from front page
             // We won't be called for any other model changes (such as the page or section changing)
 
@@ -829,19 +825,19 @@ let appMain () =
             | PageView _ ->
                 viewBook showContents pageView
         )
-
     ]
 
 let app () =
-    //Html.app 
     Html.fragment [
         // Page title
         headTitle "sutil"
 
-        appMain() |> withStyle mainStyleSheet //|> Bulma.withBulmaHelpers
+        appMain() |> withStyle mainStyleSheet
     ]
 
 let main() =
-    app() |> Program.mount
+    app() 
+    //|> withStyle mainStyleSheet
+    |> Program.mount
 
 main()

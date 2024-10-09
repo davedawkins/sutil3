@@ -72,7 +72,7 @@ type Navigable =
         Html.fragment [
             disposeOnUnmount [
                 store
-                Navigable.listenLocation(id,Store.set store) |> Sutil.Dom.Dispose.makeDisposable
+                Navigable.listenLocation(id,Store.set store) |> Sutil.Internal.Dispose.makeDisposable
             ]
             Bind.el( store, view )
         ]

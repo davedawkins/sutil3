@@ -12,7 +12,7 @@ Each of the Sutil wrappers returns an unsubscribe function of type `unit -> unit
 For example:
 
 ```fs
-open Sutil.DomHelpers
+open Sutil.Internal.DomHelpers
 
 let cancelTimeout = timeout (fun _ -> printfn "Hello!") 1000
 

@@ -18,7 +18,7 @@ let withIndex xs = xs |> List.mapi makePair
 
 let view() =
     Html.div [
-        Html.h4 [ text "The Famous Cats of YouTube" ]
+        Bulma.h4 [ text "The Famous Cats of YouTube" ]
         Html.ul [
 
             // Simple "each" case with index, but one-time generation only.

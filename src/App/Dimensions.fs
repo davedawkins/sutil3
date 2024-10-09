@@ -34,11 +34,11 @@ let view() =
 
         disposeOnUnmount [w; h; size; editText ]
 
-        Html.divc "block" [
-            Html.input [ Attr.typeRange; Bind.attr("value",size) ]
+        Bulma.block [
+            Bulma.inputRange [ Bind.attr("value",size) ]
         ]
-        Html.divc "block" [
-            Html.input [ Attr.typeText; Bind.attr("value",editText) ]
+        Bulma.block [
+            Bulma.inputText [ Bind.attr("value",editText) ]
         ]
 
         Html.div [

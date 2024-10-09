@@ -2,29 +2,45 @@ namespace Sutil
 
 open Browser.Types
 
-type PatchReference =
-    | PatchNode of Node
-    | BeforeNode of Node
-    | AfterNode of Node
-
-/// Type of function returned from effecting functions, that allow
-/// the effect to be reversed. So, a subscribe() function returns a
-/// function that unsubscribes; listen() function will return  a
-/// function that stops listening, etc.
-type Unsubscriber = unit -> unit
-
 /// Helper type for general DOM event handlers
 type DomEventHandler = Event -> unit
 
-/// Return value from a SutilElement.SideEffect
-type SutilEffectResult =
-    /// The side-effect created a new node
-    | CreatedNode of Node
-    /// The side-effect operated on the DOM in some way
-    | DomEffect
-    with 
-        member __.Node = 
-            match __ with CreatedNode node -> Some node | _ -> None
+type PatchResult =
+    | AttrSet
+    | AttrRemoved
+    | EventAdded
+    | EventRemoved
+    | TextSet
+    | ChildResult of SutilResult
+    | EffectResult of SutilResult
+
+and SutilResultType =
+    /// The current node was replaced with a new one
+    | Replaced
+
+    /// A new node was added (current node did not exist)
+    | Appended
+
+    /// A custom effect was applied
+    | Effected of string
+
+    /// Current node was removed
+    | Removed
+
+    /// The current node was updated (attributes, events, children)
+    | Patched of (PatchResult[])
+
+    /// The current node was unchanged
+    | Unchanged
+
+and SutilResult = 
+        SutilResult of SutilResultType * Node
+    with
+        static member Of (result, node) = SutilResult(result,node)
+        member __.Node = let (SutilResult (_,node)) = __ in node
+        member __.Result = let (SutilResult (result,_)) = __ in result
+        override __.ToString (): string = 
+            sprintf "[%A,%s]" (__.Result) (Sutil.Internal.DomHelpers.toStringSummary __.Node)
 
 type VirtualElementType =
     | NullNode
@@ -35,8 +51,9 @@ type VirtualElementType =
 and VirtualElement = {
     Type : VirtualElementType
     Children : VirtualElement[]
-    Attributes : (string * string) []
-    Events : (string * (Browser.Types.Event -> unit)) []
+    Attributes : (string * obj) []
+    Events : (string * (Browser.Types.Event -> unit) * Internal.CustomEvents.EventOption[]) []
+    BuildMappers : (BuildContext -> BuildContext)[]
 }
 
 /// BuildContext provides context for building SutilElements. 
@@ -66,7 +83,20 @@ and BuildContext =
         LogElementEnabled : bool
         LogPatchEnabled : bool
     }
-
+    static member GlobalNextId = Helpers.createIdGenerator()
+    static member DefaultAppendNode = Internal.DomEdit.appendLabel "BuildContext.Mount" 
+    static member Create( parent : Node ) : BuildContext = 
+        {
+            Parent = parent
+            NextId = BuildContext.GlobalNextId
+            AppendNode = BuildContext.DefaultAppendNode
+            Current = null
+            VirtualElementMapper = id
+            OnImportedNode = ignore
+            ElementCtor = Sutil.Internal.DomEdit.element
+            LogElementEnabled = false
+            LogPatchEnabled = false
+        }
     member __.ParentNode = __.Parent
     
     member __.CreateElement( tag : string ) : HTMLElement =
@@ -108,22 +138,36 @@ and VirtualElementMapper = VirtualElement -> VirtualElement
 
 /// Implementation of a SutilElement.SideEffect
 and SutilSideEffect = 
-    string * (BuildContext -> SutilEffectResult)
+    string * (BuildContext -> SutilResult)
+
+and SutilBindEffect = 
+    string * (BuildContext -> unit)
 
 and SutilElement =
+
     /// Text node
     | Text of string
+
     /// Element node with a given tag, and children. Children are SutilElements
     /// and so will include Elements, Texts, Attributes, Events, Fragments and SideEffects
     | Element of (string * SutilElement[])
+
     /// Attribute
-    | Attribute of (string * string)
+    | Attribute of (string * obj)
+
     /// Event listener
-    | Event of (string * DomEventHandler)
+    | Event of (string * DomEventHandler * Internal.CustomEvents.EventOption[])
+
     /// Collection of SutilElements that apply to the parent element
     | Fragment of (SutilElement[])
+
     /// Custom element that operates on a BuildContext. Bindings are SideEffects, for example
     | SideEffect of SutilSideEffect
+
+    | BindElement of SutilBindEffect
+
+    ///
+    | BuildMap of ( (BuildContext -> BuildContext) * SutilElement )
 
 type 'T observable = System.IObservable<'T>
 

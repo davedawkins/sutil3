@@ -17,7 +17,8 @@ let view() =
     Html.div [
         disposeOnUnmount [ name ]
 
-        Bind.el( name, fun value -> 
+        Bind.el( "inputBinding", name, fun value -> 
+            Log.Console.log("Render: input")
             Bulma.inputText [
                 Attr.value value
                 Attr.placeholder "Enter your name"
@@ -26,7 +27,7 @@ let view() =
                     inputEl.value |> Store.set name
                 )
             ]
-        )
+        ) 
         // Html.input [
         //     type' "text"
         //     Bind.attr ("value",name)
@@ -34,6 +35,8 @@ let view() =
         // ]
         Html.p [
             Attr.className "block"
-            Bind.el(name, fun s -> text $"Hello {nameOrStranger s}")
+            Bind.el( "outputBinding", name, fun s -> 
+                Log.Console.log("Render: output")
+                text $"Hello {nameOrStranger s}")
         ]
-    ]
+    ] //|> CoreElements.debug

@@ -12,8 +12,8 @@
   <ItemGroup>
     <Compile Include="Helpers.fs" />
     <Compile Include="Log.fs" />
+    <Compile Include="Internal.fs" />
     <Compile Include="Types.fs" />
-    <Compile Include="DomHelpers.fs" />
     <Compile Include="StyleDomHelpers.js.fs" />
     <Compile Include="EventHelpers.fs" />
     <Compile Include="Cmd.fs" />
@@ -22,8 +22,8 @@
     <Compile Include="VirtualDom.fs" />
     <Compile Include="Patch.fs" />
     <Compile Include="Core.fs" />
-    <Compile Include="CoreElements.fs" />
     <Compile Include="ResizeObserver.fs" />
+    <Compile Include="CoreElements.fs" />
     <Compile Include="Bindings.fs" />
     <Compile Include="Bind.fs" />
     <Compile Include="Styling.fs" />

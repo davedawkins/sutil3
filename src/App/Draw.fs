@@ -5,7 +5,7 @@
 module Draw
 
 open Sutil
-open Sutil.Dom
+open Sutil.Internal
 open Sutil.Html
 open Sutil.Styling
 

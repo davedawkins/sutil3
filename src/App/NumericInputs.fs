@@ -17,28 +17,24 @@ let view() =
         disposeOnUnmount [ a; b ]
 
         Html.divc "block" [
-            Html.input [
-                Attr.typeNumber
+            Bulma.inputNumber [
                 Bind.attr ("value",a)
                 Attr.min 0
                 Attr.max 10
             ]
-            Html.input [
-                Attr.typeRange
+            Bulma.inputRange [
                 Bind.attr ("value",a)
                 Attr.min 0
                 Attr.max 10
             ]
         ]
         Html.divc "block" [
-            Html.input [
-                Attr.typeNumber
+            Bulma.inputNumber [
                 Bind.attr ("value",b)
                 Attr.min 0
                 Attr.max 10
             ]
-            Html.input [
-                Attr.typeRange
+            Bulma.inputRange [
                 Bind.attr ("value",b)
                 Attr.min 0
                 Attr.max 10

@@ -12,24 +12,26 @@ let yes = Store.make(false)
 let view() =
     Html.div [
 
-        Html.divc "block" [
+        Bulma.block [
             Html.label [
-                Html.input [
-                    Attr.typeCheckbox
+                Bulma.inputCheckbox [
                     Bind.attr ("checked",yes)
                 ]
                 text " Enable ejector seat"
             ]
         ]
 
-        Html.divc "block" [
-            showIfElse yes
-                (Html.p  [ text "You are ready for launch" ])
-                (Html.p  [ text "You won't be going anywhere unless you enable the ejector seat" ])
+        Bulma.block [
+            Bind.el( yes, fun ready ->
+                if ready then
+                    (Html.p  [ text "You are ready for launch" ])
+                else
+                    (Html.p  [ text "You won't be going anywhere unless you enable the ejector seat" ])
+            )
         ]
 
-        Html.divc "block" [
-            Html.button [
+        Bulma.block [
+            Bulma.button [
                 Bind.attr ("disabled", yes |> Store.map not)
                 text "Launch"
             ]

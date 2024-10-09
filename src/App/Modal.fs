@@ -12,7 +12,7 @@ let view() =
 
         disposeOnUnmount [active]
 
-        Html.button [
+        Bulma.button [
             text "Launch example modal"
             Ev.onClick (fun _ -> active <~ true)
         ]
@@ -25,12 +25,11 @@ let view() =
                 Html.div [ Attr.className "modal-background" ]
                 Html.div [
                     Attr.className "modal-content"
-                    Html.div [
-                        Attr.className "box"
+                    Bulma.box [
                         text "All Your Modal Content Goes Here"
                     ]
                 ]
-                Html.button [
+                Bulma.button [
                     Attr.className "modal-close"
                     Ev.onClick (fun _ -> active <~ false) 
                     Attr.ariaLabel "close"

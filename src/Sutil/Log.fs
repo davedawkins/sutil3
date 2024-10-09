@@ -2,6 +2,10 @@ namespace Sutil
 
 [<RequireQualifiedAccess>]
 module Log =
+
+
+    let mutable private nextMessageId = Helpers.createIdGenerator()
+
     open Fable.Core
 
     type IEnable = 
@@ -64,7 +68,7 @@ module Log =
             "Warning", true
             "Error"  , true
             "Debug"  , false
-            "Trace"  , false
+            "Trace"  , true
         ] |> Map
 
     let private sourceIsEnabled src = not (sources.ContainsKey src) || sources[src]
@@ -122,7 +126,7 @@ module Log =
         if categoryIsEnabled m.Category && sourceIsEnabled m.Source then
             if (m.Message.StartsWith("Error")) then
                 Fable.Core.JS.debugger()
-            Console.log(m.Category,m.Source,m.Message)
+            Console.log(sprintf "%04d" m.Id,m.Category,m.Source,m.Message)
 
     /// Log message with a given source, category, message and context 
     let private  logm (src : string) (cat : string) (msg : string) (ctx : obj) =

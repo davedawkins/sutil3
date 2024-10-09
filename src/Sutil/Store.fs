@@ -7,7 +7,7 @@ namespace Sutil
 module Observable =
 
     open System
-    open Sutil.Dom
+    open Sutil.Internal
 
     [<AbstractClass>]
     type BasicObserver<'T>() =
@@ -124,12 +124,12 @@ module Observable =
 [<RequireQualifiedAccess>]
 module Store =
     open System
-    open Sutil.Dom
+    open Sutil.Internal
 
     let logEnabled() = false
     let log s = ()
 
-    let fastEquals = Sutil.Dom.JsHelpers.eq3
+    let fastEquals = Sutil.Internal.JsHelpers.eq3
 
     let private nextStoreId() = Helpers.createIdGenerator()
 
@@ -635,7 +635,6 @@ module ObservablePromise =
 
     type ObservablePromise<'T>(p : JS.Promise<'T>) =
         let store = Store.make PromiseState.Waiting
-        // TODO: Clean up store
 
         let run () =
                 store <~ PromiseState.Waiting
@@ -649,7 +648,10 @@ module ObservablePromise =
         interface IObservable<PromiseState<'T>> with
             member this.Subscribe(observer: IObserver<PromiseState<'T>>) = store.Subscribe(observer)
 
+        interface IDisposable with
+            member _.Dispose() = store.Dispose()
+
     type JS.Promise<'T> with
         member self.ToObservable() : ObservablePromise<'T> =
-            ObservablePromise<'T>(self)
+            new ObservablePromise<'T>(self)
 

@@ -3,7 +3,7 @@ module Sutil.StyleDomHelpers
 
 open Browser.Types
 open Browser.Dom
-open Sutil.Dom
+open Sutil.Internal
 
 let newStyleElement (doc : Document)=
     let head = "head" |> DomHelpers.findElement doc

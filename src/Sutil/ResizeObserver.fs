@@ -10,7 +10,7 @@ open Browser.Dom
 open Browser.CssExtensions
 open System
 open Core.Sutil2
-open Sutil.Dom
+open Sutil.Internal
 
 let isCrossOrigin = false // TODO
 
@@ -19,7 +19,7 @@ type private ResizeSubscriber = {
     Id : int
 }
 
-let [<Literal>] private ResizeObserverKey = "__sutil_resize"
+let [<Literal>] private RESIZE_KEY = "__sutil_resize"
 
 type ResizeObserver( el : HTMLElement ) =
     let mutable iframe : HTMLIFrameElement = Unchecked.defaultof<_>
@@ -70,4 +70,4 @@ type ResizeObserver( el : HTMLElement ) =
         member this.Dispose() = this.Dispose()
 
 let getResizer (el:HTMLElement) : ResizeObserver =
-    JsMap.getCreate el ResizeObserverKey (fun () -> new ResizeObserver(el))
+    JsMap.getCreate el RESIZE_KEY (fun () -> new ResizeObserver(el))

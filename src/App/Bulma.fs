@@ -7,6 +7,15 @@ open Sutil
 open Sutil.Html
 open type Feliz.length
 
+let block (children : SutilElement seq) = 
+    Html.divc "block" children
+    
+let box (children : SutilElement seq) = 
+    Html.divc "box" children
+
+let form (children : SutilElement seq) = 
+    Html.form [ Attr.className "block"; yield! children ]
+
 let h1 (children : SutilElement seq) = 
     Html.h1c "title is-1" children
 
@@ -59,7 +68,7 @@ let inputNumber (children : SutilElement seq) =
 let inputRange (children : SutilElement seq) =
     Html.inputc "input is-small" [
         yield! children
-        Attr.typeNumber
+        Attr.typeRange
         Attr.style [ Css.maxWidth (percent 50) ]
     ]
 
