@@ -6,23 +6,7 @@ open Sutil.Internal
 open Browser.Types
 open Sutil.Internal.CustomEvents
 
-let debug (se: SutilElement) =
-    Log.Console.log ("debug: Adding element")
-
-    SutilElement.BuildMap(
-        (fun ctx ->
-            Log.Console.log ("debug: Mapping build context to enable logging")
-            ctx.WithLogEnabled()
-        ),
-        se
-    )
-
-let __debug (se: SutilElement) =
-    SutilElement.Define(
-        "debug",
-        (fun context -> se |> Sutil.Core.mount (context.WithLogEnabled()) null)
-    )
-
+/// Call these unit functions when the parent element is unmounted
 let unsubscribeOnUnmount (fns: (unit -> unit) seq) =
     SutilElement.Define(
         "unsubscribeOnUnmount",
@@ -32,12 +16,14 @@ let unsubscribeOnUnmount (fns: (unit -> unit) seq) =
         )
     )
 
+/// Call _.Dispose() for these IDisposables when the parent element is unmounted
 let disposeOnUnmount (fns: (System.IDisposable) seq) =
     SutilElement.Define(
         "disposeOnUnmount",
         (fun ctx -> fns |> Seq.iter (Dispose.addDisposable ctx.ParentElement "disposeOnUmount"))
     )
 
+/// Call this function when the element is mounted
 let hookParent (f: HTMLElement -> unit) =
     SutilElement.Define(
         "hookParent",
@@ -59,30 +45,27 @@ let html (text: string) : SutilElement =
     SutilElement.Define(
         "html",
         fun ctx ->
-            ctx.Parent.asElement
-            |> Option.map (fun el ->
-                let host = ctx.CreateElement "div"
+            let host = ctx.CreateElement "div"
 
-                // Parse HTML and add to new node
-                host.innerHTML <- text.Trim()
+            // Parse HTML and add to new node
+            host.innerHTML <- text.Trim()
 
-                // Tell Patcher that no point in trying repair this section
-                host.setAttribute ("data-sutil-imported", "html")
+            // Tell Patcher that no point in trying repair this section
+            host.setAttribute ("data-sutil-imported", "html")
 
-                // Add into the DOM
-                ctx.AppendNode el host
+            // Add into the DOM
+            ctx.AppendNode (ctx.Parent) host
 
-                // Let styling know that a new node needs marking up
-                ctx.OnImportedNode host
+            // Let styling know that a new node needs marking up
+            ctx.OnImportedNode host
 
-                // Let code highligher (index.html) know that new code needs marking up
-                Sutil.Internal.CustomEvents.notifySutilUpdated (host.ownerDocument)
+            // Let code highligher (index.html) know that new code needs marking up
+            Sutil.Internal.CustomEvents.notifySutilUpdated (host.ownerDocument)
 
-                SutilResult.Of(Appended, host)
-            )
-            |> Option.defaultWith (fun _ -> failwith "Not an element")
+            SutilResult.Of(Appended, host)
     )
 
+/// Call the dispatch function when the parent element is resized
 let listenToResize (dispatch: HTMLElement -> unit) : SutilElement =
     SutilElement.Define(
         "listenToResize",
@@ -106,9 +89,6 @@ let listenToResize (dispatch: HTMLElement -> unit) : SutilElement =
 
     )
 
-// let postProcess (f : SutilEffect -> SutilEffect) (view : SutilElement) : SutilElement =
-//     SutilElement.Define( "postProcess", fun ctx -> ctx |> build view |> f )
-
 let postProcessElementsWithName
     (name: string)
     (f: HTMLElement -> unit)
@@ -123,8 +103,9 @@ let postProcessElementsWithName
 
     SutilElement.Define(name, run)
 
-let postProcessElements (f: HTMLElement -> unit) (se: SutilElement) : SutilElement =
-    postProcessElementsWithName ("postProcessElement") f se
+/// Pass the generated HTMLElement for child 'se' to the handler function
+let postProcessElements (handler: HTMLElement -> unit) (se: SutilElement) : SutilElement =
+    postProcessElementsWithName ("postProcessElement") handler se
 
 open Core.Sutil2
 

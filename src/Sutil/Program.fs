@@ -24,7 +24,7 @@ type Program() =
 
         let append parent node =
             DomEdit.clear parent
-            DomEdit.appendLabel "Program.mount" parent node
+            DomEdit.append parent node
 
         Core.mount
             (BuildContext
@@ -43,7 +43,7 @@ type Program() =
                 .Create(host)
                 .WithAppendNode(fun parent node ->
                     DomEdit.clear parent
-                    DomEdit.appendLabel "Program.mount2" parent node
+                    DomEdit.append parent node
                 ))
             null
             app

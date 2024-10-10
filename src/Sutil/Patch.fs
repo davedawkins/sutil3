@@ -7,20 +7,20 @@ open Browser.Types
 open Sutil.Internal
 open Sutil.Internal.TypeHelpers
 
-type VElement = VirtualElement
 open VirtualDom
 
 let private _log = Log.create ("Patch")
 _log.enabled <- false
 
+/// Actions we can perform on an existing DOM node to bring it into alignment with a VirtualElement
 type PatchAction =
     | SetAttr of string * string
     | RemoveAttr of string * string
     | AddEvent of string * (Browser.Types.Event -> unit) * (Internal.CustomEvents.EventOption[])
     | RemoveEvent of string * (Browser.Types.Event -> unit)
     | SetInnerText of string
-    | ApplyEffect of VElement
-    | ChildAction of (int * Action)
+    | ApplyEffect of SutilEffect
+    | ChildAction of (int * NodeAction)
 
     override __.ToString() : string =
         match __ with
@@ -29,71 +29,93 @@ type PatchAction =
         | AddEvent(name, _, _) -> "AddEvent '" + name + "'"
         | RemoveEvent(name, _) -> "RemoveEvent " + name + "'"
         | SetInnerText(s) -> "SetInnerText '" + s + "'"
-        | ApplyEffect(ve) -> "ApplyEffect '" + (ve.AsEffect() |> fst) + "'"
+        | ApplyEffect(name, _) -> "ApplyEffect '" + name + "'"
         | ChildAction(i, action) -> "ChildAction #" + (string i) + "[" + action.ToString() + "]"
 
-// What we're going to do to an existing (node, vnode) pair
-and Action =
+/// We do exactly one of the following when we calculate what to do with a given VirtualElement and
+/// its associated DOM node (if it exists).
+///
+/// - Do nothing (AsIs)
+///   The current DOM node matches the VirtualElement (AsIs)
+///
+/// - Remove the DOM node (Remove)
+///   there is no corresponding VirtualElement (Remove). This happens when we have more DOM nodes
+///   than VirtualElements (such as when we're calculating actions for the children of a DOM node)
+///
+/// - Insert a new DOM node (Insert)
+///   there is no corresponding DOM node
+///
+/// - Replace the DOM node (Replace)
+///   the corresponding DOM node cannot be patched to the Virtual Element. For example, one is a Text
+///   node and the other is an HTMLElement, or the two HTMLElements have different `tagName`s
+///
+/// - Patch the DOM node (Patch)
+///   apply one or more patches to the DOM node so it matches the VirtualElement. For example, set/remove attributes.
+///   A patch contains an array of PatchActions
+
+and NodeAction =
     | AsIs
-    | Patch of VElement * PatchAction[]
-    | ActionApplyEffect of VElement * SutilSideEffect
-    | ReplaceNew of VElement
-    | AppendNew of VElement
     | Remove
+    | Insert of VirtualElement
+    | Replace of VirtualElement
+    | Patch of PatchAction[]
 
     override __.ToString() : string =
         match __ with
-        | Patch(_, actions) ->
-            sprintf "[%s]" (actions |> Array.map (_.ToString()) |> String.concat ",")
-        | ReplaceNew _ -> "ReplaceNew"
-        | AppendNew e -> "AppendNew " + e.AsString()
+        | Patch actions -> sprintf "[%s]" (actions |> Array.map (_.ToString()) |> String.concat ",")
+        | Replace _ -> "Replace"
+        | Insert e -> "Insert " + e.AsString()
         | Remove -> "Remove"
-        | ActionApplyEffect _ -> "Effect"
         | AsIs -> "AsIs"
 
-let asArray (n: NamedNodeMap) =
-    [|
-        for i in 0 .. (n.length - 1) do
-            let a = n.item (i)
-            a.name, a.value
-    |]
+module private Helpers =
+    let private asArray (n: NamedNodeMap) =
+        [|
+            for i in 0 .. (n.length - 1) do
+                let a = n.item (i)
+                a.name, a.value
+        |]
 
-let diffAttributes (a: NamedNodeMap) (attrs: (string * obj)[]) =
-    let a = a |> asArray |> Array.sortBy fst
-    let b = attrs |> Array.sortBy fst
+    let diffAttributes (a: NamedNodeMap) (attrs: (string * obj)[]) =
+        let a = a |> asArray |> Array.sortBy fst
+        let b = attrs |> Array.sortBy fst
 
-    let anames = a |> Array.map fst
-    let bnames = b |> Array.map fst
-    let allnames = Array.append anames bnames |> Set |> Set.toArray
-    let ma = Map a
-    let mb = Map b
+        let anames = a |> Array.map fst
+        let bnames = b |> Array.map fst
+        let allnames = Array.append anames bnames |> Set |> Set.toArray
+        let ma = Map a
+        let mb = Map b
 
-    [|
-        for name in allnames do
-            match ma.TryFind name, mb.TryFind name |> Option.map string with
-            | Some va, Some vb when va <> vb -> SetAttr(name, vb)
-            | None, Some vb -> SetAttr(name, vb)
-            | Some x, None -> RemoveAttr(name, x)
-            | _ -> ()
-    |]
+        [|
+            for name in allnames do
+                match ma.TryFind name, mb.TryFind name |> Option.map string with
+                | Some va, Some vb when va <> vb -> SetAttr(name, vb)
+                | None, Some vb -> SetAttr(name, vb)
+                | Some x, None -> RemoveAttr(name, x)
+                | _ -> ()
+        |]
 
-[<Literal>]
-let SUTIL_IMPORTED = "sutil-imported"
+    [<Literal>]
+    let SUTIL_IMPORTED = "sutil-imported"
 
-let tryGetData (name: string) (el: HTMLElement) : string option =
-    if Fable.Core.JsInterop.isIn name el.dataset then
-        Some(el.dataset[name])
-    else
-        None
+    let private tryGetData (name: string) (el: HTMLElement) : string option =
+        if Fable.Core.JsInterop.isIn name el.dataset then
+            Some(el.dataset[name])
+        else
+            None
 
-let getImportedBy (el: HTMLElement) : string option = el |> tryGetData SUTIL_IMPORTED
+    let getImportedBy (el: HTMLElement) : string option = el |> tryGetData SUTIL_IMPORTED
 
-let rec private calculatePatch (existing: Node) (ve: VElement) : Action =
+open Helpers
+
+let rec private calculatePatch (existing: Node) (ve: VirtualElement) : NodeAction =
 
     if isTextNode existing && ve.IsTextNode then
+
+        // Both are text nodes. If they have different text we can just update the inner text, otherwise nothing to do.
+
         if existing.textContent <> ve.InnerText then
             Patch(
-                ve,
                 [|
                     SetInnerText ve.InnerText
                 |]
@@ -102,6 +124,10 @@ let rec private calculatePatch (existing: Node) (ve: VElement) : Action =
             AsIs
 
     elif (existing.asElement |> Option.bind getImportedBy).IsSome then
+
+        // The DOM node was imported by an effect. If the virtual element name matches
+        // the 'imported-by' attribute then we don't need to do anything. Otherwise, remove the DOM node.
+
         if
             (existing.asElement
              |> Option.bind getImportedBy
@@ -120,7 +146,12 @@ let rec private calculatePatch (existing: Node) (ve: VElement) : Action =
         isElementNode existing
         && ve.IsElementNode
         && ve.Tag = (asElement existing).tagName.ToLower()
+
     then
+
+        // Both are elements with matching tags. Generate the patches needed to
+        // edit DOM node so that it matches the virtual element, including children.
+
         [|
             yield! (diffAttributes (existing.attributes) (ve.Attributes))
 
@@ -140,13 +171,13 @@ let rec private calculatePatch (existing: Node) (ve: VElement) : Action =
                         ChildAction(domIndex, calculate (existingChildren[domIndex]) child)
 
                     | false, true -> // No existing DOM node, create VE as Dom
-                        ChildAction(domIndex, AppendNew child)
+                        ChildAction(domIndex, Insert child)
 
                     | true, false -> // Can't happen, since we didn't append existing DOM nodes to this array
                         failwith "Internal error"
 
                     | false, false -> // Not a DOM child
-                        ApplyEffect child
+                        PatchAction.ApplyEffect(child.AsEffect())
                 )
 
             yield! childPatches
@@ -159,53 +190,49 @@ let rec private calculatePatch (existing: Node) (ve: VElement) : Action =
         |]
         |> (fun patches ->
             if patches.Length > 0 then
-                Patch(ve, patches)
+                Patch patches
             else
                 AsIs
         )
 
     elif ve.IsDomNode then
+
+        // The virtual element corresponds to a real DOM node type (ie Text or HTMLElement), so if there is no
+        // current DOM node we must Insert, otherwise Replace. We know we must replace because the checks above
+        // have already decided we can't patch the existing node.
+
         if isNull existing then
-            AppendNew ve
+            // Instantiate the virtual element and insert it at the current location
+            Insert ve
         else
-            ReplaceNew ve
+            // Instantiate the virtual element and replace the existing DOM node
+            Replace ve
 
     elif (ve.IsEffectNode) then
+
+        // We have a virtual element which is a side-effect, so we need to apply the effect.
+        // If there is a corresponding DOM node then we need to remove it, since it doesn't match
+        // this virtual element (the imported-by check further up for a case where an effect can
+        // match a DOM node).
+        // We overload the Replace action in this instance - it will remove the existing node
+        // and apply the virtual element.
         if isNull existing then
-            ActionApplyEffect(ve, ve.AsEffect())
+            Patch(
+                [|
+                    ApplyEffect(ve.AsEffect())
+                |]
+            )
         else
-            ReplaceNew ve
+            Replace ve
 
     else
         failwith "Unexpected virtual node"
 
-and calculate (existing: Node) (ve: VElement) : Action =
-    let patch = calculatePatch existing ve
+/// Calculate a NodeAction for a given Node and VirtualElement. The Node may be null.
+and calculate (existing: Node) (ve: VirtualElement) : NodeAction = calculatePatch existing ve
 
-    if (ve.BuildMappers.Length > 0) then
-        let ctx = BuildContext.Create(null) |> ve.MapContext
-
-        if ctx.LogElementEnabled then
-            _log.trace (
-                "---------------------------------------------------------------------------"
-            )
-
-            _log.trace (sprintf "Patch element: %s" (ve.AsString()))
-
-        if ctx.LogPatchEnabled then
-            _log.trace (
-                sprintf
-                    "Patch action:\n current= %s\n action=%s\nparent=%s"
-                    (Sutil.Internal.DomHelpers.outerHTML existing)
-                    (patch.ToString())
-                    (if isNull existing then
-                         ""
-                     else
-                         existing.parentElement |> DomHelpers.toStringSummary)
-            )
-
-    patch
-
+/// Apply a patch to context.Parent
+/// The return value allows us to discover newly-created nodes
 let rec private applyPatchAction (context: BuildContext) (a: PatchAction) : PatchResult =
     let current = context.Parent
 
@@ -271,7 +298,7 @@ let rec private applyPatchAction (context: BuildContext) (a: PatchAction) : Patc
             _log.trace ("Child: ", ix, nodeChild ix |> Internal.DomHelpers.toStringSummary)
 
         let childResult =
-            applyAction
+            applyNodeAction
                 (context.WithAppendNode(fun parent node ->
                     DomEdit.insertAfter parent node (nodeChild (ix - 1))
                 ))
@@ -280,25 +307,21 @@ let rec private applyPatchAction (context: BuildContext) (a: PatchAction) : Patc
 
         ChildResult childResult
 
-    | ApplyEffect ve ->
-        match ve.Type with
+    | PatchAction.ApplyEffect(name, effect) ->
+        if isNull current then
+            failwith "Cannot apply effect to null node"
 
-        | SideEffectNode(name, effect) ->
-            if isNull current then
-                failwith "Cannot apply effect to null node"
+        if _log.enabled then
+            _log.trace ("Apply Effect: ", (current |> Internal.DomHelpers.toStringSummary), name)
 
-            if _log.enabled then
-                _log.trace (
-                    "Apply Effect: ",
-                    (current |> Internal.DomHelpers.toStringSummary),
-                    name
-                )
+        EffectResult(effect context)
 
-            EffectResult(effect context)
-
-        | _ -> failwith "Not a side-effect"
-
-and private applyAction (context: BuildContext) (current: Node) (action: Action) : SutilResult =
+and private applyNodeAction
+    (context: BuildContext)
+    (current: Node)
+    (action: NodeAction)
+    : SutilResult
+    =
 
     match action with
     | AsIs -> (Unchanged, current) |> SutilResult.Of
@@ -310,21 +333,27 @@ and private applyAction (context: BuildContext) (current: Node) (action: Action)
         DomEdit.remove current
         (Removed, current) |> SutilResult.Of
 
-    | ReplaceNew(ve) ->
-        let de = VirtualDom.toDom context ve
+    | Replace(ve) ->
+        if ve.IsEffectNode then
+            DomEdit.remove current
+            let (_, effect) = ve.AsEffect()
+            effect context
+        //            (Replaced, de) |> SutilResult.Of
+        else
+            let de = VirtualDom.toDom context ve
 
-        if _log.enabled then
-            _log.trace (
-                "Replace: ",
-                (current |> Internal.DomHelpers.toStringSummary),
-                " with ",
-                (de |> DomHelpers.toStringSummary)
-            )
+            if _log.enabled then
+                _log.trace (
+                    "Replace: ",
+                    (current |> Internal.DomHelpers.toStringSummary),
+                    " with ",
+                    (de |> DomHelpers.toStringSummary)
+                )
 
-        DomEdit.replace context.ParentElement current de
-        (Replaced, de) |> SutilResult.Of
+            DomEdit.replace context.ParentElement current de
+            (Replaced, de) |> SutilResult.Of
 
-    | AppendNew ve ->
+    | Insert ve ->
         let de = VirtualDom.toDom context ve
 
         if not (de.isSameNode (context.ParentElement)) then
@@ -333,16 +362,13 @@ and private applyAction (context: BuildContext) (current: Node) (action: Action)
 
         (Appended, de) |> SutilResult.Of
 
-    | ActionApplyEffect(ve, (name, effect)) ->
-        _log.trace ("Apply: ", (name))
-        (effect (ve.MapContext context))
-
-    | Patch(ve, patches) ->
+    | Patch patches ->
         if _log.enabled then
             _log.trace ("Patch: ", (current |> Internal.DomHelpers.toStringSummary))
 
         if not (isNull current) then
             Dispose.disposeNode (current) // Cleanup event listeners and disposables
+
         else if _log.enabled then
             _log.trace ("Patch: current is null")
 
@@ -350,11 +376,11 @@ and private applyAction (context: BuildContext) (current: Node) (action: Action)
             patches
             |> Array.map (
                 applyPatchAction (
-                    context.WithParent(current).WithAppendNode(DomEdit.append) |> ve.MapContext
+                    context.WithParent(current).WithAppendNode(DomEdit.append) //|> ve.MapContext
                 )
             )
 
         (Patched result, current) |> SutilResult.Of
 
-let apply (context: BuildContext) (current: Node) (action: Action) : SutilResult =
-    applyAction context current action
+let apply (context: BuildContext) (current: Node) (action: NodeAction) : SutilResult =
+    applyNodeAction context current action

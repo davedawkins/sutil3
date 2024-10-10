@@ -20,7 +20,6 @@ type VirtualElement with
             Children = Array.empty
             Attributes = Array.empty
             Events = Array.empty
-            BuildMappers = Array.empty
         }
 
     static member TextNode(s: string) =
@@ -33,7 +32,7 @@ type VirtualElement with
             Type = TagNode tag
         }
 
-    static member SideEffectNode(effect: SutilSideEffect) =
+    static member SideEffectNode(effect: SutilEffect) =
         { VirtualElement.Empty with
             Type = SideEffectNode(effect)
         }
@@ -75,14 +74,6 @@ type VirtualElement with
                     yield (-1, child)
         |]
 
-    member __.MapContext(ctx) =
-        __.BuildMappers |> Array.fold ((|>)) ctx
-
-    member __.AddBuildMapper(mapper: BuildContext -> BuildContext) =
-        { __ with
-            BuildMappers = Array.singleton mapper |> Array.append __.BuildMappers
-        }
-
     member __.AddChild(ch: VirtualElement) =
         { __ with
             Children = Array.singleton ch |> Array.append __.Children
@@ -100,7 +91,7 @@ type VirtualElement with
                 |> Array.append __.Events
         }
 
-    member __.AddEffect(effect: SutilSideEffect) =
+    member __.AddEffect(effect: SutilEffect) =
         __.AddChild(VirtualElement.SideEffectNode(effect))
 
     member __.RemoveAttr(name: string) =
@@ -159,13 +150,6 @@ type VirtualElement with
                 sprintf "<%s%s/>" tag attrs
             else
                 sprintf "<%s%s>%s</%s>" tag attrs children tag
-
-        |> (fun s ->
-            if __.BuildMappers.Length > 0 then
-                "MAPPER(" + s + ")"
-            else
-                s
-        )
 
     member __.AsString() =
         __.AsString(__.Children |> Array.map _.AsString() |> String.concat "")
@@ -247,8 +231,6 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
 
     | SideEffect effect -> parent.AddEffect(effect)
 
-    | BuildMap(map, child) -> (addSutilElement parent child).AddBuildMapper map
-
 /// Create a VirtualDom element from a SutilElement.
 /// This function will also be able to hoist fragment children up into the parent element
 and fromSutil (se: SutilElement) : VirtualElement =
@@ -262,10 +244,7 @@ and fromSutil (se: SutilElement) : VirtualElement =
         // Eg   div [ ... ]
         // Note also that fragment [ div [ ... ] ] would bring us here too
         if root.Children.Length = 1 && noAttributes then
-            root.BuildMappers
-            |> Array.fold
-                (fun (ve: VirtualElement) mapper -> ve.AddBuildMapper(mapper))
-                root.Children[0]
+            root.Children[0]
 
         // No elements found, and no attributes (and events etc) given
         // Eg fragment []
@@ -287,8 +266,7 @@ and fromSutil (se: SutilElement) : VirtualElement =
     el
 
 /// Create a DOM element from a VirtualDom element
-let rec toDom (_context: BuildContext) (ve: VirtualElement) : Browser.Types.Node =
-    let context = ve.MapContext _context
+let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node =
 
     match ve.Type with
     | NullNode -> failwith "Cannot create DOM node from null node"
@@ -324,7 +302,7 @@ let rec toDom (_context: BuildContext) (ve: VirtualElement) : Browser.Types.Node
             if _log.enabled then
                 _log.trace ("toDom: -- set __sutil_ctx ", el |> DomHelpers.toStringSummary)
 
-            JsMap.setKey el "__sutil_ctx" _context
+            JsMap.setKey el "__sutil_ctx" context
 
         ve.Attributes
         |> Array.iter (fun (name, value) ->
@@ -365,7 +343,7 @@ let rec toDom (_context: BuildContext) (ve: VirtualElement) : Browser.Types.Node
             // Maybe toDom should return an enum to be very specific about what
             // happened?
             if not (childEl.isSameNode (el)) then
-                DomEdit.appendLabel "toDom" el childEl
+                DomEdit.append el childEl
         )
 
         el

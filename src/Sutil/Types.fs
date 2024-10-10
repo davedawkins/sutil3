@@ -47,7 +47,7 @@ type VirtualElementType =
     | NullNode
     | TextNode of string
     | TagNode of string
-    | SideEffectNode of SutilSideEffect
+    | SideEffectNode of SutilEffect
 
 and VirtualElement =
     {
@@ -55,7 +55,6 @@ and VirtualElement =
         Children: VirtualElement[]
         Attributes: (string * obj)[]
         Events: (string * (Browser.Types.Event -> unit) * Internal.CustomEvents.EventOption[])[]
-        BuildMappers: (BuildContext -> BuildContext)[]
     }
 
 /// BuildContext provides context for building SutilElements.
@@ -87,7 +86,7 @@ and BuildContext =
     }
 
     static member GlobalNextId = Helpers.createIdGenerator ()
-    static member DefaultAppendNode = Internal.DomEdit.appendLabel "BuildContext.Mount"
+    static member DefaultAppendNode = Internal.DomEdit.append
 
     static member Create(parent: Node) : BuildContext =
         {
@@ -166,7 +165,7 @@ and BuildContext =
 and VirtualElementMapper = VirtualElement -> VirtualElement
 
 /// Implementation of a SutilElement.SideEffect
-and SutilSideEffect = string * (BuildContext -> SutilResult)
+and SutilEffect = string * (BuildContext -> SutilResult)
 
 and SutilBindEffect = string * (BuildContext -> unit)
 
@@ -189,12 +188,11 @@ and SutilElement =
     | Fragment of (SutilElement[])
 
     /// Custom element that operates on a BuildContext. Bindings are SideEffects, for example
-    | SideEffect of SutilSideEffect
+    | SideEffect of SutilEffect
 
+    /// Custom element that will a sub-element at this DOM location.
+    /// Eg Bind.el, Html.parse
     | BindElement of SutilBindEffect
-
-    ///
-    | BuildMap of ((BuildContext -> BuildContext) * SutilElement)
 
 type 'T observable = System.IObservable<'T>
 

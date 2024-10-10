@@ -139,14 +139,12 @@ let bindElementWithName<'T>
                             currentNode |> DomHelpers.toStringSummary
                         )
 
-                    if _log.enabled then
                         _log.trace (
                             "Bind:" + name,
                             " next parent=",
                             currentNode.parentNode |> DomHelpers.toStringSummary
                         )
 
-                    if _log.enabled then
                         _log.trace (
                             "Bind:" + name,
                             "      parent=",

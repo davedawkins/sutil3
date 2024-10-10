@@ -48,7 +48,7 @@ let private logElement (context: BuildContext) (current: Node) (velement: Virtua
 
     velement
 
-let private logPatch (context: BuildContext) (current: Node) (patchAction: Patch.Action) =
+let private logPatch (context: BuildContext) (current: Node) (patchAction: Patch.NodeAction) =
     if context.LogPatchEnabled then
         _log.trace (
             sprintf

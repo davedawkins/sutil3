@@ -1,3 +1,6 @@
+### 3.0.0-beta-001
+- Rewrite of core to support DOM patching
+
 ### 2.0.16
 - Fix for Ev.onUnmount (issue #93) with unit test
 - Fixed FSharp.Core dependency to 5.0.2

@@ -71,4 +71,3 @@ let view () =
             )
         ]
     ]
-    |> CoreElements.debug

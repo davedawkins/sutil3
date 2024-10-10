@@ -581,8 +581,6 @@ module DomEdit =
 
     let append (parent: Node) (node: Node) = parent.appendChild (node) |> ignore
 
-    let appendLabel label (parent: Node) (node: Node) = append parent node
-
     let replace (parent: Node) (current: Node) (node: Node) =
         if isNull (current) then
             failwith "Attempt to replace null node"

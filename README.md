@@ -1,28 +1,19 @@
-Experimental rewrite of the Sutil core to support a diffing engine
-
 New in Sutil 3
 
-- DOM updates are optimised using a patching mechanism, very much like React
-- withStyle uses nested stylesheets, rather than recoding all rule selectors to insert ".__sutil_xx" selectors
+- DOM updates are optimised using a patching mechanism. Amongst other things, this means that an Html.input element
+  can be re-rendered without losing focus
+
 - Ev.input understands that it belongs to an HTMLInputElement, and so `e.targeElement.value` will work without casts
+
 - Better handling of `fragment`. This removes a large amount of ugly code. If a Bind's view function returns a fragment
   this will be wrapped in a `div`. If the fragment is empty then the `div` will be set to `display: none`Bind.fs:module Sutil.Bind
 
-# Modules and Namespaces
+- Separation of Feliz.Engine DSL into Sutil.Html. This allows for other DSLs to be used with the core of Sutil
 
-Notes from Maxime meeting Oct-5
+- Separation of Bulma components into Sutil.Bulma. This allows for a smaller core for those who don't need or want Bulma.
 
-- Docs are detailed but hard to parse. Comapre with Fable.Form docs
-- Open in REPL is good!
-- Try not to mix use of namespace / module
-- What I Want to Work with . subgroup . helpers function
-- SideEffect -> SutilSideEffect
-- Dsl.fs into own package
-- Upper case for Literals
-- Prefix with SUTIL_
-- <| only in tests
-- Fable.Form fantomas settings
-- [<Erase>] can remove reflection *eg Bind - use on static types eg - when no instance needed
-- Use inline for 'rename' helpers
-- EasyBuild
+- Re-organization of modules and API so that it should be easier to find the functionality you're looking for with Intellisense
+
+- Optimizations to Fable code generation, so that bundle sizes will be smaller.
+
 

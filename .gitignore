@@ -308,4 +308,4 @@ tests/build
 public/apidocs
 .fsdocs/cache
 src/Sutil/Sutil.fable-temp.csproj
-build
+fable-build
