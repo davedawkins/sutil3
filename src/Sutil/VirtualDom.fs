@@ -15,7 +15,7 @@ _log.enabled <- false
 type VirtualElement with
 
     static member Empty =
-        {
+        {   Key = None
             Type = NullNode
             Children = Array.empty
             Attributes = Array.empty
@@ -36,6 +36,11 @@ type VirtualElement with
         { VirtualElement.Empty with
             Type = SideEffectNode(effect)
         }
+
+    member __.GetKey() =
+        match __.Key with
+        | Some k -> k
+        | None -> failwith "Key is not set"
 
     member __.IsTextNode =
         match __.Type with

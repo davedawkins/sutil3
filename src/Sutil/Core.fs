@@ -9,6 +9,7 @@ open Sutil.Internal.DomHelpers
 open Sutil.Internal.CustomEvents
 open Sutil.Internal.TypeHelpers
 open VirtualDom
+open CalculatePatch
 
 let private _log = Log.create ("Core")
 
@@ -48,7 +49,7 @@ let private logElement (context: BuildContext) (current: Node) (velement: Virtua
 
     velement
 
-let private logPatch (context: BuildContext) (current: Node) (patchAction: Patch.NodeAction) =
+let private logPatch (context: BuildContext) (current: Node) (patchAction: NodeAction) =
     if context.LogPatchEnabled then
         _log.trace (
             sprintf
@@ -157,3 +158,23 @@ module Sutil2 =
             member __.Document = document
 
     let documentOf (node: Node) = node.ownerDocument
+
+
+module Retry =
+
+    let mount (context: BuildContext) (current: Node) (se: SutilElement) : SutilResult =
+        if _log.enabled then
+            _log.trace ("Mount: building", "parent=", context.Parent |> DomHelpers.toStringOutline)
+
+        let context = context.WithLogEnabled()
+
+        se
+        |> VirtualDom.fromSutil
+        |> context.VirtualElementMapper
+        |> logElement context current // SutilElement -> VirtualDom.Element
+        |> Patch.calculate current // Calculate patch for new element
+        |> logPatch context current // Log the patch (debug)
+        |> Patch.apply context current // Apply patch
+        |> fun (result) ->
+            notifyNewNodes result // Notify new nodes
+            result

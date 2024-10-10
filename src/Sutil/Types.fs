@@ -51,6 +51,9 @@ type VirtualElementType =
 
 and VirtualElement =
     {
+        /// Only set when this element has been rendered into the DOM
+        Key: string option
+        
         Type: VirtualElementType
         Children: VirtualElement[]
         Attributes: (string * obj)[]

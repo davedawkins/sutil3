@@ -6,67 +6,12 @@ module Sutil.Patch
 open Browser.Types
 open Sutil.Internal
 open Sutil.Internal.TypeHelpers
+open Sutil.CalculatePatch
 
 open VirtualDom
 
 let private _log = Log.create ("Patch")
 _log.enabled <- false
-
-/// Actions we can perform on an existing DOM node to bring it into alignment with a VirtualElement
-type PatchAction =
-    | SetAttr of string * string
-    | RemoveAttr of string * string
-    | AddEvent of string * (Browser.Types.Event -> unit) * (Internal.CustomEvents.EventOption[])
-    | RemoveEvent of string * (Browser.Types.Event -> unit)
-    | SetInnerText of string
-    | ApplyEffect of SutilEffect
-    | ChildAction of (int * NodeAction)
-
-    override __.ToString() : string =
-        match __ with
-        | SetAttr(name, value) -> "SetAttr '" + name + "' = '" + value + "'"
-        | RemoveAttr(name, value) -> "RemoveAttr '" + name + "' = '" + value + "'"
-        | AddEvent(name, _, _) -> "AddEvent '" + name + "'"
-        | RemoveEvent(name, _) -> "RemoveEvent " + name + "'"
-        | SetInnerText(s) -> "SetInnerText '" + s + "'"
-        | ApplyEffect(name, _) -> "ApplyEffect '" + name + "'"
-        | ChildAction(i, action) -> "ChildAction #" + (string i) + "[" + action.ToString() + "]"
-
-/// We do exactly one of the following when we calculate what to do with a given VirtualElement and
-/// its associated DOM node (if it exists).
-///
-/// - Do nothing (AsIs)
-///   The current DOM node matches the VirtualElement (AsIs)
-///
-/// - Remove the DOM node (Remove)
-///   there is no corresponding VirtualElement (Remove). This happens when we have more DOM nodes
-///   than VirtualElements (such as when we're calculating actions for the children of a DOM node)
-///
-/// - Insert a new DOM node (Insert)
-///   there is no corresponding DOM node
-///
-/// - Replace the DOM node (Replace)
-///   the corresponding DOM node cannot be patched to the Virtual Element. For example, one is a Text
-///   node and the other is an HTMLElement, or the two HTMLElements have different `tagName`s
-///
-/// - Patch the DOM node (Patch)
-///   apply one or more patches to the DOM node so it matches the VirtualElement. For example, set/remove attributes.
-///   A patch contains an array of PatchActions
-
-and NodeAction =
-    | AsIs
-    | Remove
-    | Insert of VirtualElement
-    | Replace of VirtualElement
-    | Patch of PatchAction[]
-
-    override __.ToString() : string =
-        match __ with
-        | Patch actions -> sprintf "[%s]" (actions |> Array.map (_.ToString()) |> String.concat ",")
-        | Replace _ -> "Replace"
-        | Insert e -> "Insert " + e.AsString()
-        | Remove -> "Remove"
-        | AsIs -> "AsIs"
 
 module private Helpers =
     let private asArray (n: NamedNodeMap) =
@@ -140,7 +85,7 @@ let rec private calculatePatch (existing: Node) (ve: VirtualElement) : NodeActio
         then
             AsIs
         else
-            Remove
+            Remove ve
 
     elif
         isElementNode existing
@@ -186,7 +131,7 @@ let rec private calculatePatch (existing: Node) (ve: VirtualElement) : NodeActio
 
             if existingChildren.Length > n then
                 for i in (existingChildren.Length - 1) .. -1 .. n do
-                    yield ChildAction(i, Remove)
+                    yield ChildAction(i, Remove (VirtualElement.Empty))
         |]
         |> (fun patches ->
             if patches.Length > 0 then
@@ -206,7 +151,7 @@ let rec private calculatePatch (existing: Node) (ve: VirtualElement) : NodeActio
             Insert ve
         else
             // Instantiate the virtual element and replace the existing DOM node
-            Replace ve
+            Replace (VirtualElement.Empty, ve)
 
     elif (ve.IsEffectNode) then
 
@@ -223,7 +168,7 @@ let rec private calculatePatch (existing: Node) (ve: VirtualElement) : NodeActio
                 |]
             )
         else
-            Replace ve
+            Replace (VirtualElement.Empty,ve)
 
     else
         failwith "Unexpected virtual node"
@@ -326,14 +271,14 @@ and private applyNodeAction
     match action with
     | AsIs -> (Unchanged, current) |> SutilResult.Of
 
-    | Remove ->
+    | Remove _ ->
         if _log.enabled then
             _log.trace ("Remove: ", (current |> Internal.DomHelpers.toStringSummary))
 
         DomEdit.remove current
         (Removed, current) |> SutilResult.Of
 
-    | Replace(ve) ->
+    | Replace(_,ve) ->
         if ve.IsEffectNode then
             DomEdit.remove current
             let (_, effect) = ve.AsEffect()
