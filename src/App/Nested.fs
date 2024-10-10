@@ -6,6 +6,8 @@ module Nested
 open Sutil.Html
 open Sutil.Styling
 
-let Nested() =
-   Html.p [ text "...don't affect this element" ] |> withStyle []
-
+let Nested () =
+    Html.p [
+        text "...don't affect this element"
+    ]
+    |> withStyle []

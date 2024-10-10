@@ -13,39 +13,56 @@ open Sutil.Styling
 
 open type Feliz.length
 
-type Question = {
-    Id : int
-    Text : string
-}
+type Question =
+    {
+        Id: int
+        Text: string
+    }
 
-let questions = [
-    { Id = 1; Text = "How much water have you drunk today?" }
-    { Id = 2; Text = "When did you last take a break?" }
-    { Id = 3; Text = "Do you plan to go for a walk later?" }
-]
-
-let appStyle = [
-    rule "input" [
-        Css.displayBlock
-        Css.width 620
-        Css.maxWidth (percent 100)
+let questions =
+    [
+        {
+            Id = 1
+            Text = "How much water have you drunk today?"
+        }
+        {
+            Id = 2
+            Text = "When did you last take a break?"
+        }
+        {
+            Id = 3
+            Text = "Do you plan to go for a walk later?"
+        }
     ]
-]
 
-let view() =
-    let answer   = Store.make("")
-    let selected : IStore<Question> = Store.make( questions |> List.head )
+let appStyle =
+    [
+        rule "input" [
+            Css.displayBlock
+            Css.width 620
+            Css.maxWidth (percent 100)
+        ]
+    ]
 
-    let handleSubmit (e : Types.Event) =
-        e.preventDefault()
+let view () =
+    let answer = Store.make ("")
+    let selected: IStore<Question> = Store.make (questions |> List.head)
+
+    let handleSubmit (e: Types.Event) =
+        e.preventDefault ()
         let a = Store.get answer
         let q = Store.get selected
-        window.alert($"Answered question {q.Id} ({q.Text}) with '{a}'")
+        window.alert ($"Answered question {q.Id} ({q.Text}) with '{a}'")
 
     Html.div [
-        disposeOnUnmount [ answer; selected ]
+        disposeOnUnmount [
+            answer
+            selected
+        ]
 
-        Bulma.h2 [ text "Health Check" ]
+        Bulma.h2 [
+            text "Health Check"
+        ]
 
         Bulma.form [
             Ev.onSubmit handleSubmit
@@ -65,13 +82,13 @@ let view() =
 
             Bulma.block [
                 Bulma.inputText [
-                    Bind.attr ("value",answer)
+                    Bind.attr ("value", answer)
                 ]
             ]
 
             Bulma.block [
                 Bulma.button [
-                    Bind.attr ("disabled",answer |> Store.map (fun a -> a = ""))
+                    Bind.attr ("disabled", answer |> Store.map (fun a -> a = ""))
                     Attr.typeSubmit
                     text "Submit"
                 ]
@@ -79,9 +96,13 @@ let view() =
         ]
 
         Bulma.block [
-            Bind.el( selected, fun q ->
-                Html.p [
-                    text $"Selected question {q.Id}"
-                ] )
+            Bind.el (
+                selected,
+                fun q ->
+                    Html.p [
+                        text $"Selected question {q.Id}"
+                    ]
+            )
         ]
-    ] |> withStyle appStyle
+    ]
+    |> withStyle appStyle

@@ -19,12 +19,16 @@ module MockServer =
             failwith "Login details not found or incorrect"
 
 // App views
-type Page = Main | Login
+type Page =
+    | Main
+    | Login
 
 // MVU types
-type AuthorisedUser = {
-    Name : string
-    AuthToken : string }
+type AuthorisedUser =
+    {
+        Name: string
+        AuthToken: string
+    }
 
 type Message =
     | SetUser of string * string
@@ -32,9 +36,11 @@ type Message =
     | SignOut
     | CancelSignIn
 
-type Model = {
-    User : AuthorisedUser option
-    Page : Page }
+type Model =
+    {
+        User: AuthorisedUser option
+        Page: Page
+    }
 
 // Model helpers
 let loggedInName defaultName m =
@@ -45,74 +51,111 @@ let loggedInName defaultName m =
 let isLoggedIn m = m.User.IsSome
 let page m = m.Page
 
-let private appStyleSheet = [
-    rule "a" [
-        Css.color "gray"
+let private appStyleSheet =
+    [
+        rule "a" [
+            Css.color "gray"
+        ]
     ]
-]
 
 // MVU / Elmish functions
-let private init() = { User = None; Page = Main }
+let private init () =
+    {
+        User = None
+        Page = Main
+    }
 
 let private update msg model =
     match msg with
-    | SetUser (name,token) ->
-        { model with Page = Main; User = Some { Name = name; AuthToken = token }}
+    | SetUser(name, token) ->
+        { model with
+            Page = Main
+            User =
+                Some
+                    {
+                        Name = name
+                        AuthToken = token
+                    }
+        }
     | SignIn ->
-        { model with Page = Login }
+        { model with
+            Page = Login
+        }
     | SignOut ->
-        { model with Page = Main; User = None }
+        { model with
+            Page = Main
+            User = None
+        }
     | CancelSignIn ->
-        { model with Page = Main }
+        { model with
+            Page = Main
+        }
 
-let view() =
+let view () =
     let model, dispatch = () |> Store.makeElmishSimple init update ignore
 
     bulma.container [
-        disposeOnUnmount [ model ]
+        disposeOnUnmount [
+            model
+        ]
 
-        Bind.el (model .> page,fun p ->
-            match p with
+        Bind.el (
+            model .> page,
+            fun p ->
+                match p with
 
-            | Main ->
-                bulma.section [
+                | Main ->
+                    bulma.section [
 
-                    Bind.el( model, fun m ->
-                        match m.User with
-                        | Some u ->
-                            Html.span [
-                                Html.text u.Name
-                                Html.text " "
-                                Html.a [
-                                    Html.text "sign out"
-                                    Attr.href "#"
-                                    onClick (fun _ -> dispatch SignOut) [PreventDefault]
-                                ]
-                            ]
-                        | None ->
-                            Html.span [
-                                Html.text "guest "
-                                Html.a [
-                                    Html.text "sign in"
-                                    Attr.href "#"
-                                    onClick (fun _ -> dispatch SignIn) [PreventDefault]
-                                ]
-                            ]
-                    )
-                ]
+                        Bind.el (
+                            model,
+                            fun m ->
+                                match m.User with
+                                | Some u ->
+                                    Html.span [
+                                        Html.text u.Name
+                                        Html.text " "
+                                        Html.a [
+                                            Html.text "sign out"
+                                            Attr.href "#"
+                                            onClick (fun _ -> dispatch SignOut) [
+                                                PreventDefault
+                                            ]
+                                        ]
+                                    ]
+                                | None ->
+                                    Html.span [
+                                        Html.text "guest "
+                                        Html.a [
+                                            Html.text "sign in"
+                                            Attr.href "#"
+                                            onClick (fun _ -> dispatch SignIn) [
+                                                PreventDefault
+                                            ]
+                                        ]
+                                    ]
+                        )
+                    ]
 
-            | Login ->
-                let onLogin details =
-                    let authToken = MockServer.login details.Username details.Password
-                    (details.Username, authToken) |> SetUser |> dispatch
+                | Login ->
+                    let onLogin details =
+                        let authToken = MockServer.login details.Username details.Password
+                        (details.Username, authToken) |> SetUser |> dispatch
 
-                let onCancel() = dispatch CancelSignIn
+                    let onCancel () = dispatch CancelSignIn
 
-                Html.div [
-                    Bind.el(model,fun m ->
-                        let init = { LoginDetails.Default with Username = loggedInName "" m }
-                        Login.create init onLogin onCancel // The Login component
-                    )
-                ]
-            )
-        ] |> withStyle appStyleSheet
+                    Html.div [
+                        Bind.el (
+                            model,
+                            fun m ->
+                                let init =
+                                    { LoginDetails.Default with
+                                        Username = loggedInName "" m
+                                    }
+
+                                Login.create init onLogin onCancel // The Login component
+                        )
+                    ]
+        )
+    ]
+    |> withStyle appStyleSheet

@@ -6,13 +6,22 @@
       "version": "4.21.0",
       "commands": [
         "fable"
-      ]
+      ],
+      "rollForward": false
     },
     "fsdocs-tool": {
       "version": "20.0.1",
       "commands": [
         "fsdocs"
-      ]
+      ],
+      "rollForward": false
+    },
+    "fantomas": {
+      "version": "6.3.15",
+      "commands": [
+        "fantomas"
+      ],
+      "rollForward": false
     }
   }
 }

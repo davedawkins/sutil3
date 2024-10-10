@@ -7,6 +7,7 @@ open Sutil.Html
 
 let stringOfHtml = "here's some <strong>HTML!!!</strong>"
 
-let view() = Html.p [
-    Html.parse stringOfHtml
-]
+let view () =
+    Html.p [
+        Html.parse stringOfHtml
+    ]

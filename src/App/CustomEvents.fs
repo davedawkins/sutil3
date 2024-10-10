@@ -10,37 +10,49 @@ open Sutil.Internal.CustomEvents
 open Browser.Types
 open System
 
-let customDispatchButton() =
+let customDispatchButton () =
     let r = Random()
 
     let clickHandler (e: Event) =
-        let props: CustomDispatch<string> list = [Bubbles true; Detail($"Hello there! %i{r.Next(1000)}")]
-        CustomDispatch.dispatch<string>(e,"on-custom-click", props)
+        let props: CustomDispatch<string> list =
+            [
+                Bubbles true
+                Detail($"Hello there! %i{r.Next(1000)}")
+            ]
+
+        CustomDispatch.dispatch<string> (e, "on-custom-click", props)
 
     Bulma.button [
         Ev.onClick clickHandler
         text "I will dispatch an 'on-custom-click' event"
     ]
 
-let view() =
+let view () =
     Html.div [
         let m = Store.make ""
 
-        disposeOnUnmount [m]
+        disposeOnUnmount [
+            m
+        ]
 
-        Ev.onCustomEvent<string>(
+        Ev.onCustomEvent<string> (
             "on-custom-click",
             (fun (e: CustomEvent<string>) -> e.detail |> Option.defaultValue "" |> Store.set m)
         )
 
         Html.div [
-            customDispatchButton()
+            customDispatchButton ()
 
-            Bind.el(m,fun s ->
-                Html.p [
-                    text $"Got: [{s}]"
+            Bind.el (
+                m,
+                fun s ->
+                    Html.p [
+                        text $"Got: [{s}]"
 
-                    Attr.style [ Css.marginTop (px 12) ]
-                ] )
+                        Attr.style [
+                            Css.marginTop (px 12)
+                        ]
+                    ]
+            )
         ]
     ]

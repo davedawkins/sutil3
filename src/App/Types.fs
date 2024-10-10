@@ -15,20 +15,23 @@ type PageLink =
 /// - a markdown file loaded from "/doc"
 /// - an external URL
 
-type Page = {
-    Title : string
-    Category : string
-    Link : PageLink
-    Pass : bool
+type Page =
+    {
+        Title: string
+        Category: string
+        Link: PageLink
+        Pass: bool
     // Create : (unit -> SutilElement)
     // Sections : string list
-}
+    }
 
 /// The app currently has two books, with titles "Examples" and "Documentation"
 /// The "Examples" book is constructed in App.fs and is compiled in
 /// The "Documentation" book is constructed from /doc/index.md
-type Book = {
-    Title : string
-    Pages : Page list
-} with
+type Book =
+    {
+        Title: string
+        Pages: Page list
+    }
+
     member this.defaultPage = this.Pages.Head

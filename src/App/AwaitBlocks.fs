@@ -8,22 +8,36 @@ open Sutil.Html
 open Sutil.Bind
 
 module RandomUser =
-    type Name = { title: string; first : string; last : string }
-    type RandomUser = { name : Name }
-    type RandomUserResult = { results : RandomUser array }
+    type Name =
+        {
+            title: string
+            first: string
+            last: string
+        }
 
-    let get() = promise {
-        let! response = Fetch.fetch "https://randomuser.me/api/?inc=name" []
-        let! responseText = response.text()
-        let result = (Fable.Core.JS.JSON.parse responseText) :?> RandomUserResult
-        return result.results.[0]
-    }
+    type RandomUser =
+        {
+            name: Name
+        }
 
-let getRandomName() =
+    type RandomUserResult =
+        {
+            results: RandomUser array
+        }
+
+    let get () =
+        promise {
+            let! response = Fetch.fetch "https://randomuser.me/api/?inc=name" []
+            let! responseText = response.text ()
+            let result = (Fable.Core.JS.JSON.parse responseText) :?> RandomUserResult
+            return result.results.[0]
+        }
+
+let getRandomName () =
     promise {
-        do! Promise.sleep(500) // So we can see more of the "Waiting..." phase
+        do! Promise.sleep (500) // So we can see more of the "Waiting..." phase
 
-        let! u = RandomUser.get()
+        let! u = RandomUser.get ()
 
         if (u.GetHashCode() % 3 = 1) then // Simulate a failure so we an see "Error" state
             failwith "Simulated failure to get name"
@@ -31,25 +45,30 @@ let getRandomName() =
         return $"{u.name.first} {u.name.last}"
     }
 
-let randomNames = getRandomName() |> Store.make
+let randomNames = getRandomName () |> Store.make
 
-let view() =
+let view () =
     Html.div [
         Bulma.button [
-            Ev.onClick (fun _ -> getRandomName() |> Store.set randomNames)
+            Ev.onClick (fun _ -> getRandomName () |> Store.set randomNames)
             text "generate random name"
         ]
 
         Bulma.block [
-            Bind.promises( "randomNames", randomNames,
+            Bind.promises (
+                "randomNames",
+                randomNames,
                 (fun n -> text $"Please welcome {n}"),
                 (text "...waiting"),
                 (fun x ->
                     Html.p [
-                        Attr.style [ Css.color "red" ]
+                        Attr.style [
+                            Css.color "red"
+                        ]
                         text (string x.Message)
                     ]
                 )
             )
         ]
-    ] |> CoreElements.debug
+    ]
+    |> CoreElements.debug

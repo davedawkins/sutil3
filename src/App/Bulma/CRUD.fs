@@ -7,28 +7,47 @@ open Sutil.CoreElements
 open Sutil.Bulma
 
 open type Feliz.length
+
 module DbSchema =
-    type Name = {
-        Id : int
-        Name : string
-        Surname : string
-    }
+    type Name =
+        {
+            Id: int
+            Name: string
+            Surname: string
+        }
 
 [<RequireQualifiedAccess>]
 module Db =
     open DbSchema
 
-    let initDb = [
-        { Id = 1; Name = "Hans"; Surname = "Emil" }
-        { Id = 2; Name = "Max"; Surname = "Mustermann" }
-        { Id = 3; Name = "Roman"; Surname = "Tisch" }
-        { Id = 4; Name = "Steve"; Surname = "Miller" }
-    ]
+    let initDb =
+        [
+            {
+                Id = 1
+                Name = "Hans"
+                Surname = "Emil"
+            }
+            {
+                Id = 2
+                Name = "Max"
+                Surname = "Mustermann"
+            }
+            {
+                Id = 3
+                Name = "Roman"
+                Surname = "Tisch"
+            }
+            {
+                Id = 4
+                Name = "Steve"
+                Surname = "Miller"
+            }
+        ]
 
     let mutable nextId = 1 + (initDb |> List.map (fun n -> n.Id) |> List.max)
     let mutable db = initDb
 
-    let fetchAll() : list<Name> = db
+    let fetchAll () : list<Name> = db
 
     let assertExists id =
         db |> List.findIndex (fun p -> p.Id = id) |> ignore
@@ -36,34 +55,56 @@ module Db =
     let removeId id =
         assertExists id
         db <- db |> List.filter (fun p -> p.Id <> id)
-        Browser.Dom.console.log($"{db}")
+        Browser.Dom.console.log ($"{db}")
         id
 
-    let create (p : Name) =
-        if p.Name = "" && p.Surname = "" then failwith "Invalid name"
-        let p' = { p with Id = nextId }
+    let create (p: Name) =
+        if p.Name = "" && p.Surname = "" then
+            failwith "Invalid name"
+
+        let p' =
+            { p with
+                Id = nextId
+            }
+
         nextId <- nextId + 1
-        db <- db @ [ p' ]
+
+        db <-
+            db
+            @ [
+                p'
+            ]
+
         p'
 
-    let update (p : Name) =
+    let update (p: Name) =
         assertExists p.Id
-        db <- db |> List.map (fun x -> if x.Id = p.Id then p else x)
-        Browser.Dom.console.log($"{db}")
+
+        db <-
+            db
+            |> List.map (fun x ->
+                if x.Id = p.Id then
+                    p
+                else
+                    x
+            )
+
+        Browser.Dom.console.log ($"{db}")
         p
 
 open Sutil.Styling
 open System
 open DbSchema
 
-type Model = {
-    Names : Name list;
-    Name : string
-    Surname : string
-    Filter : string
-    Selected : Name option
-    Error : string
-}
+type Model =
+    {
+        Names: Name list
+        Name: string
+        Surname: string
+        Filter: string
+        Selected: Name option
+        Error: string
+    }
 
 type Message =
     | Create
@@ -77,7 +118,7 @@ type Message =
     | SetSurname of string
     | RequestAllNames
     | AllNames of Name list
-    | Select of id:int
+    | Select of id: int
     | ClearSelection
     | Error of string
     | Exception of Exception
@@ -89,95 +130,201 @@ let surname m = m.Surname
 let error m = m.Error
 let names m = m.Names
 
-let selection m = match m.Selected with |None->[] |Some n -> List.singleton n.Id
-let matchName filter (name : Name) = filter = "" || name.Surname.StartsWith(filter)
-let filteredNames m = m.Names |> List.filter (matchName m.Filter)
+let selection m =
+    match m.Selected with
+    | None -> []
+    | Some n -> List.singleton n.Id
+
+let matchName filter (name: Name) =
+    filter = "" || name.Surname.StartsWith(filter)
+
+let filteredNames m =
+    m.Names |> List.filter (matchName m.Filter)
 
 let canCreate m = m.Name <> "" || m.Surname <> ""
-let canUpdate m = m.Selected.IsSome && (m.Name <> "" || m.Surname <> "")
+
+let canUpdate m =
+    m.Selected.IsSome && (m.Name <> "" || m.Surname <> "")
+
 let canDelete m = m.Selected.IsSome
 
 let init () =
-    { Names = []; Selected = None; Filter = ""; Name = ""; Surname = ""; Error = "" }, Cmd.ofMsg RequestAllNames
+    {
+        Names = []
+        Selected = None
+        Filter = ""
+        Name = ""
+        Surname = ""
+        Error = ""
+    },
+    Cmd.ofMsg RequestAllNames
 
 let update msg model =
     match msg with
     | ClearError ->
-        { model with Error = "" }, Cmd.none
+        { model with
+            Error = ""
+        },
+        Cmd.none
     | Error msg ->
-        { model with Error = msg}, Cmd.none
+        { model with
+            Error = msg
+        },
+        Cmd.none
     | Exception x ->
-        { model with Error = x.Message}, Cmd.none
+        { model with
+            Error = x.Message
+        },
+        Cmd.none
     | Created n ->
-        { model with Names = model.Names @ [n] }, Cmd.batch [ Cmd.ofMsg ClearError; Cmd.ofMsg (Select n.Id) ]
+        { model with
+            Names =
+                model.Names
+                @ [
+                    n
+                ]
+        },
+        Cmd.batch [
+            Cmd.ofMsg ClearError
+            Cmd.ofMsg (Select n.Id)
+        ]
     | Updated n ->
-        let updatedNames = model.Names |> List.map (fun x -> if x.Id = n.Id then n else x)
-        { model with Names = updatedNames }, Cmd.ofMsg ClearError
+        let updatedNames =
+            model.Names
+            |> List.map (fun x ->
+                if x.Id = n.Id then
+                    n
+                else
+                    x
+            )
+
+        { model with
+            Names = updatedNames
+        },
+        Cmd.ofMsg ClearError
     | Deleted id ->
         let updatedNames = model.Names |> List.filter (fun x -> x.Id <> id)
-        let selnMsg = if updatedNames.IsEmpty then ClearSelection else Select (updatedNames.Head.Id)
-        { model with Names = updatedNames }, Cmd.batch [ Cmd.ofMsg ClearError; Cmd.ofMsg selnMsg ]
+
+        let selnMsg =
+            if updatedNames.IsEmpty then
+                ClearSelection
+            else
+                Select(updatedNames.Head.Id)
+
+        { model with
+            Names = updatedNames
+        },
+        Cmd.batch [
+            Cmd.ofMsg ClearError
+            Cmd.ofMsg selnMsg
+        ]
     | ClearSelection ->
-        { model with Name = ""; Surname = ""; Selected = None}, Cmd.none
+        { model with
+            Name = ""
+            Surname = ""
+            Selected = None
+        },
+        Cmd.none
     | Select id ->
         let n = model.Names |> List.find (fun n -> n.Id = id)
-        { model with Selected = Some n }, Cmd.batch [ Cmd.ofMsg (SetName n.Name); Cmd.ofMsg (SetSurname n.Surname)]
+
+        { model with
+            Selected = Some n
+        },
+        Cmd.batch [
+            Cmd.ofMsg (SetName n.Name)
+            Cmd.ofMsg (SetSurname n.Surname)
+        ]
     | Create ->
-        let n = { Name = model.Name; Surname = model.Surname; Id = 0 }
+        let n =
+            {
+                Name = model.Name
+                Surname = model.Surname
+                Id = 0
+            }
+
         model, Cmd.OfFunc.either Db.create n Created Exception
     | Update ->
         match model.Selected with
         | None -> model, Cmd.ofMsg (Error "No record selected to update")
-        | Some n -> model, Cmd.OfFunc.either Db.update { n with Name = model.Name; Surname = model.Surname } Updated Exception
-    | Delete  ->
+        | Some n ->
+            model,
+            Cmd.OfFunc.either
+                Db.update
+                { n with
+                    Name = model.Name
+                    Surname = model.Surname
+                }
+                Updated
+                Exception
+    | Delete ->
         match model.Selected with
         | None -> model, Cmd.ofMsg (Error "No record selected to delete")
         | Some n -> model, Cmd.OfFunc.either Db.removeId n.Id Deleted Exception
     | SetFilter f ->
-        { model with Filter = f }, Cmd.ofMsg ClearSelection
+        { model with
+            Filter = f
+        },
+        Cmd.ofMsg ClearSelection
     | SetName n ->
-        { model with Name = n }, Cmd.none
+        { model with
+            Name = n
+        },
+        Cmd.none
     | SetSurname n ->
-        { model with Surname = n }, Cmd.none
-    | RequestAllNames ->
-        model, Cmd.OfFunc.perform Db.fetchAll () AllNames
+        { model with
+            Surname = n
+        },
+        Cmd.none
+    | RequestAllNames -> model, Cmd.OfFunc.perform Db.fetchAll () AllNames
     | AllNames names ->
-        { model with Names = names }, Cmd.none
+        { model with
+            Names = names
+        },
+        Cmd.none
 
+let appStyle =
+    [
+        rule "div.select, select, .width100" [
+            Css.width (percent 100) // Streatch list and text box to fit column, looks nicer right aligned
+        ]
+        rule ".field-label" [
+            Css.flexGrow 2 // Allow more space for field label
+        ]
+        rule "label.label" [
+            Css.textAlignLeft // To match 7GUI spec
+        ]
+    ]
 
-let appStyle = [
-    rule "div.select, select, .width100" [
-        Css.width (percent 100) // Streatch list and text box to fit column, looks nicer right aligned
-    ]
-    rule ".field-label" [
-        Css.flexGrow 2 // Allow more space for field label
-    ]
-    rule "label.label" [
-        Css.textAlignLeft // To match 7GUI spec
-    ]
-]
-
-let view() =
+let view () =
     let model, dispatch = () |> Store.makeElmish init update ignore
 
-    let labeledField (label : string) model dispatch =
+    let labeledField (label: string) model dispatch =
         bulma.field.div [
             field.isHorizontal
-            bulma.fieldLabel [ bulma.label [ Html.text label ] ]
+            bulma.fieldLabel [
+                bulma.label [
+                    Html.text label
+                ]
+            ]
             bulma.fieldBody [
                 bulma.control.div [
                     class' "width100"
                     bulma.input.text [
-                        Attr.value (model,dispatch)
-                    ]]]]
+                        Attr.value (model, dispatch)
+                    ]
+                ]
+            ]
+        ]
 
-    let button (label : string) enabled message =
+    let button (label: string) enabled message =
         bulma.control.p [
             bulma.button.button [
                 Attr.disabled (model .> (enabled >> not))
                 Html.text label
                 onClick (fun _ -> dispatch message) []
-                ] ]
+            ]
+        ]
 
     bulma.container [
         bulma.columns [
@@ -194,14 +341,17 @@ let view() =
                 Sutil.Bulma.Helpers.selectList [ // FIXME: Feliz.BulmaEngine should provide this
                     Attr.size 6
 
-                    let viewNames =
-                        model .> filteredNames |> Observable.distinctUntilChanged
+                    let viewNames = model .> filteredNames |> Observable.distinctUntilChanged
 
-                    Bind.each(viewNames,(fun n ->
-                        Html.option [
-                            Attr.value n.Id
-                            (sprintf "%s, %s" n.Surname n.Name) |> Html.text
-                            ]))
+                    Bind.each (
+                        viewNames,
+                        (fun n ->
+                            Html.option [
+                                Attr.value n.Id
+                                (sprintf "%s, %s" n.Surname n.Name) |> Html.text
+                            ]
+                        )
+                    )
 
                     Bind.selected (model .> selection, List.exactlyOne >> Select >> dispatch)
                 ]
@@ -225,4 +375,5 @@ let view() =
             Bind.el (model .> error, Html.text)
         ]
 
-    ] |> withStyle appStyle
+    ]
+    |> withStyle appStyle

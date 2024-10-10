@@ -9,7 +9,8 @@ open Nested
 
 open type Feliz.length
 
-let css = [
+let css =
+    [
         rule "p" [
             Css.color "orange"
             Css.fontFamily "'Comic Sans MS', cursive"
@@ -17,8 +18,9 @@ let css = [
         ]
     ]
 
-let view() =
-    withStyle css <| Html.div [
+let view () =
+    withStyle css
+    <| Html.div [
         Html.p [
             text "These styles..."
         ]

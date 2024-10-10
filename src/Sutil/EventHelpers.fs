@@ -11,4 +11,4 @@ type TypedEvent<'T when 'T :> HTMLElement> =
     // type of TypedEvent<HTMLInputElement>.targetElement (in editor) as literally 'T
 
     [<Emit("$0.currentTarget")>]
-    abstract targetElement : 'T 
+    abstract targetElement: 'T

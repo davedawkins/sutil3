@@ -7,7 +7,8 @@ open Sutil.Styling
 open Sutil.Html
 open type Feliz.length
 
-let css = [
+let css =
+    [
         rule "p" [
             Css.color "purple"
             Css.fontFamily "'Comic Sans MS', cursive"
@@ -15,7 +16,8 @@ let css = [
         ]
     ]
 
-let view() =
-    withStyle css <| Html.p [
+let view () =
+    withStyle css
+    <| Html.p [
         text "Styled!"
     ]

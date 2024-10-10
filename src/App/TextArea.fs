@@ -16,37 +16,42 @@ let marked text : string =
     Fable.Formatting.Markdown.Markdown.ToHtml(doc)
 
 let sampleText =
-     """## Markdown
+    """## Markdown
 
 - Some words are *italic*
 - some are **bold**"""
 
-let style = [
-    rule "textarea" [
-        Css.width  (percent 100)
-        Css.height (percent 100)
-        Css.fontFamily "monospace"
-        Css.padding 4
+let style =
+    [
+        rule "textarea" [
+            Css.width (percent 100)
+            Css.height (percent 100)
+            Css.fontFamily "monospace"
+            Css.padding 4
+        ]
+
+        rule "span" [
+            Css.displayBlock
+            Css.marginTop 40
+        ]
     ]
 
-    rule "span" [
-        Css.displayBlock
-        Css.marginTop 40
-    ]
-]
-
-let view() =
+let view () =
     let inputText = Store.make sampleText
 
     Html.div [
-        disposeOnUnmount [inputText]
+        disposeOnUnmount [
+            inputText
+        ]
 
         Html.textarea [
             Attr.rows 5
-            Bind.attr("value",inputText)
+            Bind.attr ("value", inputText)
         ]
 
         Html.span [
-            Bind.el(inputText , fun t -> Html.parse $"{marked t}")
-        ] |> withStyle Markdown.style
-    ] |> withStyle style
+            Bind.el (inputText, fun t -> Html.parse $"{marked t}")
+        ]
+        |> withStyle Markdown.style
+    ]
+    |> withStyle style

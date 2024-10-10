@@ -6,11 +6,13 @@ open Sutil.CoreElements
 open Sutil.Bind
 open Sutil.Styling
 
-let view() =
+let view () =
     Html.div [
         let active = Store.make false
 
-        disposeOnUnmount [active]
+        disposeOnUnmount [
+            active
+        ]
 
         Bulma.button [
             text "Launch example modal"
@@ -20,9 +22,11 @@ let view() =
         Html.body [
             Html.div [
                 Attr.className "modal"
-                Bind.toggleClass(active,"is-active")
+                Bind.toggleClass (active, "is-active")
 
-                Html.div [ Attr.className "modal-background" ]
+                Html.div [
+                    Attr.className "modal-background"
+                ]
                 Html.div [
                     Attr.className "modal-content"
                     Bulma.box [
@@ -31,9 +35,10 @@ let view() =
                 ]
                 Bulma.button [
                     Attr.className "modal-close"
-                    Ev.onClick (fun _ -> active <~ false) 
+                    Ev.onClick (fun _ -> active <~ false)
                     Attr.ariaLabel "close"
                 ]
             ]
-        ] |> withStyle []
+        ]
+        |> withStyle []
     ]

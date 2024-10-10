@@ -13,38 +13,67 @@ module Observable =
     type BasicObserver<'T>() =
 
         let mutable stopped = false
-        abstract Next : value : 'T -> unit
-        abstract Error : error : exn -> unit
-        abstract Completed : unit -> unit
+        abstract Next: value: 'T -> unit
+        abstract Error: error: exn -> unit
+        abstract Completed: unit -> unit
 
         interface IObserver<'T> with
             member x.OnNext value =
-                if not stopped then x.Next value
-            member x.OnError e =
-                if not stopped then stopped <- true; x.Error e
-            member x.OnCompleted () =
-                if not stopped then stopped <- true; x.Completed ()
+                if not stopped then
+                    x.Next value
 
-    let map2<'A, 'B, 'Res> (f: 'A -> 'B -> 'Res) (a: IObservable<'A>) (b: IObservable<'B>) : IObservable<'Res> =
+            member x.OnError e =
+                if not stopped then
+                    stopped <- true
+                    x.Error e
+
+            member x.OnCompleted() =
+                if not stopped then
+                    stopped <- true
+                    x.Completed()
+
+    let map2<'A, 'B, 'Res>
+        (f: 'A -> 'B -> 'Res)
+        (a: IObservable<'A>)
+        (b: IObservable<'B>)
+        : IObservable<'Res>
+        =
         { new IObservable<'Res> with
             member _.Subscribe(h: IObserver<'Res>) =
                 let mutable valueA, valueB = None, None
 
-                let notify() =
-                     if valueA.IsSome && valueB.IsSome then h.OnNext (f valueA.Value valueB.Value)
+                let notify () =
+                    if valueA.IsSome && valueB.IsSome then
+                        h.OnNext(f valueA.Value valueB.Value)
 
-                let disposeA = a.Subscribe(fun v -> valueA <- Some v; notify())
-                let disposeB = b.Subscribe(fun v -> valueB <- Some v; notify())
+                let disposeA =
+                    a.Subscribe(fun v ->
+                        valueA <- Some v
+                        notify ()
+                    )
 
-                Dispose.makeDisposable(fun _ -> disposeA.Dispose(); disposeB.Dispose())
+                let disposeB =
+                    b.Subscribe(fun v ->
+                        valueB <- Some v
+                        notify ()
+                    )
+
+                Dispose.makeDisposable (fun _ ->
+                    disposeA.Dispose()
+                    disposeB.Dispose()
+                )
         }
 
-    let zip<'A,'B> (a:IObservable<'A>) (b:IObservable<'B>) : IObservable<'A*'B> =
+    let zip<'A, 'B> (a: IObservable<'A>) (b: IObservable<'B>) : IObservable<'A * 'B> =
         map2<'A, 'B, 'A * 'B> (fun a b -> a, b) a b
 
-    let distinctUntilChangedCompare<'T> (eq:'T -> 'T -> bool) (source:IObservable<'T>) : IObservable<'T> =
+    let distinctUntilChangedCompare<'T>
+        (eq: 'T -> 'T -> bool)
+        (source: IObservable<'T>)
+        : IObservable<'T>
+        =
         { new System.IObservable<'T> with
-            member _.Subscribe( h : IObserver<'T> ) =
+            member _.Subscribe(h: IObserver<'T>) =
                 let mutable value = Unchecked.defaultof<'T>
                 let mutable init = false
 
@@ -52,117 +81,130 @@ module Observable =
                 // Can't use Unchecked.defaultof<'T> as meaning "init = false"
                 let safeEq next = init && eq value next
 
-                let disposeA = source.Subscribe( fun next ->
-                    if not (safeEq next) then
-                        h.OnNext next
-                        value <- next
-                        init <- true
-                )
+                let disposeA =
+                    source.Subscribe(fun next ->
+                        if not (safeEq next) then
+                            h.OnNext next
+                            value <- next
+                            init <- true
+                    )
 
-                Dispose.makeDisposable ( 
-                    (fun _ -> disposeA.Dispose()  )
-                )
+                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()))
         }
 
-    let distinctUntilChanged<'T when 'T : equality> (source:IObservable<'T>) : IObservable<'T> =
+    let distinctUntilChanged<'T when 'T: equality> (source: IObservable<'T>) : IObservable<'T> =
         source |> distinctUntilChangedCompare (=)
 
-    /// Provide the initial value for a sequence so that new subscribers will receive an 
+    /// Provide the initial value for a sequence so that new subscribers will receive an
     /// immediate update of the current value
-    let init (v : 'T) (source: IObservable<'T>) =
+    let init (v: 'T) (source: IObservable<'T>) =
         let mutable current = v
+
         { new System.IObservable<'T> with
-            member _.Subscribe( h : IObserver<'T> ) =
-            
-                let notify() =
-                    try h.OnNext (current)
-                    with ex -> h.OnError ex
+            member _.Subscribe(h: IObserver<'T>) =
 
-                let disposeA = source.Subscribe( fun x ->
-                    current <- x
-                    notify()
-                )
+                let notify () =
+                    try
+                        h.OnNext(current)
+                    with ex ->
+                        h.OnError ex
 
-                notify()
+                let disposeA =
+                    source.Subscribe(fun x ->
+                        current <- x
+                        notify ()
+                    )
 
-                Dispose.makeDisposable ( (fun _ -> disposeA.Dispose()) )
+                notify ()
+
+                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()))
         }
-
 
     /// Determines whether an observable sequence contains a specified value
     /// which satisfies the given predicate
     let exists predicate (source: IObservable<'T>) =
         { new System.IObservable<'T> with
-            member _.Subscribe( h : IObserver<'T> ) =
-                let disposeA = source.Subscribe( fun x ->
-                    try h.OnNext (predicate x)
-                    with ex -> h.OnError ex
-                )
-                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()) )
+            member _.Subscribe(h: IObserver<'T>) =
+                let disposeA =
+                    source.Subscribe(fun x ->
+                        try
+                            h.OnNext(predicate x)
+                        with ex ->
+                            h.OnError ex
+                    )
+
+                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()))
         }
 
     /// Filters the observable elements of a sequence based on a predicate
     let filter predicate (source: IObservable<'T>) =
         { new System.IObservable<'T> with
-            member _.Subscribe( h : IObserver<'T> ) =
-                let disposeA = source.Subscribe( fun x ->
-                    try if predicate x then h.OnNext x
-                    with ex -> h.OnError ex
-                )
-                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()) )
+            member _.Subscribe(h: IObserver<'T>) =
+                let disposeA =
+                    source.Subscribe(fun x ->
+                        try
+                            if predicate x then
+                                h.OnNext x
+                        with ex ->
+                            h.OnError ex
+                    )
+
+                Dispose.makeDisposable ((fun _ -> disposeA.Dispose()))
         }
 
-    //let choose (f : 'T option -> 'R option) (source:IObservable<'T option>) : IObservable<'R> =
-    //    { new System.IObservable<_> with
-    //        member _.Subscribe( h : IObserver<_> ) =
-    //            let disposeA = source.Subscribe( fun x ->
-    //                (try f x with ex -> h.OnError ex;None) |> Option.iter h.OnNext
-    //            )
-    //            Dispose.makeDisposable (fun _ -> disposeA.Dispose() )
-    //    }
+//let choose (f : 'T option -> 'R option) (source:IObservable<'T option>) : IObservable<'R> =
+//    { new System.IObservable<_> with
+//        member _.Subscribe( h : IObserver<_> ) =
+//            let disposeA = source.Subscribe( fun x ->
+//                (try f x with ex -> h.OnError ex;None) |> Option.iter h.OnNext
+//            )
+//            Dispose.makeDisposable (fun _ -> disposeA.Dispose() )
+//    }
 
 [<RequireQualifiedAccess>]
 module Store =
     open System
     open Sutil.Internal
 
-    let logEnabled() = false
+    let logEnabled () = false
     let log s = ()
 
     let fastEquals = Sutil.Internal.JsHelpers.eq3
 
-    let private nextStoreId() = Helpers.createIdGenerator()
+    let private nextStoreId () = Helpers.createIdGenerator ()
 
     // Allow stores that can handle mutable 'Model types (eg, <input>.FileList). In this
     // case we can pass (fun _ _ -> true)
     type Store<'Model>(init: unit -> 'Model, dispose: 'Model -> unit) =
         let mutable uid = 0
-        let storeId = nextStoreId()
+        let storeId = nextStoreId ()
         let mutable name = "store-" + (string storeId)
         let mutable _modelInitialized = false
         let mutable _model = Unchecked.defaultof<_>
-        let mutable disposeListeners : (unit -> unit) list = []
+        let mutable disposeListeners: (unit -> unit) list = []
 
-        let onDispose f = disposeListeners <- f :: disposeListeners
+        let onDispose f =
+            disposeListeners <- f :: disposeListeners
 
-        let notifyDispose() =
-            disposeListeners |> List.iter (fun f -> f())
+        let notifyDispose () =
+            disposeListeners |> List.iter (fun f -> f ())
             disposeListeners <- []
 
-        let model() =
+        let model () =
             if not _modelInitialized then
-                _model <- init()
+                _model <- init ()
                 _modelInitialized <- true
+
             _model
-        let subscribers =
-            Collections.Generic.Dictionary<_, IObserver<'Model>>()
+
+        let subscribers = Collections.Generic.Dictionary<_, IObserver<'Model>>()
 
         override _.ToString() = $"#{storeId}={_model}"
 
-        member _.Value = model()
+        member _.Value = model ()
 
         member this.Update(f: 'Model -> 'Model) =
-            let newModel = f (model())
+            let newModel = f (model ())
 
             // Send every update. Use 'distinctUntilChanged' with fastEquals to get previous behaviour
             //Fable.Core.JS.console.log($"Update {_model} -> {newModel}")
@@ -170,16 +212,16 @@ module Store =
                 _model <- newModel
 
                 if subscribers.Count > 0 then
-                    subscribers.Values
-                        |> Seq.iter (fun s -> s.OnNext(_model))
+                    subscribers.Values |> Seq.iter (fun s -> s.OnNext(_model))
 
         member this.NumSubscribers = subscribers.Count
 
-        member this.Subscribe(observer: IObserver<'Model>): IDisposable =
+        member this.Subscribe(observer: IObserver<'Model>) : IDisposable =
             let id = uid
             uid <- uid + 1
 
-            if logEnabled() then log $"subscribe {id}"
+            if logEnabled () then
+                log $"subscribe {id}"
 
             subscribers.Add(id, observer)
 
@@ -187,44 +229,50 @@ module Store =
             //Fable.Core.JS.setTimeout (fun _ -> observer.OnNext(model)) 0 |> ignore
 
             // Sutil depends on an immediate callback
-            observer.OnNext(model())
+            observer.OnNext(model ())
 
-            Dispose.makeDisposable( fun () ->
-                if logEnabled() then log $"unsubscribe {id}"
+            Dispose.makeDisposable (fun () ->
+                if logEnabled () then
+                    log $"unsubscribe {id}"
+
                 subscribers.Remove(id) |> ignore
             )
 
-        member this.Name with get() = name and set (v) = name <- v
+        member this.Name
+            with get () = name
+            and set (v) = name <- v
 
-        member this.OnDispose( f : unit -> unit ) =
-            onDispose f
+        member this.OnDispose(f: unit -> unit) = onDispose f
 
         member this.Dispose() =
             subscribers.Values |> Seq.iter (fun x -> x.OnCompleted())
             subscribers.Clear()
-            dispose (model())
+            dispose (model ())
             _model <- Unchecked.defaultof<_>
             //Registry.notifyDisposeStore this
-            notifyDispose()
+            notifyDispose ()
 
         interface IStore<'Model> with
             member this.Subscribe(observer: IObserver<'Model>) = this.Subscribe(observer)
             member this.Update(f) = this.Update(f)
             member this.Value = this.Value
-            member this.OnDispose( f : unit -> unit ) = this.OnDispose(f)
-            member this.Name with get() = this.Name and set (v:string) = this.Name <- v
-            // member this.Debugger = {
-            //         new IStoreDebugger with
-            //             member _.Value = upcast this.Value
-            //             member _.NumSubscribers = subscribers.Count }
+            member this.OnDispose(f: unit -> unit) = this.OnDispose(f)
+
+            member this.Name
+                with get () = this.Name
+                and set (v: string) = this.Name <- v
+        // member this.Debugger = {
+        //         new IStoreDebugger with
+        //             member _.Value = upcast this.Value
+        //             member _.NumSubscribers = subscribers.Count }
 
         interface IDisposable with
             member this.Dispose() = this.Dispose()
 
-    let countSubscribers (store : IStore<'T>) = (store :?> Store<'T>).NumSubscribers 
+    let countSubscribers (store: IStore<'T>) = (store :?> Store<'T>).NumSubscribers
 
-    let makeStore<'Model> (init:unit->'Model) (dispose:'Model->unit) =
-        new Store<'Model>(init,dispose)
+    let makeStore<'Model> (init: unit -> 'Model) (dispose: 'Model -> unit) =
+        new Store<'Model>(init, dispose)
 
     /// <summary>
     /// Create a new store
@@ -312,7 +360,12 @@ module Store =
     ///     subscription.Dispose()
     /// </code>
     /// </example>
-    let map2<'A, 'B, 'Res> (callback: 'A -> 'B -> 'Res) (storeA: IObservable<'A>) (storeB: IObservable<'B>) = Observable.map2<'A, 'B, 'Res> callback storeA storeB
+    let map2<'A, 'B, 'Res>
+        (callback: 'A -> 'B -> 'Res)
+        (storeA: IObservable<'A>)
+        (storeB: IObservable<'B>)
+        =
+        Observable.map2<'A, 'B, 'Res> callback storeA storeB
 
     /// <summary>
     /// Applies a predicate function to obtain an observable of the elements that evaluated to true
@@ -327,7 +380,8 @@ module Store =
     ///     over18.Dispose()
     /// </code>
     /// </example>
-    let filter<'A> (predicate: 'A -> bool) (store: IObservable<'A>) = store |> Observable.filter predicate
+    let filter<'A> (predicate: 'A -> bool) (store: IObservable<'A>) =
+        store |> Observable.filter predicate
 
     /// <summary>
     /// Provides an observable that will emit a value only when the updated store value is different from the previous one
@@ -344,7 +398,8 @@ module Store =
     ///     Store.set 1 store // when distinct doesn't emit
     /// </code>
     /// </example>
-    let distinct<'T when 'T: equality> (source: IObservable<'T>) = Observable.distinctUntilChanged source
+    let distinct<'T when 'T: equality> (source: IObservable<'T>) =
+        Observable.distinctUntilChanged source
 
     /// <summary>
     /// Helper function for commonly used form
@@ -395,7 +450,7 @@ module Store =
     ///     printf %"Budget available: {formattedBudget}
     /// </code>
     /// </example>
-    let getMap (mapper : 'T -> 'U) (store : IStore<'T>) = store |> get |> mapper
+    let getMap (mapper: 'T -> 'U) (store: IStore<'T>) = store |> get |> mapper
 
     /// <summary>
     /// Invoke callback for each observed value from source
@@ -405,8 +460,7 @@ module Store =
     ///    source |> Store.iter (fun v -> printfn $"New value: {v}")
     /// </code>
     /// </example>
-    let iter<'A> (callback: 'A -> unit) (source: IObservable<'A>) =
-        subscribe callback source
+    let iter<'A> (callback: 'A -> unit) (source: IObservable<'A>) = subscribe callback source
 
     [<Obsolete("Use Store.iter instead")>]
     let write<'A> (callback: 'A -> unit) (store: IObservable<'A>) = iter callback store |> ignore
@@ -429,9 +483,7 @@ module Store =
     /// </code>
     /// </example>
 
-
     let modify (callback: ('T -> 'T)) (store: IStore<'T>) = store |> getMap callback |> set store
-
 
     /// <summary>
     /// Takes two observables and subscribes to both with a single callback,
@@ -460,13 +512,14 @@ module Store =
         (source1: IObservable<'A>)
         (source2: IObservable<'B>)
         (callback: ('A * 'B) -> unit)
-        : System.IDisposable =
+        : System.IDisposable
+        =
         // Requires that subscribe makes an initializing first callback. Otherwise, there will
         // be a missing value for A (say) when B (say) sends an update.
         let mutable initState = 0
 
-        let mutable cachea : 'A = Unchecked.defaultof<'A>
-        let mutable cacheb : 'B = Unchecked.defaultof<'B>
+        let mutable cachea: 'A = Unchecked.defaultof<'A>
+        let mutable cacheb: 'B = Unchecked.defaultof<'B>
 
         let notify () =
             if initState = 2 then
@@ -474,19 +527,23 @@ module Store =
 
         let unsuba =
             source1
-            |> subscribe
-                (fun v ->
-                    if initState = 0 then initState <- 1
-                    cachea <- v
-                    notify ())
+            |> subscribe (fun v ->
+                if initState = 0 then
+                    initState <- 1
+
+                cachea <- v
+                notify ()
+            )
 
         let unsubb =
             source2
-            |> subscribe
-                (fun v ->
-                    if initState = 1 then initState <- 2
-                    cacheb <- v
-                    notify ())
+            |> subscribe (fun v ->
+                if initState = 1 then
+                    initState <- 2
+
+                cacheb <- v
+                notify ()
+            )
 
         if (initState <> 2) then
             log ("Error: subscribe didn't initialize us")
@@ -494,7 +551,9 @@ module Store =
 
         (fun () ->
             unsuba.Dispose()
-            unsubb.Dispose()) |> Dispose.makeDisposable
+            unsubb.Dispose()
+        )
+        |> Dispose.makeDisposable
 
 /// <summary>
 /// Operators for store functions
@@ -633,17 +692,18 @@ module ObservablePromise =
         | Result of 'T
         | Error of Exception
 
-    type ObservablePromise<'T>(p : JS.Promise<'T>) =
+    type ObservablePromise<'T>(p: JS.Promise<'T>) =
         let store = Store.make PromiseState.Waiting
 
         let run () =
-                store <~ PromiseState.Waiting
-                p |> Promise.map (fun v -> store <~ PromiseState.Result v)
-                  |> Promise.catch (fun x -> store <~ PromiseState.Error x)
-                  |> ignore
+            store <~ PromiseState.Waiting
 
-        do
-            run()
+            p
+            |> Promise.map (fun v -> store <~ PromiseState.Result v)
+            |> Promise.catch (fun x -> store <~ PromiseState.Error x)
+            |> ignore
+
+        do run ()
 
         interface IObservable<PromiseState<'T>> with
             member this.Subscribe(observer: IObserver<PromiseState<'T>>) = store.Subscribe(observer)
@@ -652,6 +712,4 @@ module ObservablePromise =
             member _.Dispose() = store.Dispose()
 
     type JS.Promise<'T> with
-        member self.ToObservable() : ObservablePromise<'T> =
-            new ObservablePromise<'T>(self)
-
+        member self.ToObservable() : ObservablePromise<'T> = new ObservablePromise<'T>(self)

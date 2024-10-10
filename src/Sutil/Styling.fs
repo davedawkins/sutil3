@@ -1,12 +1,12 @@
-
 module Sutil.Styling
 
 open Sutil.Internal
 open Sutil.Internal.TypeHelpers
 
-let [<Literal>] private  MODULE_NAME = "Styling"
+[<Literal>]
+let private MODULE_NAME = "Styling"
 
-let private log = Log.create( MODULE_NAME )
+let private log = Log.create (MODULE_NAME)
 
 module Types =
     type SutilCssSelector = string
@@ -16,26 +16,33 @@ module Types =
 
     /// <exclude/>
     /// Selector with associated style attributes
-    type SutilStyleRule = {
-            Selector : string
-            Styles: SutilStyleAttribute [] 
+    type SutilStyleRule =
+        {
+            Selector: string
+            Styles: SutilStyleAttribute[]
         }
 
     /// <exclude/>
     /// Keyframe entry. StartAt is a percentage value, ranging from 0-100
-    type SutilStyleKeyFrame = {
-        StartAt: int
-        Styles: SutilStyleAttribute list 
-    }
+    type SutilStyleKeyFrame =
+        {
+            StartAt: int
+            Styles: SutilStyleAttribute list
+        }
 
     /// <exclude/>
-    type SutilStyleKeyFrames = { Name: string; Frames: SutilStyleKeyFrame list }
+    type SutilStyleKeyFrames =
+        {
+            Name: string
+            Frames: SutilStyleKeyFrame list
+        }
 
     /// <exclude/>
-    type SutilStyleMediaRule = { 
-        Condition: string
-        Rules: SutilStyleSheetDefinition list
-    }
+    type SutilStyleMediaRule =
+        {
+            Condition: string
+            Rules: SutilStyleSheetDefinition list
+        }
 
     /// <exclude/>
     and SutilStyleSheetDefinition =
@@ -43,11 +50,12 @@ module Types =
         | KeyFrames of SutilStyleKeyFrames
         | MediaRule of SutilStyleMediaRule
 
-    type SutilStyleSheet = 
+    type SutilStyleSheet =
         {
-            Definitions : SutilStyleSheetDefinition []
+            Definitions: SutilStyleSheetDefinition[]
         }
-        static member Of (rules : SutilStyleRule seq) = 
+
+        static member Of(rules: SutilStyleRule seq) =
             {
                 Definitions = rules |> Seq.map Rule |> Seq.toArray
             }
@@ -59,32 +67,41 @@ module internal Renderer =
     open System
     open Browser.Types
 
-    let private toLines (s : string) =
-        s.Split( [| '\n' |] )
+    let private toLines (s: string) =
+        s.Split(
+            [|
+                '\n'
+            |]
+        )
 
-    let private fromLines (s : string seq) =
-        s |> String.concat "\n"
+    let private fromLines (s: string seq) = s |> String.concat "\n"
 
-    let private indent (s : string) =
+    let private indent (s: string) =
         s |> toLines |> Array.map (fun line -> "  " + line) |> fromLines
 
+    let parseStyleAttr (style: string) =
+        style.Split(
+            [|
+                ';'
+            |],
+            StringSplitOptions.RemoveEmptyEntries
+        )
+        |> Array.collect (fun entry ->
+            entry.Split(
+                [|
+                    ':'
+                |],
+                2
+            )
+            |> Array.chunkBySize 2
+            |> Array.map (fun pair -> pair.[0].Trim(), pair.[1].Trim())
+        )
 
-    let parseStyleAttr (style : string) =
-        style.Split([|';'|], StringSplitOptions.RemoveEmptyEntries)
-            |> Array.collect (fun entry ->
-                            entry.Split([|':'|],2)
-                            |> Array.chunkBySize 2
-                            |> Array.map (fun pair -> pair.[0].Trim(), pair.[1].Trim()))
-
-    let emitStyleAttr (keyValues : (string * string) array) =
-        keyValues
-            |> Array.map (fun (k,v) -> sprintf "%s:%s;" k v )
-            |> String.concat ""
+    let emitStyleAttr (keyValues: (string * string) array) =
+        keyValues |> Array.map (fun (k, v) -> sprintf "%s:%s;" k v) |> String.concat ""
 
     let filterStyleAttr name style =
-        parseStyleAttr style
-            |> Array.filter (fun (k,v) -> k <> name)
-            |> emitStyleAttr
+        parseStyleAttr style |> Array.filter (fun (k, v) -> k <> name) |> emitStyleAttr
 
     // let getStyleAttr (el : HTMLElement) =
     //     match el.getAttribute("style") with
@@ -105,59 +122,88 @@ module internal Renderer =
     //     head.appendChild(style :> Node) |> ignore
     //     style
 
-    let splitMapJoin (delim:char) (f : string -> string) (s:string) =
-        s.Split([| delim |], StringSplitOptions.RemoveEmptyEntries )
-            |> Array.map f
-            |> fun values -> String.Join(string delim, values)
+    let splitMapJoin (delim: char) (f: string -> string) (s: string) =
+        s.Split(
+            [|
+                delim
+            |],
+            StringSplitOptions.RemoveEmptyEntries
+        )
+        |> Array.map f
+        |> fun values -> String.Join(string delim, values)
 
-    let mapPseudo (f : string -> string) (s : string) =
+    let mapPseudo (f: string -> string) (s: string) =
         let i = s.IndexOf(':')
+
         if i < 0 then
             f s
         else
-            f (s.Substring(0,i)) + (s.Substring(i))
+            f (s.Substring(0, i)) + (s.Substring(i))
 
     let isPseudo s =
-        s = "hover" || s = "active" || s = "visited" || s = "link" || s = "before" || s = "after" || s = "checked" || s = "marker"
+        s = "hover"
+        || s = "active"
+        || s = "visited"
+        || s = "link"
+        || s = "before"
+        || s = "after"
+        || s = "checked"
+        || s = "marker"
 
     let isGlobal s = s = "body" || s = "html"
 
-    let specifySelector (styleName : string) (selectors : string) =
+    let specifySelector (styleName: string) (selectors: string) =
         if (styleName = "") then
             selectors
         else
-            let trans s = if isPseudo s || isGlobal s then s else sprintf "%s.%s" s styleName  // button -> button.styleA
+            let trans s =
+                if isPseudo s || isGlobal s then
+                    s
+                else
+                    sprintf "%s.%s" s styleName // button -> button.styleA
+
             splitMapJoin ',' (splitMapJoin ' ' (mapPseudo trans)) selectors
 
-    let private styleListToText (css : list<SutilStyleAttribute>) =
-        " {\n" +  String.Join ("\n", css |> Seq.map (fun (nm,v) -> $"    {nm}: {v};")) + " }\n"
+    let private styleListToText (css: list<SutilStyleAttribute>) =
+        " {\n"
+        + String.Join("\n", css |> Seq.map (fun (nm, v) -> $"    {nm}: {v};"))
+        + " }\n"
 
-    let private frameToText (f : SutilStyleKeyFrame) =
+    let private frameToText (f: SutilStyleKeyFrame) =
         sprintf "%d%% %s" f.StartAt (styleListToText f.Styles)
 
-    let private framesToText (frames : SutilStyleKeyFrames) =
-        sprintf "@keyframes %s {\n%s\n}\n"
+    let private framesToText (frames: SutilStyleKeyFrames) =
+        sprintf
+            "@keyframes %s {\n%s\n}\n"
             frames.Name
             (String.Join("\n", frames.Frames |> List.map frameToText))
 
-    let private isSutilRule (nm:string,v) = nm.StartsWith("sutil")
+    let private isSutilRule (nm: string, v) = nm.StartsWith("sutil")
 
-    let private ruleToText (classMap : Map<string,SutilStyleRule>) (styleName : string) (rule:SutilStyleRule) =
+    let private ruleToText
+        (classMap: Map<string, SutilStyleRule>)
+        (styleName: string)
+        (rule: SutilStyleRule)
+        =
         //rule.SelectorSpec + (styleListToText rule.Style)
 
-        let rec styleText (r : SutilStyleRule) = 
+        let rec styleText (r: SutilStyleRule) =
             r.Styles
-            |> Seq.filter (not << isSutilRule) 
-            |> Seq.map (fun (nm,v) -> 
+            |> Seq.filter (not << isSutilRule)
+            |> Seq.map (fun (nm, v) ->
                 if (nm.EndsWith("()")) then
-                    match classMap.TryFind nm[0..-3] with
-                    | Some subrule ->  
-                        styleText subrule
-                    | _ -> 
-                        Fable.Core.JS.console.warn("No class found for substitution: ", nm[0..-3])
+                    match classMap.TryFind nm[0 .. -3] with
+                    | Some subrule -> styleText subrule
+                    | _ ->
+                        Fable.Core.JS.console.warn (
+                            "No class found for substitution: ",
+                            nm[0 .. -3]
+                        )
+
                         ""
                 else
-                    $"    {nm}: {v};")
+                    $"    {nm}: {v};"
+            )
             |> String.concat "\n"
 
         [
@@ -165,34 +211,44 @@ module internal Renderer =
             " {\n"
             styleText rule
             "}\n"
-        ] |> String.concat ""
+        ]
+        |> String.concat ""
 
     let rec mediaRuleToText classMap styleName rule =
-        sprintf "@media %s {\n%s\n}\n" (rule.Condition) (rule.Rules |> List.map (entryToText classMap styleName) |> String.concat "\n")
+        sprintf
+            "@media %s {\n%s\n}\n"
+            (rule.Condition)
+            (rule.Rules |> List.map (entryToText classMap styleName) |> String.concat "\n")
 
-    and entryToText classMap (styleName : string) = function
-        | Rule rule ->
-            ruleToText classMap styleName rule
-        | KeyFrames frames ->
-            framesToText frames
-        | MediaRule rule ->
-            mediaRuleToText classMap styleName rule
+    and entryToText classMap (styleName: string) =
+        function
+        | Rule rule -> ruleToText classMap styleName rule
+        | KeyFrames frames -> framesToText frames
+        | MediaRule rule -> mediaRuleToText classMap styleName rule
 
-    let private isClassChar c = System.Char.IsLetterOrDigit(c) || c = '-' || c = '_'
+    let private isClassChar c =
+        System.Char.IsLetterOrDigit(c) || c = '-' || c = '_'
 
-    let private isClassName (s : string) =
+    let private isClassName (s: string) =
         s.ToCharArray() |> Array.forall isClassChar
 
-    let private isClassOnly (s : string) = 
+    let private isClassOnly (s: string) =
         s.Length >= 2 && s[0] = '.' && isClassName (s.Substring(1))
 
-
-    let getClassMap ( definitions : SutilStyleSheetDefinition seq) =
-        definitions 
-        |> Seq.choose (fun d -> match d with Rule r when isClassOnly r.Selector -> Some (r.Selector.Substring(1),r) | _ -> None)
+    let getClassMap (definitions: SutilStyleSheetDefinition seq) =
+        definitions
+        |> Seq.choose (fun d ->
+            match d with
+            | Rule r when isClassOnly r.Selector -> Some(r.Selector.Substring(1), r)
+            | _ -> None
+        )
         |> Map
 
-    let internal styleSheetWithScopeAsText (scopeName : string) (styleSheet : SutilStyleSheet) : string =
+    let internal styleSheetWithScopeAsText
+        (scopeName: string)
+        (styleSheet: SutilStyleSheet)
+        : string
+        =
 
         let classMap = getClassMap (styleSheet.Definitions)
 
@@ -200,18 +256,21 @@ module internal Renderer =
         |> Array.map (entryToText classMap scopeName)
         |> String.concat "\n"
 
-    let internal styleSheetAsText (styleSheet : SutilStyleSheet ) =
-        styleSheetWithScopeAsText "" styleSheet 
+    let internal styleSheetAsText (styleSheet: SutilStyleSheet) =
+        styleSheetWithScopeAsText "" styleSheet
 
-let internal makeMediaRule condition rules =
-    MediaRule { Condition = condition; Rules = rules }
+let makeMediaRule condition rules =
+    MediaRule
+        {
+            Condition = condition
+            Rules = rules
+        }
 
-let includeRule (name : string) = 
-    (name + "()"), ("" :> obj)
+let includeRule (name: string) = (name + "()"), ("" :> obj)
 
-let rule (selector : SutilCssSelector) (styles : SutilStyleAttribute seq) : SutilStyleRule =
+let rule (selector: SutilCssSelector) (styles: SutilStyleAttribute seq) : SutilStyleRule =
     {
-        Selector = selector 
+        Selector = selector
         Styles = styles |> Seq.toArray
     }
 
@@ -219,7 +278,7 @@ let rule (selector : SutilCssSelector) (styles : SutilStyleAttribute seq) : Suti
 /// Define a CSS keyframe as part of a keyframes sequence
 /// See also: <seealso cref="M:Sutil.Styling.keyframes"/>
 /// </summary>
-let keyframe (startAt : int) (styles : SutilStyleAttribute seq) =
+let keyframe (startAt: int) (styles: SutilStyleAttribute seq) =
     {
         StartAt = startAt
         Styles = styles |> Seq.toList
@@ -238,81 +297,80 @@ let keyframe (startAt : int) (styles : SutilStyleAttribute seq) =
 /// </code>
 /// </example>
 let keyframes name frames =
-    KeyFrames {
-        Name = name
-        Frames = frames
-    }
+    KeyFrames
+        {
+            Name = name
+            Frames = frames
+        }
 
-let [<Literal>] private WITH_STYLE = "withStyle"
-let [<Literal>] private SUTIL_SCOPE = "sutil-scope"
+[<Literal>]
+let private WITH_STYLE = "withStyle"
+
+[<Literal>]
+let private SUTIL_SCOPE = "sutil-scope"
 
 open VirtualDom
 
-let rec private addScope (scopeName : string) (virtualElement : VirtualElement) : VirtualElement =
+let rec private addScope (scopeName: string) (virtualElement: VirtualElement) : VirtualElement =
 
-    let isScoped = 
+    let isScoped =
         virtualElement.ClassList |> Array.exists (fun cls -> cls.StartsWith SUTIL_SCOPE)
 
     match virtualElement.Type with
 
     | VirtualElementType.TagNode _ when not isScoped ->
-        {   
-            virtualElement.AddClass(scopeName) with
-                Children = virtualElement.Children |> Array.map (addScope scopeName)
+        { virtualElement.AddClass(scopeName) with
+            Children = virtualElement.Children |> Array.map (addScope scopeName)
         }
 
-    | _ -> 
-        virtualElement
+    | _ -> virtualElement
 
 open Browser.Types
 
-let private addScopeForNode (scopeName : string) (node : Node) : unit = 
+let private addScopeForNode (scopeName: string) (node: Node) : unit =
 
-    let rec run (scopeName : string) (node : Node) : unit =
+    let rec run (scopeName: string) (node: Node) : unit =
         node.asElement
         |> Option.iter (fun el ->
 
-                let isScoped = 
-                    el.classList
-                    |> ClassHelpers.toSeq
-                    |> Seq.exists (fun name ->(name.StartsWith SUTIL_SCOPE))
+            let isScoped =
+                el.classList
+                |> ClassHelpers.toSeq
+                |> Seq.exists (fun name -> (name.StartsWith SUTIL_SCOPE))
 
-                if not isScoped then
-                    // Log.Console.log("Adding scope '" + scopeName + "' to " + (DomHelpers.toStringSummary(node)) )
-                    el.classList
-                    |> ClassHelpers.toArray
-                    |> (Array.append (Array.singleton scopeName))
-                    |> ClassHelpers.setClassList el
+            if not isScoped then
+                // Log.Console.log("Adding scope '" + scopeName + "' to " + (DomHelpers.toStringSummary(node)) )
+                el.classList
+                |> ClassHelpers.toArray
+                |> (Array.append (Array.singleton scopeName))
+                |> ClassHelpers.setClassList el
 
-                    el 
-                    |> DomHelpers.children 
-                    |> Seq.iter (run scopeName)
+                el |> DomHelpers.children |> Seq.iter (run scopeName)
         )
 
     run scopeName node
 
 open Core
 
-let withStyle (rules : SutilStyleRule seq) (sutilElement : SutilElement) =
-    let addStyle ( context : BuildContext )  =
+let withStyle (rules: SutilStyleRule seq) (sutilElement: SutilElement) =
+    let addStyle (context: BuildContext) =
 
         let scopeName = sprintf "%s-%d" SUTIL_SCOPE (context.NextId())
 
         rules
-        |> SutilStyleSheet.Of 
+        |> SutilStyleSheet.Of
         |> Renderer.styleSheetWithScopeAsText scopeName
         |> StyleDomHelpers.addGlobalStyleSheet
         |> ignore
         //|> Dispose.addUnsubscribe context.Parent
 
-        let context2 = 
+        let context2 =
             context
-                .WithAppendNode( DomEdit.append )
-                .WithVirtualElementMapperPre( addScope scopeName )
-                .WithOnImportedNode( addScopeForNode scopeName )
-                //.WithLogEnabled()
+                .WithAppendNode(DomEdit.append)
+                .WithVirtualElementMapperPre(addScope scopeName)
+                .WithOnImportedNode(addScopeForNode scopeName)
+        //.WithLogEnabled()
 
-        sutilElement
-        |> Sutil.Core.mount context2 null
+        sutilElement |> Sutil.Core.mount context2 null
 
-    SutilElement.Define ( WITH_STYLE, addStyle )
+    SutilElement.Define(WITH_STYLE, addStyle)

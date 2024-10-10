@@ -8,7 +8,7 @@ open Sutil.Html
 let src = "https://i.gifer.com/K9s.gif"
 let name = "Minion"
 
-let view() =
+let view () =
     Html.img [
         Attr.src src
         Attr.alt $"{name} playing guitar"

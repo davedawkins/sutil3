@@ -2,7 +2,6 @@ namespace Sutil
 
 open Sutil
 open Browser.Types
-open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Bind
 open Core
@@ -28,13 +27,15 @@ type Navigable =
     /// <summary>
     /// Call <c>dispatch</c> each time the window's location changes. The location is parsed into a <c>'T</c> with the given <c>parser</c>/
     /// </summary>
-    static member listenLocation (onChangeLocation: Location -> unit) =
-        let mutable onChangeRef : obj -> obj =
+    static member listenLocation(onChangeLocation: Location -> unit) =
+        let mutable onChangeRef: obj -> obj =
             fun _ ->
-                failwith "`onChangeRef` has not been initialized.\nPlease make sure you used Elmish.Navigation.Program.Internal.subscribe"
+                failwith
+                    "`onChangeRef` has not been initialized.\nPlease make sure you used Elmish.Navigation.Program.Internal.subscribe"
 
         let subscribe () =
             let mutable lastLocation = None
+
             let onChange _ =
                 match lastLocation with
                 | Some href when href = window.location.href -> ()
@@ -45,35 +46,36 @@ type Navigable =
 
             onChangeRef <- onChange
 
-            window.addEventListener("popstate", unbox onChangeRef)
-            window.addEventListener("hashchange", unbox onChangeRef)
+            window.addEventListener ("popstate", unbox onChangeRef)
+            window.addEventListener ("hashchange", unbox onChangeRef)
 
-            onChange() |> ignore // Initialize with starting href
+            onChange () |> ignore // Initialize with starting href
 
         let unsubscribe () =
-            window.removeEventListener("popstate", unbox onChangeRef)
-            window.removeEventListener("hashchange", unbox onChangeRef)
+            window.removeEventListener ("popstate", unbox onChangeRef)
+            window.removeEventListener ("hashchange", unbox onChangeRef)
 
-        subscribe()
+        subscribe ()
 
         unsubscribe
 
     /// <summary>
     /// Call <c>dispatch</c> each time the window's location changes. The location is parsed into a <c>'T</c> with the given <c>parser</c>/
     /// </summary>
-    static member listenLocation<'T> (parser:Parser<'T>, dispatch: 'T -> unit) =
-        Navigable.listenLocation (dispatch<<parser)
+    static member listenLocation<'T>(parser: Parser<'T>, dispatch: 'T -> unit) =
+        Navigable.listenLocation (dispatch << parser)
 
     /// <summary>
     /// Bind the window location to a view
     /// </summary>
-    static member bindLocation<'T> ( view : Location -> SutilElement ) =
+    static member bindLocation<'T>(view: Location -> SutilElement) =
         let store = Store.make (window.location)
-        Html.fragment [
+
+        Basic.fragment [
             disposeOnUnmount [
                 store
-                Navigable.listenLocation(id,Store.set store) |> Sutil.Internal.Dispose.makeDisposable
+                Navigable.listenLocation (id, Store.set store)
+                |> Sutil.Internal.Dispose.makeDisposable
             ]
-            Bind.el( store, view )
+            Bind.el (store, view)
         ]
-

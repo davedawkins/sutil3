@@ -11,27 +11,31 @@ open Sutil.Transition
 open Browser.Types
 open Sutil.Internal.DomHelpers
 
-let typewriter (userProps : TransitionProp list) (node: HTMLElement) = fun _ ->
-    let valid = node.childNodes.length = 1 && isTextNode(node.childNodes.[0])
+let typewriter (userProps: TransitionProp list) (node: HTMLElement) =
+    fun _ ->
+        let valid = node.childNodes.length = 1 && isTextNode (node.childNodes.[0])
 
-    if not valid then
-        failwith "This transition only works on elements with a single text node child"
+        if not valid then
+            failwith "This transition only works on elements with a single text node child"
 
-    let nodeText = node.textContent
+        let nodeText = node.textContent
 
-    [ Speed 50.0 ] //  Default speed
+        [
+            Speed 50.0
+        ] //  Default speed
         |> mergeProps userProps
         |> makeTransition
-        |> mapTrans  (fun t ->
+        |> mapTrans (fun t ->
             [
-                Duration (float(nodeText.Length) * t.Speed)
-                Tick (fun t _ ->
-                    let i = int( float(nodeText.Length) * t )
-                    node.textContent <- nodeText.Substring(0,i)
+                Duration(float (nodeText.Length) * t.Speed)
+                Tick(fun t _ ->
+                    let i = int (float (nodeText.Length) * t)
+                    node.textContent <- nodeText.Substring(0, i)
                 )
-            ])
+            ]
+        )
 
-let view() =
+let view () =
     let visible = Store.make false
 
     Html.div [
@@ -40,16 +44,22 @@ let view() =
         Html.label [
             Html.input [
                 type' "checkbox"
-                Bind.attr( "checked", visible )
+                Bind.attr ("checked", visible)
             ]
             text " visible"
         ]
 
-        transition [In typewriter] visible <|
-            Html.p [
-                text "The quick brown fox jumps over the lazy dog"
+        transition
+            [
+                In typewriter
             ]
+            visible
+        <| Html.p [
+            text "The quick brown fox jumps over the lazy dog"
+        ]
 
-        disposeOnUnmount [visible]
+        disposeOnUnmount [
+            visible
+        ]
         onMount (fun _ -> true |> Store.set visible) [] // Force a transition upon first showing
     ]

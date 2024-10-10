@@ -58,10 +58,12 @@
     <!-- <Compile Include="WebComponents.fs" /> -->
     <!-- <Compile Include="Draw.fs" /> -->
     <!-- <Compile Include="Cells.fs" /> -->
+    <Compile Include="Examples.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sutil\Sutil.fsproj" />
+    <ProjectReference Include="..\Sutil.Html\Sutil.Html.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Formatting.Markdown" Version="1.0.1" />

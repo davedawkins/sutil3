@@ -21,31 +21,42 @@ open System
 open Sutil.Core
 open Sutil.CoreElements
 
-type Model = {  Started : bool }
-type Message =  Toggle
+type Model =
+    {
+        Started: bool
+    }
 
-let init () = { Started = false }, Cmd.none
+type Message = Toggle
+
+let init () =
+    {
+        Started = false
+    },
+    Cmd.none
 
 let update msg model =
     match msg with
-    | Toggle -> { model with Started = not model.Started }, Cmd.none
+    | Toggle ->
+        { model with
+            Started = not model.Started
+        },
+        Cmd.none
 
-let icon (name : IObservable<string>) =
+let icon (name: IObservable<string>) =
     Html.i [
-        Bind.attr( "class",(name |> Store.map (sprintf "fa fa-%s")) )
+        Bind.attr ("class", (name |> Store.map (sprintf "fa fa-%s")))
     ]
 
-let create (slot : IObservable<bool * float> -> SutilElement) =
+let create (slot: IObservable<bool * float> -> SutilElement) =
     let model, dispatch = () |> Store.makeElmish init update ignore
 
-    model
-    |> Store.map (fun m -> m.Started)
-    |> TimerLogic.create <| fun elapsed ->
+    model |> Store.map (fun m -> m.Started) |> TimerLogic.create
+    <| fun elapsed ->
         bulma.columns [
             columns.isVcentered
             columns.isMobile
 
-            Bind.toggleClass(model |> Store.map (fun m -> m.Started),"running")
+            Bind.toggleClass (model |> Store.map (fun m -> m.Started), "running")
 
             bulma.column [
                 column.isHalf
@@ -58,9 +69,16 @@ let create (slot : IObservable<bool * float> -> SutilElement) =
 
                 bulma.button.a [
                     model
-                    |> Store.map (fun m -> if m.Started then "stop" else "play")
+                    |> Store.map (fun m ->
+                        if m.Started then
+                            "stop"
+                        else
+                            "play"
+                    )
                     |> icon
-                    onClick (fun _ -> dispatch Toggle) [PreventDefault]
+                    onClick (fun _ -> dispatch Toggle) [
+                        PreventDefault
+                    ]
                 ]
             ]
         ]

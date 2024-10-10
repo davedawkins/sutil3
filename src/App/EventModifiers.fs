@@ -7,11 +7,10 @@ open Sutil.Html
 
 open Browser.Dom
 
-let handleClick _ =
-    window.alert("no more alerts")
+let handleClick _ = window.alert ("no more alerts")
 
-let view() = 
+let view () =
     Bulma.button [
-        Ev.once( "click", handleClick )
+        Ev.once ("click", handleClick)
         text "Click me"
     ]

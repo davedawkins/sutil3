@@ -12,22 +12,31 @@ open Sutil.Elmish
 open Sutil.Internal.DomHelpers
 open System
 
-type Model = {
-    TimerTask : (unit -> unit) option; // Unsubscribe function for current timer, if any
-    StartedAt : DateTime
-    Elapsed : float
-}
+type Model =
+    {
+        TimerTask: (unit -> unit) option // Unsubscribe function for current timer, if any
+        StartedAt: DateTime
+        Elapsed: float
+    }
 
-let stopTimerTask m = m.TimerTask |> Option.iter (fun f -> f())
+let stopTimerTask m =
+    m.TimerTask |> Option.iter (fun f -> f ())
+
 let isRunning m = m.TimerTask.IsSome
 
 type Message =
-    |StartTimer
-    |StopTimer
-    |Tick
-    |SetTask of (unit -> unit) option
+    | StartTimer
+    | StopTimer
+    | Tick
+    | SetTask of (unit -> unit) option
 
-let init () = { StartedAt = DateTime.UtcNow; Elapsed = 0.0; TimerTask = None }, Cmd.none
+let init () =
+    {
+        StartedAt = DateTime.UtcNow
+        Elapsed = 0.0
+        TimerTask = None
+    },
+    Cmd.none
 
 let update msg model =
     match msg with
@@ -35,31 +44,47 @@ let update msg model =
         { model with
             StartedAt = DateTime.UtcNow
             Elapsed = 0.0
-            }, [ fun d -> interval (fun _ -> Tick |> d) 1000 |> Some |> SetTask |> d ]
+        },
+        [
+            fun d -> interval (fun _ -> Tick |> d) 1000 |> Some |> SetTask |> d
+        ]
     | StopTimer ->
-        { model with Elapsed = 0.0 }, Cmd.ofMsg (SetTask None)
+        { model with
+            Elapsed = 0.0
+        },
+        Cmd.ofMsg (SetTask None)
     | Tick ->
-        { model with Elapsed = (DateTime.UtcNow - model.StartedAt).TotalSeconds }, Cmd.none
+        { model with
+            Elapsed = (DateTime.UtcNow - model.StartedAt).TotalSeconds
+        },
+        Cmd.none
     | SetTask t ->
         model |> stopTimerTask // Dispose existing timer
-        { model with TimerTask = t }, Cmd.none
 
-let create (run : IObservable<bool>) (view : IObservable<bool * float> -> SutilElement) =
+        { model with
+            TimerTask = t
+        },
+        Cmd.none
+
+let create (run: IObservable<bool>) (view: IObservable<bool * float> -> SutilElement) =
 
     let log s = Browser.Dom.console.log s
     let model, dispatch = () |> Store.makeElmish init update ignore
 
-    let stop() = dispatch StopTimer
-    let start() = dispatch StartTimer
+    let stop () = dispatch StopTimer
+    let start () = dispatch StartTimer
 
     // Convert the user-supplied command observable into dispatches in our private MVU
-    let watch = run
-                |> Store.distinct
-                |> Store.subscribe (function
-                    | true -> start()
-                    | false -> stop())
+    let watch =
+        run
+        |> Store.distinct
+        |> Store.subscribe (
+            function
+            | true -> start ()
+            | false -> stop ()
+        )
 
-    let cleanup() =
+    let cleanup () =
         watch.Dispose()
         model |> Store.get |> stopTimerTask
         model.Dispose()
@@ -72,8 +97,10 @@ let create (run : IObservable<bool>) (view : IObservable<bool * float> -> SutilE
     // be called when that div itself is cleaned up
 
     model
-    |> Store.map (fun m ->  isRunning m, m.Elapsed)
+    |> Store.map (fun m -> isRunning m, m.Elapsed)
     |> view // User's view component
     |> CoreElements.inject [ // Attach our cleanup to the view component
-        unsubscribeOnUnmount [ cleanup ] // Clean up the timer subscription
+        unsubscribeOnUnmount [
+            cleanup
+        ] // Clean up the timer subscription
     ]

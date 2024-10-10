@@ -11,19 +11,23 @@ open Sutil.CoreElements
 open Sutil.Bind
 // open Sutil.Transition
 
-let view() =
+let view () =
     let visible = Store.make true
 
     Html.div [
-        disposeOnUnmount [visible]
+        disposeOnUnmount [
+            visible
+        ]
 
         Html.label [
             Html.input [
                 Attr.typeCheckbox
-                Bind.attr ("checked",visible)
+                Bind.attr ("checked", visible)
             ]
             text " visible"
         ]
         //transition [InOut fade] visible <|
-        Html.p [ text "TODO: Fades in and out" ]
+        Html.p [
+            text "TODO: Fades in and out"
+        ]
     ]

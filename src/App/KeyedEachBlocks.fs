@@ -13,18 +13,24 @@ open Sutil.Styling
 
 open type Feliz.length
 
-type Thing = { Id : int; Color : string }
+type Thing =
+    {
+        Id: int
+        Color: string
+    }
+
 let Color t = t.Color
 let Id t = t.Id
 
-let ThingView (viewId : int) (thing : Thing) : SutilElement =
-        let initialColor = thing |> Color
+let ThingView (viewId: int) (thing: Thing) : SutilElement =
+    let initialColor = thing |> Color
 
-        let thingStyle = [
+    let thingStyle =
+        [
             rule "span" [
                 Css.displayInlineBlock
-                Css.padding( em 0.2, em 0.5 )
-                Css.margin( zero, em 0.2, em 0.2, zero )
+                Css.padding (em 0.2, em 0.5)
+                Css.margin (zero, em 0.2, em 0.2, zero)
                 Css.width (em 8)
                 Css.textAlignCenter
                 Css.borderRadius (em 0.2)
@@ -32,31 +38,59 @@ let ThingView (viewId : int) (thing : Thing) : SutilElement =
             ]
         ]
 
-        Html.div [
-            Html.p [
-                Html.span [ Attr.style [ Css.backgroundColor thing.Color ]; text $"{thing.Id} {thing.Color} #{viewId}" ]
-                Html.span [ Attr.style [ Css.backgroundColor initialColor ]; text "initial" ]
-            ] |> withStyle thingStyle
+    Html.div [
+        Html.p [
+            Html.span [
+                Attr.style [
+                    Css.backgroundColor thing.Color
+                ]
+                text $"{thing.Id} {thing.Color} #{viewId}"
+            ]
+            Html.span [
+                Attr.style [
+                    Css.backgroundColor initialColor
+                ]
+                text "initial"
+            ]
         ]
-
-let view() =
-    let nextId = Helpers.createIdGenerator()
-
-    let makeThing thing = ThingView (nextId()) thing
-
-    let things = Store.make [
-        { Id = 1; Color = "darkblue" }
-        { Id = 2; Color = "indigo" }
-        { Id = 3; Color = "deeppink" }
-        { Id = 4; Color = "salmon" }
-        { Id = 5; Color = "gold" }
+        |> withStyle thingStyle
     ]
 
-    let handleClick _ =
-        things |> Store.modify List.tail
+let view () =
+    let nextId = Helpers.createIdGenerator ()
+
+    let makeThing thing = ThingView (nextId ()) thing
+
+    let things =
+        Store.make [
+            {
+                Id = 1
+                Color = "darkblue"
+            }
+            {
+                Id = 2
+                Color = "indigo"
+            }
+            {
+                Id = 3
+                Color = "deeppink"
+            }
+            {
+                Id = 4
+                Color = "salmon"
+            }
+            {
+                Id = 5
+                Color = "gold"
+            }
+        ]
+
+    let handleClick _ = things |> Store.modify List.tail
 
     Html.div [
-        disposeOnUnmount [things]
+        disposeOnUnmount [
+            things
+        ]
 
         Bulma.button [
             Ev.onClick handleClick
@@ -64,16 +98,27 @@ let view() =
         ]
 
         Html.div [
-            Attr.style [ Css.displayGrid; Css.gridTemplateColumns [fr 1; fr 1]; Css.gap (em 1) ]
-
-            Html.div [
-                Bulma.h2 [ text "Keyed" ]
-                Bind.each( things, makeThing, Id )
+            Attr.style [
+                Css.displayGrid
+                Css.gridTemplateColumns [
+                    fr 1
+                    fr 1
+                ]
+                Css.gap (em 1)
             ]
 
             Html.div [
-                Bulma.h2 [ text "Unkeyed" ]
-                Bind.each( things, makeThing )
+                Bulma.h2 [
+                    text "Keyed"
+                ]
+                Bind.each (things, makeThing, Id)
+            ]
+
+            Html.div [
+                Bulma.h2 [
+                    text "Unkeyed"
+                ]
+                Bind.each (things, makeThing)
             ]
         ]
     ]

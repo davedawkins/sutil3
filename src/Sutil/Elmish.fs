@@ -26,64 +26,73 @@ module Elmish =
         // All Cmd code take from Fable.Elmish/src/cmd.fs, by Maxel Mangime
         // TODO: Refactor this into Sutil.Elmish module
         //
-        #if FABLE_COMPILER
+#if FABLE_COMPILER
         /// <exclude/>
         module internal Timer =
             open System.Timers
 
             let delay interval callback =
-                let t =
-                    new Timer(float interval, AutoReset = false)
+                let t = new Timer(float interval, AutoReset = false)
 
                 t.Elapsed.Add callback
                 t.Enabled <- true
                 t.Start()
-        #endif
-
+#endif
 
         let none: Cmd<'Msg> = []
 
         /// Command to call the effect
         let ofEffect (effect: Effect<'msg>) : Cmd<'msg> =
-            [effect]
+            [
+                effect
+            ]
 
         let map (f: 'MsgA -> 'MsgB) (cmd: Cmd<'MsgA>) : Cmd<'MsgB> =
-            cmd
-            |> List.map (fun g -> (fun dispatch -> f >> dispatch) >> g)
+            cmd |> List.map (fun g -> (fun dispatch -> f >> dispatch) >> g)
 
-        let ofMsg msg : Cmd<'Msg> = [ fun d -> d msg ]
+        let ofMsg msg : Cmd<'Msg> =
+            [
+                fun d -> d msg
+            ]
 
         let batch (cmds: Cmd<'Msg> list) : Cmd<'Msg> = cmds |> List.concat
 
         module OfFunc =
             let either (task: 'args -> _) (a: 'args) (success: _ -> 'msg') (error: _ -> 'msg') =
-                [ fun d ->
+                [
+                    fun d ->
                         try
                             task a |> (success >> d)
-                        with
-                        | x -> x |> (error >> d) ]
+                        with x ->
+                            x |> (error >> d)
+                ]
 
             let perform (task: 'args -> _) (a: 'args) (success: _ -> 'msg') =
-                [ fun d ->
+                [
+                    fun d ->
                         try
                             task a |> (success >> d)
-                        with
-                        | _ -> () ]
+                        with _ ->
+                            ()
+                ]
 
             let attempt (task: 'args -> unit) (a: 'args) (error: _ -> 'msg') =
-                [ fun d ->
+                [
+                    fun d ->
                         try
                             task a
-                        with
-                        | x -> x |> (error >> d) ]
+                        with x ->
+                            x |> (error >> d)
+                ]
 
             let exec (task: 'args -> _) (a: 'args) =
-                [ fun d ->
+                [
+                    fun d ->
                         try
                             task a
-                        with
-                        | _ -> () ]
-
+                        with _ ->
+                            ()
+                ]
 
         module OfAsyncWith =
             /// Command that will evaluate an async block and map the result
@@ -94,7 +103,8 @@ module Elmish =
                 (arg: 'a)
                 (ofSuccess: _ -> 'msg)
                 (ofError: _ -> 'msg)
-                : Cmd<'msg> =
+                : Cmd<'msg>
+                =
                 let bind dispatch =
                     async {
                         let! r = task arg |> Async.Catch
@@ -106,10 +116,18 @@ module Elmish =
                         )
                     }
 
-                [ bind >> start ]
+                [
+                    bind >> start
+                ]
 
             /// Command that will evaluate an async block and map the success
-            let perform (start: Async<unit> -> unit) (task: 'a -> Async<_>) (arg: 'a) (ofSuccess: _ -> 'msg) : Cmd<'msg> =
+            let perform
+                (start: Async<unit> -> unit)
+                (task: 'a -> Async<_>)
+                (arg: 'a)
+                (ofSuccess: _ -> 'msg)
+                : Cmd<'msg>
+                =
                 let bind dispatch =
                     async {
                         let! r = task arg |> Async.Catch
@@ -119,10 +137,18 @@ module Elmish =
                         | _ -> ()
                     }
 
-                [ bind >> start ]
+                [
+                    bind >> start
+                ]
 
             /// Command that will evaluate an async block and map the error (of exception)
-            let attempt (start: Async<unit> -> unit) (task: 'a -> Async<_>) (arg: 'a) (ofError: _ -> 'msg) : Cmd<'msg> =
+            let attempt
+                (start: Async<unit> -> unit)
+                (task: 'a -> Async<_>)
+                (arg: 'a)
+                (ofError: _ -> 'msg)
+                : Cmd<'msg>
+                =
                 let bind dispatch =
                     async {
                         let! r = task arg |> Async.Catch
@@ -132,7 +158,9 @@ module Elmish =
                         | _ -> ()
                     }
 
-                [ bind >> start ]
+                [
+                    bind >> start
+                ]
 
             /// Command that will evaluate an async block to the message
             let result (start: Async<unit> -> unit) (task: Async<'msg>) : Cmd<'msg> =
@@ -142,18 +170,26 @@ module Elmish =
                         dispatch r
                     }
 
-                [ bind >> start ]
+                [
+                    bind >> start
+                ]
 
         module OfAsync =
-        #if FABLE_COMPILER
+#if FABLE_COMPILER
             let start x =
                 Timer.delay 0 (fun _ -> Async.StartImmediate x)
-        #else
+#else
             let inline start x = Async.Start x
-        #endif
+#endif
             /// Command that will evaluate an async block and map the result
             /// into success or error (of exception)
-            let inline either (task: 'a -> Async<_>) (arg: 'a) (ofSuccess: _ -> 'msg) (ofError: _ -> 'msg) : Cmd<'msg> =
+            let inline either
+                (task: 'a -> Async<_>)
+                (arg: 'a)
+                (ofSuccess: _ -> 'msg)
+                (ofError: _ -> 'msg)
+                : Cmd<'msg>
+                =
                 OfAsyncWith.either start task arg ofSuccess ofError
 
             /// Command that will evaluate an async block and map the success
@@ -170,7 +206,13 @@ module Elmish =
         module OfAsyncImmediate =
             /// Command that will evaluate an async block and map the result
             /// into success or error (of exception)
-            let inline either (task: 'a -> Async<_>) (arg: 'a) (ofSuccess: _ -> 'msg) (ofError: _ -> 'msg) : Cmd<'msg> =
+            let inline either
+                (task: 'a -> Async<_>)
+                (arg: 'a)
+                (ofSuccess: _ -> 'msg)
+                (ofError: _ -> 'msg)
+                : Cmd<'msg>
+                =
                 OfAsyncWith.either Async.StartImmediate task arg ofSuccess ofError
 
             /// Command that will evaluate an async block and map the success
@@ -185,7 +227,7 @@ module Elmish =
             let inline result (task: Async<'msg>) : Cmd<'msg> =
                 OfAsyncWith.result Async.StartImmediate task
 
-        #if FABLE_COMPILER
+#if FABLE_COMPILER
         module OfPromise =
             /// Command to call `promise` block and map the results
             let either
@@ -193,35 +235,46 @@ module Elmish =
                 (arg: 'a)
                 (ofSuccess: _ -> 'msg)
                 (ofError: #exn -> 'msg)
-                : Cmd<'msg> =
+                : Cmd<'msg>
+                =
                 let bind dispatch =
-                    (task arg)
-                        .``then``(ofSuccess >> dispatch)
-                        .catch (unbox >> ofError >> dispatch)
+                    (task arg).``then``(ofSuccess >> dispatch).catch (unbox >> ofError >> dispatch)
                     |> ignore
 
-                [ bind ]
+                [
+                    bind
+                ]
 
             /// Command to call `promise` block and map the success
             let perform (task: 'a -> Fable.Core.JS.Promise<_>) (arg: 'a) (ofSuccess: _ -> 'msg) =
                 let bind dispatch =
-                    (task arg).``then`` (ofSuccess >> dispatch)
-                    |> ignore
+                    (task arg).``then`` (ofSuccess >> dispatch) |> ignore
 
-                [ bind ]
+                [
+                    bind
+                ]
 
             /// Command to call `promise` block and map the error
-            let attempt (task: 'a -> Fable.Core.JS.Promise<_>) (arg: 'a) (ofError: #exn -> 'msg) : Cmd<'msg> =
+            let attempt
+                (task: 'a -> Fable.Core.JS.Promise<_>)
+                (arg: 'a)
+                (ofError: #exn -> 'msg)
+                : Cmd<'msg>
+                =
                 let bind dispatch =
-                    (task arg).catch (unbox >> ofError >> dispatch)
-                    |> ignore
+                    (task arg).catch (unbox >> ofError >> dispatch) |> ignore
 
-                [ bind ]
+                [
+                    bind
+                ]
 
             /// Command to dispatch the `promise` result
             let result (task: Fable.Core.JS.Promise<'msg>) =
                 let bind dispatch = task.``then`` dispatch |> ignore
-                [ bind ]
+
+                [
+                    bind
+                ]
 
         [<Obsolete("Use `OfPromise.either` instead")>]
         let inline ofPromise
@@ -229,14 +282,21 @@ module Elmish =
             (arg: 'a)
             (ofSuccess: _ -> 'msg)
             (ofError: _ -> 'msg)
-            : Cmd<'msg> =
+            : Cmd<'msg>
+            =
             OfPromise.either task arg ofSuccess ofError
-        #else
+#else
         open System.Threading.Tasks
 
         module OfTask =
             /// Command to call a task and map the results
-            let inline either (task: 'a -> Task<_>) (arg: 'a) (ofSuccess: _ -> 'msg) (ofError: _ -> 'msg) : Cmd<'msg> =
+            let inline either
+                (task: 'a -> Task<_>)
+                (arg: 'a)
+                (ofSuccess: _ -> 'msg)
+                (ofError: _ -> 'msg)
+                : Cmd<'msg>
+                =
                 OfAsync.either (task >> Async.AwaitTask) arg ofSuccess ofError
 
             /// Command to call a task and map the success
@@ -252,104 +312,156 @@ module Elmish =
                 OfAsync.result (task |> Async.AwaitTask)
 
         [<Obsolete("Use OfTask.either instead")>]
-        let inline ofTask (task: 'a -> Task<_>) (arg: 'a) (ofSuccess: _ -> 'msg) (ofError: _ -> 'msg) : Cmd<'msg> =
+        let inline ofTask
+            (task: 'a -> Task<_>)
+            (arg: 'a)
+            (ofSuccess: _ -> 'msg)
+            (ofError: _ -> 'msg)
+            : Cmd<'msg>
+            =
             OfTask.either task arg ofSuccess ofError
-        #endif
+#endif
 
     open Cmd
-
 
     ///  <exclude />
     type Update<'Model> = ('Model -> 'Model) -> unit // A store updater. Store updates by being passed a model updater
 
-    type StoreCons<'Model, 'Store> = 
-        (unit -> 'Model) -> ('Model -> unit) -> 'Store * Update<'Model>
-            
+    type StoreCons<'Model, 'Store> = (unit -> 'Model) -> ('Model -> unit) -> 'Store * Update<'Model>
+
     module internal Helpers =
         type CmdHandler<'Msg>(handler, ?dispose) =
-            member _.Handle(cmd: Cmd<'Msg>): unit = handler cmd
-            member _.Dispose() = match dispose with Some d -> d () | None -> ()
+            member _.Handle(cmd: Cmd<'Msg>) : unit = handler cmd
+
+            member _.Dispose() =
+                match dispose with
+                | Some d -> d ()
+                | None -> ()
+
             interface IDisposable with
                 member this.Dispose() = this.Dispose()
 
-    #if FABLE_COMPILER
+#if FABLE_COMPILER
         open Fable.Core
-        let cmdHandler (dispatch: 'Msg -> unit): CmdHandler<'Msg> =
-            new CmdHandler<_>(List.iter (fun cmd -> JS.setTimeout (fun _ -> cmd dispatch) 0 |> ignore))
-    #else
-        let cmdHandler (dispatch: 'Msg -> unit): CmdHandler<'Msg> =
+
+        let cmdHandler (dispatch: 'Msg -> unit) : CmdHandler<'Msg> =
+            new CmdHandler<_>(
+                List.iter (fun cmd -> JS.setTimeout (fun _ -> cmd dispatch) 0 |> ignore)
+            )
+#else
+        let cmdHandler (dispatch: 'Msg -> unit) : CmdHandler<'Msg> =
             let cts = new Threading.CancellationTokenSource()
 
-            let mb = MailboxProcessor.Start(fun inbox -> async {
-                while true do
-                    let! msg = inbox.Receive()
-                    dispatch msg
-            }, cts.Token)
+            let mb =
+                MailboxProcessor.Start(
+                    fun inbox ->
+                        async {
+                            while true do
+                                let! msg = inbox.Receive()
+                                dispatch msg
+                        }
+                    , cts.Token
+                )
 
             new CmdHandler<_>(List.iter (fun cmd -> cmd mb.Post), fun _ -> cts.Cancel())
-    #endif
+#endif
 
-    let internal makeElmishWithCons (init: 'Props -> 'Model * Cmd<'Msg>)
-                            (update: 'Msg -> 'Model -> 'Model * Cmd<'Msg>)
-                            (dispose: 'Model -> unit)
-                            (cons: StoreCons<'Model, 'Store>)
-                            : 'Props -> 'Store * Dispatch<'Msg> =
+    let internal makeElmishWithCons
+        (init: 'Props -> 'Model * Cmd<'Msg>)
+        (update: 'Msg -> 'Model -> 'Model * Cmd<'Msg>)
+        (dispose: 'Model -> unit)
+        (cons: StoreCons<'Model, 'Store>)
+        : 'Props -> 'Store * Dispatch<'Msg>
+        =
 
         let mutable _storeDispatch: ('Store * Dispatch<'Msg>) option = None
 
         let mutable _cmdHandler = Unchecked.defaultof<Helpers.CmdHandler<'Msg>>
-            //new Helpers.CmdHandler<'Msg>(ignore)
+        //new Helpers.CmdHandler<'Msg>(ignore)
 
         fun props ->
             match _storeDispatch with
-            | Some storeDispatch ->
-                storeDispatch
+            | Some storeDispatch -> storeDispatch
             | None ->
                 let store, storeUpdate =
                     cons
                         (fun () ->
                             let m, cmd = init props
                             _cmdHandler.Handle cmd
-                            m)
+                            m
+                        )
                         (fun m ->
                             _cmdHandler.Dispose()
-                            dispose m)
+                            dispose m
+                        )
 
                 let dispatch msg =
                     let mutable _cmds = []
-                    storeUpdate(fun model ->
+
+                    storeUpdate (fun model ->
                         let model, cmds = update msg model
                         _cmds <- cmds
-                        model)
+                        model
+                    )
+
                     _cmdHandler.Handle _cmds
 
                 _cmdHandler <- Helpers.cmdHandler dispatch
                 _storeDispatch <- Some(store, dispatch)
                 store, dispatch
 
-    let internal makeElmishWithDocument (doc:Document) (init: 'Props -> 'Model * Cmd<'Msg>)
-                    (update: 'Msg -> 'Model -> 'Model * Cmd<'Msg>)
-                    (dispose: 'Model -> unit)
-                    : 'Props -> IStore<'Model> * Dispatch<'Msg> =
+    let internal makeElmishWithDocument
+        (doc: Document)
+        (init: 'Props -> 'Model * Cmd<'Msg>)
+        (update: 'Msg -> 'Model -> 'Model * Cmd<'Msg>)
+        (dispose: 'Model -> unit)
+        : 'Props -> IStore<'Model> * Dispatch<'Msg>
+        =
 
-        makeElmishWithCons init update dispose (fun i d ->
-            let s = Store.makeStore i  d
-            let u = (fun f -> s.Update(f); Sutil.Internal.CustomEvents.notifySutilUpdated doc)
-            upcast s, u)
+        makeElmishWithCons
+            init
+            update
+            dispose
+            (fun i d ->
+                let s = Store.makeStore i d
 
-    let internal makeElmishSimpleWithDocument (doc:Document) (init: 'Props -> 'Model)
-                    (update: 'Msg -> 'Model -> 'Model)
-                    (dispose: 'Model -> unit)
-                    : 'Props -> IStore<'Model> * Dispatch<'Msg> =
+                let u =
+                    (fun f ->
+                        s.Update(f)
+                        Sutil.Internal.CustomEvents.notifySutilUpdated doc
+                    )
+
+                upcast s, u
+            )
+
+    let internal makeElmishSimpleWithDocument
+        (doc: Document)
+        (init: 'Props -> 'Model)
+        (update: 'Msg -> 'Model -> 'Model)
+        (dispose: 'Model -> unit)
+        : 'Props -> IStore<'Model> * Dispatch<'Msg>
+        =
         let init p = init p, []
         let update msg model = update msg model, []
-        makeElmishWithCons init update dispose (fun i d ->
-            let s = Store.makeStore i  d
-            let u = (fun f -> s.Update(f); Sutil.Internal.CustomEvents.notifySutilUpdated doc)
-            upcast s, u)
+
+        makeElmishWithCons
+            init
+            update
+            dispose
+            (fun i d ->
+                let s = Store.makeStore i d
+
+                let u =
+                    (fun f ->
+                        s.Update(f)
+                        Sutil.Internal.CustomEvents.notifySutilUpdated doc
+                    )
+
+                upcast s, u
+            )
 
     [<RequireQualifiedAccess>]
-    module Store = 
+    module Store =
         ///<summary>
         /// Creates a store and a dispatch method commonly used
         /// in elmish programs, this can be used to model more complex views that require better
@@ -389,6 +501,7 @@ module Elmish =
             (dispose: 'Model -> unit)
             =
             makeElmishSimpleWithDocument document init update dispose
+
         ///<summary>
         /// Creates a store and a dispatch function as <c>Store.makeElmishSimple</c>
         /// the difference being that this version handles [Elmish commands](https://elmish.github.io/elmish/index.html#Commands)

@@ -9,11 +9,13 @@ open Sutil.Core
 open Sutil.CoreElements
 open Sutil.Transition
 
-let view() =
+let view () =
     let visible = Store.make true
 
     Html.div [
-        disposeOnUnmount [visible]
+        disposeOnUnmount [
+            visible
+        ]
 
         Html.label [
             Html.input [
@@ -23,8 +25,20 @@ let view() =
             text " visible"
         ]
 
-        let flyIn = fly |> withProps [ Duration 2000.0; Y 200.0 ]
+        let flyIn =
+            fly
+            |> withProps [
+                Duration 2000.0
+                Y 200.0
+            ]
 
-        transition [ In flyIn; Out fade ] visible <|
-            Html.p [ text "Flies in and fades out" ]
+        transition
+            [
+                In flyIn
+                Out fade
+            ]
+            visible
+        <| Html.p [
+            text "Flies in and fades out"
+        ]
     ]

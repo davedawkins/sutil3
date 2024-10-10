@@ -13,43 +13,58 @@ open Sutil.Bind
 
 open Sutil.Styling
 
-let style = [
-    rule "input" [
-        Css.displayBlock
-        Css.width (percent 50)
+let style =
+    [
+        rule "input" [
+            Css.displayBlock
+            Css.width (percent 50)
+        ]
+        rule "div.resizing" [
+            Css.displayInlineBlock
+            Css.border (pt 1, solid, "#dddddd")
+            Css.resizeBoth
+        ]
     ]
-    rule "div.resizing" [
-        Css.displayInlineBlock
-        Css.border( pt 1, solid, "#dddddd")
-        Css.resizeBoth
-    ]
-]
 
-let view() =
+let view () =
     Html.div [
         let w = Store.make 0.0
         let h = Store.make 0.0
         let size = Store.make 42.0
         let editText = Store.make "Edit me, slide him ↑"
 
-        disposeOnUnmount [w; h; size; editText ]
+        disposeOnUnmount [
+            w
+            h
+            size
+            editText
+        ]
 
         Bulma.block [
-            Bulma.inputRange [ Bind.attr("value",size) ]
+            Bulma.inputRange [
+                Bind.attr ("value", size)
+            ]
         ]
+
         Bulma.block [
-            Bulma.inputText [ Bind.attr("value",editText) ]
+            Bulma.inputText [
+                Bind.attr ("value", editText)
+            ]
         ]
 
         Html.div [
-            Bind.el2 w h <| fun (w',h') -> text $"Size: {w'}px x {h'}px"
+            Bind.el2 w h <| fun (w', h') -> text $"Size: {w'}px x {h'}px"
         ]
 
         Html.divc "resizing" [
-            CoreElements.listenToResize (fun e ->  Store.set w (e.clientWidth); Store.set h (e.clientHeight))
+            CoreElements.listenToResize (fun e ->
+                Store.set w (e.clientWidth)
+                Store.set h (e.clientHeight)
+            )
             Html.span [
-                Bind.attr( "style", size |> Store.map (fun n -> $"font-size: {n}px") )
-                Bind.el(editText,text)
+                Bind.attr ("style", size |> Store.map (fun n -> $"font-size: {n}px"))
+                Bind.el (editText, text)
             ]
         ]
-    ] |> withStyle style
+    ]
+    |> withStyle style

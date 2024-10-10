@@ -11,16 +11,25 @@ open Sutil.Html
 open Sutil.Bind
 open Sutil.Elmish
 
-type LoginDetails = {
-    Username: string
-    Password: string
-    RememberMe: bool }
-with
-    static member Default = { Username = ""; Password = ""; RememberMe = false }
+type LoginDetails =
+    {
+        Username: string
+        Password: string
+        RememberMe: bool
+    }
 
-type private Model = {
-    Message : string
-    Details : LoginDetails }
+    static member Default =
+        {
+            Username = ""
+            Password = ""
+            RememberMe = false
+        }
+
+type private Model =
+    {
+        Message: string
+        Details: LoginDetails
+    }
 
 let private username m = m.Details.Username
 let private password m = m.Details.Password
@@ -40,15 +49,15 @@ let private init details =
     {
         Message = ""
         Details = details
-    }, Cmd.none
+    },
+    Cmd.none
 
 module EventHelpers =
     open Browser.Types
 
-    let inputElement (target:EventTarget) = target |> asElement<HTMLInputElement>
+    let inputElement (target: EventTarget) = target |> asElement<HTMLInputElement>
 
-    let validity (e : Event) =
-        inputElement(e.target).validity
+    let validity (e: Event) = inputElement(e.target).validity
 
 // View function. Responsibilities:
 // - Arrange for cleanup of model on dispose
@@ -57,7 +66,9 @@ module EventHelpers =
 
 let private defaultView model dispatch =
     bulma.hero [
-        disposeOnUnmount [ model ]
+        disposeOnUnmount [
+            model
+        ]
 
         color.isInfo
 
@@ -66,15 +77,20 @@ let private defaultView model dispatch =
                 bulma.columns [
                     columns.isCentered
                     bulma.column [
-                        column.is10Tablet; column.is8Desktop; column.is6Widescreen
+                        column.is10Tablet
+                        column.is8Desktop
+                        column.is6Widescreen
                         bulma.box [
-                            on "submit" (fun _ -> AttemptLogin |> dispatch) [PreventDefault]
+                            on "submit" (fun _ -> AttemptLogin |> dispatch) [
+                                PreventDefault
+                            ]
                             Attr.action ""
 
                             bulma.field.div [
                                 class' "has-text-danger"
                                 Html.text (model .> message)
-                            ] |> Transition.showIf (model .> messageIsSet)
+                            ]
+                            |> Transition.showIf (model .> messageIsSet)
 
                             bulma.field.div [
                                 bulma.label "Email"
@@ -82,14 +98,24 @@ let private defaultView model dispatch =
                                     control.hasIconsLeft
                                     bulma.input.email [
                                         let isInvalid = Store.make false
-                                        disposeOnUnmount [ isInvalid ]
 
-                                        Bind.toggleClass(isInvalid, "is-danger")
+                                        disposeOnUnmount [
+                                            isInvalid
+                                        ]
 
-                                        on "input" (fun e -> EventHelpers.validity(e).valid |> not |> Store.set isInvalid) []
+                                        Bind.toggleClass (isInvalid, "is-danger")
+
+                                        on
+                                            "input"
+                                            (fun e ->
+                                                EventHelpers.validity(e).valid
+                                                |> not
+                                                |> Store.set isInvalid
+                                            )
+                                            []
 
                                         Attr.placeholder "Hint: sutil@gmail.com"
-                                        Attr.value (model .> username , SetUsername >> dispatch)
+                                        Attr.value (model .> username, SetUsername >> dispatch)
                                         Attr.required true
                                     ]
                                     bulma.icon [
@@ -106,7 +132,8 @@ let private defaultView model dispatch =
                                     bulma.input.password [
                                         Attr.placeholder "Hint: abc123"
                                         Attr.value (model .> password, SetPassword >> dispatch)
-                                        Attr.required true ]
+                                        Attr.required true
+                                    ]
                                     bulma.icon [
                                         icon.isSmall
                                         icon.isLeft
@@ -117,13 +144,17 @@ let private defaultView model dispatch =
                             bulma.field.div [
                                 bulma.inputLabels.checkbox [
                                     bulma.input.checkbox [
-                                        Bind.attr("checked", model .> rememberMe, SetRememberMe >> dispatch)
+                                        Bind.attr (
+                                            "checked",
+                                            model .> rememberMe,
+                                            SetRememberMe >> dispatch
+                                        )
                                     ]
                                     Html.text " Remember me"
                                 ]
-                                //labelCheckbox " Remember me" [
-                                //    Bind.attr("checked", model .> rememberMe, SetRememberMe >> dispatch)
-                                //]
+                            //labelCheckbox " Remember me" [
+                            //    Bind.attr("checked", model .> rememberMe, SetRememberMe >> dispatch)
+                            //]
                             ]
                             bulma.field.div [
                                 field.isGrouped
@@ -131,28 +162,63 @@ let private defaultView model dispatch =
                                     bulma.button.button [
                                         color.isSuccess
                                         Html.text "Login"
-                                        onClick (fun _ -> dispatch AttemptLogin) [PreventDefault]
+                                        onClick (fun _ -> dispatch AttemptLogin) [
+                                            PreventDefault
+                                        ]
                                     ]
                                 ]
                                 bulma.control.div [
                                     bulma.button.button [
                                         Html.text "Cancel"
-                                        onClick (fun _ -> dispatch CancelLogin) [PreventDefault]
+                                        onClick (fun _ -> dispatch CancelLogin) [
+                                            PreventDefault
+                                        ]
                                     ]
                                 ]
                             ]
-                        ] ] ] ] ] ]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+    ]
 
 let private createWithView initDetails login cancel view =
 
     let update msg model =
         match msg with
-            |SetUsername name -> { model with Details = { model.Details with Username = name }}, Cmd.none
-            |SetPassword pwd -> { model with Details = { model.Details with Password = pwd}}, Cmd.none
-            |SetRememberMe z -> { model with Details = { model.Details with RememberMe = z }}, Cmd.none
-            |AttemptLogin -> model, Cmd.OfFunc.attempt login model.Details (fun ex -> SetMessage ex.Message)
-            |SetMessage m -> { model with Message = m }, Cmd.none
-            |CancelLogin -> model, Cmd.OfFunc.perform cancel () (fun _ -> SetMessage "")
+        | SetUsername name ->
+            { model with
+                Details =
+                    { model.Details with
+                        Username = name
+                    }
+            },
+            Cmd.none
+        | SetPassword pwd ->
+            { model with
+                Details =
+                    { model.Details with
+                        Password = pwd
+                    }
+            },
+            Cmd.none
+        | SetRememberMe z ->
+            { model with
+                Details =
+                    { model.Details with
+                        RememberMe = z
+                    }
+            },
+            Cmd.none
+        | AttemptLogin ->
+            model, Cmd.OfFunc.attempt login model.Details (fun ex -> SetMessage ex.Message)
+        | SetMessage m ->
+            { model with
+                Message = m
+            },
+            Cmd.none
+        | CancelLogin -> model, Cmd.OfFunc.perform cancel () (fun _ -> SetMessage "")
 
     let model, dispatch = initDetails |> Store.makeElmish init update ignore
 

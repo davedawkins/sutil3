@@ -8,31 +8,39 @@ module Shared =
     open System
 
     type Todo =
-        { Id : Guid
-          Description : string }
+        {
+            Id: Guid
+            Description: string
+        }
 
     module Todo =
         let isValid (description: string) =
             String.IsNullOrWhiteSpace description |> not
 
         let create (description: string) =
-            { Id = Guid.NewGuid()
-              Description = description }
+            {
+                Id = Guid.NewGuid()
+                Description = description
+            }
 
     module Route =
         let builder typeName methodName =
             sprintf "/api/%s/%s" typeName methodName
 
     type ITodosApi =
-        { getTodos : unit -> Async<Todo list>
-          addTodo : Todo -> Async<Todo> }
+        {
+            getTodos: unit -> Async<Todo list>
+            addTodo: Todo -> Async<Todo>
+        }
 
 open Shared
 open Sutil
 
 type Model =
-    { Todos: Todo list
-      Input: string }
+    {
+        Todos: Todo list
+        Input: string
+    }
 
 type Msg =
     | GotTodos of Todo list
@@ -45,7 +53,7 @@ type Msg =
 open Fable.Remoting.Client
 
 let todosApi =
-    Remoting.createApi()
+    Remoting.createApi ()
     |> Remoting.withRouteBuilder Route.builder
     |> Remoting.buildProxy<ITodosApi>
 
@@ -53,42 +61,75 @@ let todosApi =
 
 [<RequireQualifiedAccess>]
 module MockServer =
-    let mutable todos : List<Todo> = [
-        Todo.create "Check out SAFE"
-        Todo.create "Write killer app"
-        Todo.create "Maximize stonks"
-    ]
-    let getTodos() = async { return todos }
-    let addTodo todo = async {
-        todos <- todos @ [ todo ]
-        return todo
-    }
-    let createApi() = { getTodos = getTodos; addTodo = addTodo }
+    let mutable todos: List<Todo> =
+        [
+            Todo.create "Check out SAFE"
+            Todo.create "Write killer app"
+            Todo.create "Maximize stonks"
+        ]
 
-let todosApi =
-    MockServer.createApi()
+    let getTodos () = async { return todos }
+
+    let addTodo todo =
+        async {
+            todos <-
+                todos
+                @ [
+                    todo
+                ]
+
+            return todo
+        }
+
+    let createApi () =
+        {
+            getTodos = getTodos
+            addTodo = addTodo
+        }
+
+let todosApi = MockServer.createApi ()
 
 #endif
 
-let init(): Model * Cmd<Msg> =
+let init () : Model * Cmd<Msg> =
     let model =
-        { Todos = []
-          Input = "" }
+        {
+            Todos = []
+            Input = ""
+        }
+
     let cmd = Cmd.OfAsync.perform todosApi.getTodos () GotTodos
     model, cmd
 
-let update (msg: Msg) (model: Model): Model * Cmd<Msg> =
+let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
     match msg with
     | GotTodos todos ->
-        { model with Todos = todos }, Cmd.none
+        { model with
+            Todos = todos
+        },
+        Cmd.none
     | SetInput value ->
-        { model with Input = value }, Cmd.none
+        { model with
+            Input = value
+        },
+        Cmd.none
     | AddTodo ->
         let todo = Todo.create model.Input
         let cmd = Cmd.OfAsync.perform todosApi.addTodo todo AddedTodo
-        { model with Input = "" }, cmd
+
+        { model with
+            Input = ""
+        },
+        cmd
     | AddedTodo todo ->
-        { model with Todos = model.Todos @ [ todo ] }, Cmd.none
+        { model with
+            Todos =
+                model.Todos
+                @ [
+                    todo
+                ]
+        },
+        Cmd.none
 
 open Sutil.Bulma
 
@@ -100,8 +141,9 @@ module Helpers =
     let mInput m = m.Input
     let mTodos m = m.Todos
     let tId t = t.Id
+
     let inline xlog m =
-        Browser.Dom.console.log(string m)
+        Browser.Dom.console.log (string m)
         m
 
 let navBrand =
@@ -116,14 +158,19 @@ let navBrand =
         ]
     ]
 
-let containerBox (model : IObservable<Model>) (dispatch : Msg -> unit) =
+let containerBox (model: IObservable<Model>) (dispatch: Msg -> unit) =
     bulma.box [
         bulma.content [
             Html.ol [
-                Bind.each(
+                Bind.each (
                     model |>> mTodos,
-                    (fun todo -> Html.li [ Html.text todo.Description ]),
-                    tId)
+                    (fun todo ->
+                        Html.li [
+                            Html.text todo.Description
+                        ]
+                    ),
+                    tId
+                )
             ]
         ]
         bulma.field.div [
@@ -131,7 +178,7 @@ let containerBox (model : IObservable<Model>) (dispatch : Msg -> unit) =
             bulma.control.p [
                 control.isExpanded
                 bulma.input.text [
-                    Attr.value( model |>> mInput, SetInput >> dispatch)
+                    Attr.value (model |>> mInput, SetInput >> dispatch)
                     Attr.placeholder "What needs to be done?"
                 ]
             ]
@@ -162,8 +209,10 @@ let view () =
 
         bulma.heroHead [
             //bulma.navbar [
-                bulma.container [ navBrand ]
-            //]
+            bulma.container [
+                navBrand
+            ]
+        //]
         ]
         bulma.heroBody [
             bulma.container [

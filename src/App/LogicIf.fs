@@ -8,28 +8,41 @@ open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Bind
 
-let view() =
-    let user = Store.make {| loggedIn = false |}
- 
-    let toggle _ =  
-        user |> Store.modify (fun u -> {| u with loggedIn = not u.loggedIn |})
+let view () =
+    let user =
+        Store.make
+            {|
+                loggedIn = false
+            |}
+
+    let toggle _ =
+        user
+        |> Store.modify (fun u ->
+            {| u with
+                loggedIn = not u.loggedIn
+            |}
+        )
 
     Html.div [
-        disposeOnUnmount [ user ]
+        disposeOnUnmount [
+            user
+        ]
 
-        Bind.el(user, fun u ->
-            Html.div [
-                if u.loggedIn then
-                    Bulma.button [
-                        Ev.onClick toggle
-                        text "Log out"
-                    ]
+        Bind.el (
+            user,
+            fun u ->
+                Html.div [
+                    if u.loggedIn then
+                        Bulma.button [
+                            Ev.onClick toggle
+                            text "Log out"
+                        ]
 
-                if not u.loggedIn then
-                    Bulma.button [
-                        Ev.onClick toggle
-                        text "Log in"
-                    ]
-            ]  
-        ) 
+                    if not u.loggedIn then
+                        Bulma.button [
+                            Ev.onClick toggle
+                            text "Log in"
+                        ]
+                ]
+        )
     ]

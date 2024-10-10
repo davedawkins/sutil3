@@ -33,14 +33,15 @@ and SutilResultType =
     /// The current node was unchanged
     | Unchanged
 
-and SutilResult = 
-        SutilResult of SutilResultType * Node
-    with
-        static member Of (result, node) = SutilResult(result,node)
-        member __.Node = let (SutilResult (_,node)) = __ in node
-        member __.Result = let (SutilResult (result,_)) = __ in result
-        override __.ToString (): string = 
-            sprintf "[%A,%s]" (__.Result) (Sutil.Internal.DomHelpers.toStringSummary __.Node)
+and SutilResult =
+    | SutilResult of SutilResultType * Node
+
+    static member Of(result, node) = SutilResult(result, node)
+    member __.Node = let (SutilResult(_, node)) = __ in node
+    member __.Result = let (SutilResult(result, _)) = __ in result
+
+    override __.ToString() : string =
+        sprintf "[%A,%s]" (__.Result) (Sutil.Internal.DomHelpers.toStringSummary __.Node)
 
 type VirtualElementType =
     | NullNode
@@ -48,44 +49,47 @@ type VirtualElementType =
     | TagNode of string
     | SideEffectNode of SutilSideEffect
 
-and VirtualElement = {
-    Type : VirtualElementType
-    Children : VirtualElement[]
-    Attributes : (string * obj) []
-    Events : (string * (Browser.Types.Event -> unit) * Internal.CustomEvents.EventOption[]) []
-    BuildMappers : (BuildContext -> BuildContext)[]
-}
+and VirtualElement =
+    {
+        Type: VirtualElementType
+        Children: VirtualElement[]
+        Attributes: (string * obj)[]
+        Events: (string * (Browser.Types.Event -> unit) * Internal.CustomEvents.EventOption[])[]
+        BuildMappers: (BuildContext -> BuildContext)[]
+    }
 
-/// BuildContext provides context for building SutilElements. 
-and BuildContext = 
+/// BuildContext provides context for building SutilElements.
+and BuildContext =
     {
         /// Return new ID for next DOM element
-        NextId : (unit -> int)
+        NextId: (unit -> int)
 
         /// The parent for the current SutilElement
-        Parent : Node
+        Parent: Node
 
         /// How to add a new DOM node into the DOM
-        AppendNode : Node -> Node -> unit
+        AppendNode: Node -> Node -> unit
 
         /// The current node that this SutilElement is replacing or patching
-        Current : Node 
+        Current: Node
 
         /// Create DOM element
         ElementCtor: string -> HTMLElement
 
         /// Notify new Node created
-        OnImportedNode : Node -> unit
+        OnImportedNode: Node -> unit
 
         /// Observers / mutators for VirtualElement created from SutilElement
-        VirtualElementMapper : VirtualElementMapper
+        VirtualElementMapper: VirtualElementMapper
 
-        LogElementEnabled : bool
-        LogPatchEnabled : bool
+        LogElementEnabled: bool
+        LogPatchEnabled: bool
     }
-    static member GlobalNextId = Helpers.createIdGenerator()
-    static member DefaultAppendNode = Internal.DomEdit.appendLabel "BuildContext.Mount" 
-    static member Create( parent : Node ) : BuildContext = 
+
+    static member GlobalNextId = Helpers.createIdGenerator ()
+    static member DefaultAppendNode = Internal.DomEdit.appendLabel "BuildContext.Mount"
+
+    static member Create(parent: Node) : BuildContext =
         {
             Parent = parent
             NextId = BuildContext.GlobalNextId
@@ -97,51 +101,74 @@ and BuildContext =
             LogElementEnabled = false
             LogPatchEnabled = false
         }
-    member __.ParentNode = __.Parent
-    
-    member __.CreateElement( tag : string ) : HTMLElement =
-        __.ElementCtor tag
 
-    // member __.WithParentId( id : string ) = 
+    member __.ParentNode = __.Parent
+
+    member __.CreateElement(tag: string) : HTMLElement = __.ElementCtor tag
+
+    // member __.WithParentId( id : string ) =
     //     __.WithParent( Browser.Dom.document.getElementById(id) )
 
     member __.ParentElement = __.Parent :?> HTMLElement
 
-    member __.WithLogPatchEnabled() = { __ with LogPatchEnabled = true }
-    member __.WithLogElementEnabled() = { __ with LogElementEnabled = true }
+    member __.WithLogPatchEnabled() =
+        { __ with
+            LogPatchEnabled = true
+        }
 
-    member __.WithLogEnabled() = __.WithLogElementEnabled().WithLogPatchEnabled()
+    member __.WithLogElementEnabled() =
+        { __ with
+            LogElementEnabled = true
+        }
 
-    member __.WithParent( node : Node ) = 
-        if isNull node then failwith "Parent is null"
-        { __ with Parent = node }
+    member __.WithLogEnabled() =
+        __.WithLogElementEnabled().WithLogPatchEnabled()
 
-    member __.WithAppendNode( append : Node -> Node -> unit  ) = 
-                { __ with AppendNode = append }
+    member __.WithParent(node: Node) =
+        if isNull node then
+            failwith "Parent is null"
 
-    member __.WithCurrent( node : Node ) = 
-                { __ with Current = node }
+        { __ with
+            Parent = node
+        }
 
-    member __.WithVirtualElementMapperPost( p : VirtualElementMapper ) = 
-                { __ with VirtualElementMapper = __.VirtualElementMapper>>p }
+    member __.WithAppendNode(append: Node -> Node -> unit) =
+        { __ with
+            AppendNode = append
+        }
 
-    member __.WithVirtualElementMapperPre( p : VirtualElementMapper ) = 
-                { __ with VirtualElementMapper = __.VirtualElementMapper<<p }
+    member __.WithCurrent(node: Node) =
+        { __ with
+            Current = node
+        }
 
-    // member __.WithElementCtor( create : string -> HTMLElement ) = 
+    member __.WithVirtualElementMapperPost(p: VirtualElementMapper) =
+        { __ with
+            VirtualElementMapper = __.VirtualElementMapper >> p
+        }
+
+    member __.WithVirtualElementMapperPre(p: VirtualElementMapper) =
+        { __ with
+            VirtualElementMapper = __.VirtualElementMapper << p
+        }
+
+    // member __.WithElementCtor( create : string -> HTMLElement ) =
     //             { __ with ElementCtor = create }
 
-    member __.WithOnImportedNode( f : Node -> unit ) = 
-                { __ with OnImportedNode = fun node -> f node; __.OnImportedNode node }
+    member __.WithOnImportedNode(f: Node -> unit) =
+        { __ with
+            OnImportedNode =
+                fun node ->
+                    f node
+                    __.OnImportedNode node
+        }
 
 and VirtualElementMapper = VirtualElement -> VirtualElement
 
 /// Implementation of a SutilElement.SideEffect
-and SutilSideEffect = 
-    string * (BuildContext -> SutilResult)
+and SutilSideEffect = string * (BuildContext -> SutilResult)
 
-and SutilBindEffect = 
-    string * (BuildContext -> unit)
+and SutilBindEffect = string * (BuildContext -> unit)
 
 and SutilElement =
 
@@ -167,7 +194,7 @@ and SutilElement =
     | BindElement of SutilBindEffect
 
     ///
-    | BuildMap of ( (BuildContext -> BuildContext) * SutilElement )
+    | BuildMap of ((BuildContext -> BuildContext) * SutilElement)
 
 type 'T observable = System.IObservable<'T>
 
@@ -175,10 +202,32 @@ type 'T observable = System.IObservable<'T>
 type IReadOnlyStore<'T> =
     inherit System.IObservable<'T>
     inherit System.IDisposable
-    abstract Value : 'T
+    abstract Value: 'T
     abstract OnDispose: (unit -> unit) -> unit
 
 type IStore<'T> =
     inherit IReadOnlyStore<'T>
-    abstract Update : f: ('T -> 'T) -> unit
-    abstract Name : string with get, set
+    abstract Update: f: ('T -> 'T) -> unit
+    abstract Name: string with get, set
+
+module Basic =
+
+    let el (tag: string) (children: SutilElement seq) =
+        SutilElement.Element(tag, children |> Seq.toArray)
+
+    let fragment (children: SutilElement seq) =
+        SutilElement.Fragment(children |> Seq.toArray)
+
+    let text (s: string) = SutilElement.Text(s)
+
+    let attr (name: string) (value: obj) = SutilElement.Attribute(name, value)
+
+    let event (event: string) (handler: Browser.Types.Event -> unit) =
+        SutilElement.Event(event, handler, Array.empty)
+
+    let eventWithOptions
+        (event: string)
+        (handler: Event -> unit)
+        (options: Internal.CustomEvents.EventOption[])
+        =
+        SutilElement.Event(event, handler, options)

@@ -7,59 +7,89 @@ open Sutil.Bind
 open Browser.Types
 open Sutil.Styling
 
-type CounterProps = {
-    value : int
-    label : string
-}
+type CounterProps =
+    {
+        value: int
+        label: string
+    }
 
-let CounterStyles = [
-    rule "div" [
-        Css.backgroundColor "#DEEEFF"
-        Css.width (Feliz.length.percent 50)
-        Css.padding (Feliz.length.rem 0.5)
+let CounterStyles =
+    [
+        rule "div" [
+            Css.backgroundColor "#DEEEFF"
+            Css.width (Feliz.length.percent 50)
+            Css.padding (Feliz.length.rem 0.5)
+        ]
+        rule "button" [
+            Css.padding (Feliz.length.rem 0.25)
+        ]
     ]
-    rule "button" [
-        Css.padding (Feliz.length.rem 0.25)
-    ]
-]
 
-let Counter (model : IStore<CounterProps>) =
+let Counter (model: IStore<CounterProps>) =
     Html.div [
         adoptStyleSheet CounterStyles
 
-        Bind.el(model |> Store.map (fun m -> m.label),Html.span)
-        Bind.el(model |> Store.map (fun m -> m.value),Html.text)
+        Bind.el (model |> Store.map (fun m -> m.label), Html.span)
+        Bind.el (model |> Store.map (fun m -> m.value), Html.text)
 
         Html.div [
             Html.button [
                 text "+"
-                Ev.onClick (fun _ -> model |> Store.modify (fun m -> { m with value = m.value + 1 } ))
+                Ev.onClick (fun _ ->
+                    model
+                    |> Store.modify (fun m ->
+                        { m with
+                            value = m.value + 1
+                        }
+                    )
+                )
             ]
             Html.button [
                 text "-"
-                Ev.onClick (fun _ -> model |> Store.modify (fun m -> { m with value = m.value - 1 } ))
+                Ev.onClick (fun _ ->
+                    model
+                    |> Store.modify (fun m ->
+                        { m with
+                            value = m.value - 1
+                        }
+                    )
+                )
             ]
         ]
     ]
 
-WebComponent.Register("my-counter",Counter,{ label = ""; value = 0})
+WebComponent.Register(
+    "my-counter",
+    Counter,
+    {
+        label = ""
+        value = 0
+    }
+)
 
-type GreetingProps = {
-    greeting : string
-    subject : string
-}
+type GreetingProps =
+    {
+        greeting: string
+        subject: string
+    }
 
-let Greeting (model : IStore<GreetingProps>) =
+let Greeting (model: IStore<GreetingProps>) =
     Html.div [
-        Bind.el(model |> Store.map (fun m -> m.greeting),Html.span)
+        Bind.el (model |> Store.map (fun m -> m.greeting), Html.span)
         text " "
-        Bind.el(model |> Store.map (fun m -> m.subject),Html.text)
+        Bind.el (model |> Store.map (fun m -> m.subject), Html.text)
     ]
 
-WebComponent.Register("my-greeting",Greeting,{ greeting = "Bonjour"; subject = "Marie-France"})
+WebComponent.Register(
+    "my-greeting",
+    Greeting,
+    {
+        greeting = "Bonjour"
+        subject = "Marie-France"
+    }
+)
 
-
-let view() =
+let view () =
     // Example of a 3rd party app, that doesn't really know anything about Sutil.
     // The JS event handlers are looking up the 'greet1' component and sending the
     // current input value into the appropriate property. You can use setAttribute too.
@@ -67,7 +97,8 @@ let view() =
         // Consider this to be <script src='app.js'></script> for the 3rd party app
         // Can't pass <script> tags to Core.html
         Html.script [
-            text """
+            text
+                """
                 function greetingUpdated(e) {
                     var greet = document.getElementById('greet1')
                     greet.greeting = e.target.value;
@@ -85,7 +116,8 @@ let view() =
 
         // Consider this to be <body> for the 3rd party app
         Html.div [
-            Html.parse """
+            Html.parse
+                """
                 <my-counter value='10' label='Counter: '></my-counter>
                 <br>
                 <my-counter value='100' label='Counter #2: '></my-counter>
