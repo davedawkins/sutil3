@@ -85,11 +85,11 @@ and NodeAction =
     | Remove of VirtualElement // Provides key of DOM node to remove
     | Insert of VirtualElement
     | Replace of VirtualElement * VirtualElement
-    | Patch of PatchAction[]
+    | Patch of VirtualElement * PatchAction[]
 
     override __.ToString() : string =
         match __ with
-        | Patch actions -> sprintf "[%s]" (actions |> Array.map (_.ToString()) |> String.concat ",")
+        | Patch (_,actions) -> sprintf "[%s]" (actions |> Array.map (_.ToString()) |> String.concat ",")
         | Replace _ -> "Replace"
         | Insert e -> "Insert " + e.AsString()
         | Remove e -> "Remove"
@@ -152,7 +152,7 @@ let rec private calculatePatch (existing: VirtualElement) (latest: VirtualElemen
         if (existing.InnerText <> latest.InnerText) then
 
             // Update text node
-            Patch [| SetInnerText latest.InnerText |]
+            Patch (latest, [| SetInnerText latest.InnerText |])
 
         else   
             // Nothing to do
@@ -194,7 +194,7 @@ let rec private calculatePatch (existing: VirtualElement) (latest: VirtualElemen
                         |> Seq.take (latest.Children.Length)
                         |> Seq.map (fun ve -> ChildAction(-1, Remove ve))
 
-            |] |> Patch
+            |] |> (fun actions -> Patch (latest, actions))
 
     elif existing.IsDomNode then
 
@@ -243,7 +243,7 @@ let applyNodeAction (context : BuildContext) (nodeAction : NodeAction) : Result<
         DomEdit.append context.Parent newNode
         (Appended, newNode) |> ok
 
-    | Patch patchActions ->
+    | Patch (latest, patchActions) ->
 
         let results =
             patchActions 

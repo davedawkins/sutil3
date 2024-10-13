@@ -6,120 +6,101 @@ open Sutil.Internal
 open Browser.Types
 open Sutil.Internal.CustomEvents
 
+/// Call this function when the element is mounted
+let onElementMounted<'Element when 'Element :> HTMLElement> (f: 'Element -> unit) : SutilElement =
+    Basic.event
+        CustomEvents.MOUNT
+        (fun (e : Event) -> (e.target.asElement :?> 'Element) |> f)
+
+let hookParent (f : HTMLElement -> unit) = onElementMounted f
+
 /// Call these unit functions when the parent element is unmounted
 let unsubscribeOnUnmount (fns: (unit -> unit) seq) =
-    SutilElement.Define(
-        "unsubscribeOnUnmount",
-        (fun context ->
-            fns
-            |> Seq.iter ((Dispose.addUnsubscribe context.ParentElement "unsubscribeOnUnmount"))
-        )
-    )
+    onElementMounted
+        (fun el -> fns |> Seq.iter (Dispose.addUnsubscribe el "unsubscribeOnUnmount"))
 
 /// Call _.Dispose() for these IDisposables when the parent element is unmounted
 let disposeOnUnmount (fns: (System.IDisposable) seq) =
-    SutilElement.Define(
-        "disposeOnUnmount",
-        (fun ctx -> fns |> Seq.iter (Dispose.addDisposable ctx.ParentElement "disposeOnUmount"))
+    onElementMounted 
+        (fun el -> fns |> Seq.iter (Dispose.addDisposable el "disposeOnUmount") )
+
+/// Helper function for creating a resource that will be disposed automatically when the element is unmounted.
+/// The handler is called once, when the containing element is mounted
+let bindDisposable<'Element when 'Element :> HTMLElement>(handler: 'Element -> System.IDisposable) =
+    onElementMounted( fun el ->
+        Dispose.addDisposable el "bindSubEl" (handler el)
     )
 
-/// Call this function when the element is mounted
-let hookParent (f: HTMLElement -> unit) =
-    SutilElement.Define(
-        "hookParent",
-        (fun context ->
-            EventListeners.add
-                context.ParentElement
-                MOUNT
-                (fun e -> (e.target :?> HTMLElement) |> f)
-            |> ignore
+/// Helper function for making a subscription to an IObservable that will be released when the element is unmounted
+/// A subscription is made on the source when the container element is mounted.
+let bindSubscribe<'T,'Element when 'Element :> HTMLElement> (source: System.IObservable<'T>) (handler: 'Element -> 'T -> unit) =
+    bindDisposable (fun el -> source.Subscribe (handler el))
 
-            SutilResult.Of(SutilResultType.Effected "hookParent", context.ParentElement)
-        )
-    )
+let private _html_log = Log.create("html")
+_html_log.enabled <- true
 
 /// <summary>
 /// Raw html that will be parsed and added as a child of the parent element
 /// </summary>
 let html (text: string) : SutilElement =
-    SutilElement.Define(
+    SutilElement.DefineBinding(
         "html",
+        Basic.el "div" [
+            Basic.attr "data-sutil-imported" "html" // Tell Patcher that no point in trying repair this section
+        ],
         fun ctx ->
-            let host = ctx.CreateElement "div"
-
+            let host = ctx.Current :?> HTMLElement  // We know this will be a div, passed as init in DefineBinding
+            
             // Parse HTML and add to new node
             host.innerHTML <- text.Trim()
+            
+            //Let styling (eg) know that a new node needs marking up
+            host
+            |> DomHelpers.children
+            |> Seq.iter (ctx.NotifyNodeImported)
 
-            // Tell Patcher that no point in trying repair this section
-            host.setAttribute ("data-sutil-imported", "html")
-
-            // Add into the DOM
-            ctx.AppendNode (ctx.Parent) host
-
-            // Let styling know that a new node needs marking up
-            ctx.OnImportedNode host
-
-            // Let code highligher (index.html) know that new code needs marking up
+            // Let code highligher (index.html) know that new code could need marking up
             Sutil.Internal.CustomEvents.notifySutilUpdated (host.ownerDocument)
-
-            SutilResult.Of(Appended, host)
     )
 
 /// Call the dispatch function when the parent element is resized
 let listenToResize (dispatch: HTMLElement -> unit) : SutilElement =
-    SutilElement.Define(
-        "listenToResize",
-        fun ctx ->
-            let parent: HTMLElement = ctx.ParentElement
-            let notify () = dispatch parent
-
-            EventListeners.once
-                CustomEvents.MOUNT
-                parent
-                (fun _ ->
-                    SutilEffect.RegisterDisposable(
-                        parent,
-                        "listenToResize",
-                        (ResizeObserver.getResizer parent).Subscribe(notify)
-                    )
-
-                    DomHelpers.rafu notify
-                )
-            |> ignore
-
-    )
+    onElementMounted <|
+        fun parent -> 
+            let notify() = dispatch parent
+            SutilEffect.RegisterDisposable(
+                parent,
+                "listenToResize",
+                (ResizeObserver.getResizer parent).Subscribe( notify )
+            )
+            DomHelpers.rafu notify
 
 let postProcessElementsWithName
     (name: string)
     (f: HTMLElement -> unit)
-    (se: SutilElement)
+    (element: SutilElement)
     : SutilElement
     =
 
-    let run (context: BuildContext) =
-        let result = se |> Sutil.Core.mount context null
-        result.Node.asElement |> Option.iter f
-        result
+        // let run (context: BuildContext) =
+    //     let result = se |> Sutil.Core.mount context null
+    //     result.Node.asElement |> Option.iter f
+    //     result
+    SutilElement.DefineMapping(
+        name,
 
-    SutilElement.Define(name, run)
+        (fun context ->
+                context
+                    .WithOnImportedNode(fun (node:Node) -> 
+                        Log.Console.log("postProcess: " + name + ": " + (node.textContent))
+                        node.asElement |> Option.iter f
+                    )
+        ),
+
+        element
+    )
+//    SutilElement.Define(name, run)
 
 /// Pass the generated HTMLElement for child 'se' to the handler function
 let postProcessElements (handler: HTMLElement -> unit) (se: SutilElement) : SutilElement =
     postProcessElementsWithName ("postProcessElement") handler se
-
-open Core.Sutil2
-
-let headStylesheet (url: string) : SutilElement =
-    SutilElement.Define("headStyleSheet", fun ctx -> DomEdit.setHeadStylesheet ctx.Document url)
-
-let headScript (url: string) : SutilElement =
-    SutilElement.Define("headScript", fun ctx -> DomEdit.setHeadScript ctx.Document url)
-
-let headEmbedScript (source: string) : SutilElement =
-    SutilElement.Define(
-        "headEmbedScript",
-        fun ctx -> DomEdit.setHeadEmbedScript ctx.Document source
-    )
-
-let headTitle (title: string) : SutilElement =
-    SutilElement.Define("headTitle", fun ctx -> DomEdit.setHeadTitle ctx.Document title)

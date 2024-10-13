@@ -901,19 +901,9 @@ let appMain () =
                 | FrontPage -> viewFrontPage ()
                 | PageView _ -> viewBook showContents pageView
         )
-    ]
-
-let app () =
-    Html.fragment [
-        // Page title
-        headTitle "sutil"
-
-        appMain () |> withStyle mainStyleSheet
-    ]
+    ] |> withStyle mainStyleSheet
 
 let main () =
-    app ()
-    //|> withStyle mainStyleSheet
-    |> Program.mount
+    appMain() |> Program.mount
 
 main ()

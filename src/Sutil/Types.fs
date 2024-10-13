@@ -5,6 +5,10 @@ open Browser.Types
 /// Helper type for general DOM event handlers
 type DomEventHandler = Event -> unit
 
+type Globals =
+    static let _globalNextId = Helpers.createIdGenerator ()
+    static member NextId : unit -> int = _globalNextId
+
 type PatchResult =
     | AttrSet
     | AttrRemoved
@@ -58,11 +62,14 @@ and VirtualElement =
         Children: VirtualElement[]
         Attributes: (string * obj)[]
         Events: (string * (Browser.Types.Event -> unit) * Internal.CustomEvents.EventOption[])[]
+        Mapper : (BuildContext -> BuildContext) option
     }
 
 /// BuildContext provides context for building SutilElements.
 and BuildContext =
     {
+        Id : int
+
         /// Return new ID for next DOM element
         NextId: (unit -> int)
 
@@ -79,7 +86,7 @@ and BuildContext =
         ElementCtor: string -> HTMLElement
 
         /// Notify new Node created
-        OnImportedNode: Node -> unit
+        OnImportedNode: (Node -> unit) option
 
         /// Observers / mutators for VirtualElement created from SutilElement
         VirtualElementMapper: VirtualElementMapper
@@ -88,17 +95,20 @@ and BuildContext =
         LogPatchEnabled: bool
     }
 
-    static member GlobalNextId = Helpers.createIdGenerator ()
-    static member DefaultAppendNode = Internal.DomEdit.append
+    static let reportId (c1 : BuildContext) (c2: BuildContext) =
+        //Log.Console.log(sprintf "Context: %d -> %d" c1.Id c2.Id)
+        c2
 
+    static member DefaultAppendNode = Internal.DomEdit.append
     static member Create(parent: Node) : BuildContext =
         {
+            Id = Globals.NextId()
             Parent = parent
-            NextId = BuildContext.GlobalNextId
+            NextId = Globals.NextId
             AppendNode = BuildContext.DefaultAppendNode
             Current = null
-            VirtualElementMapper = id
-            OnImportedNode = ignore
+            VirtualElementMapper = (fun x -> x)
+            OnImportedNode = None
             ElementCtor = Sutil.Internal.DomEdit.element
             LogElementEnabled = false
             LogPatchEnabled = false
@@ -108,20 +118,21 @@ and BuildContext =
 
     member __.CreateElement(tag: string) : HTMLElement = __.ElementCtor tag
 
-    // member __.WithParentId( id : string ) =
-    //     __.WithParent( Browser.Dom.document.getElementById(id) )
-
     member __.ParentElement = __.Parent :?> HTMLElement
 
     member __.WithLogPatchEnabled() =
         { __ with
             LogPatchEnabled = true
+            Id = Globals.NextId()
         }
+        |> reportId __
 
     member __.WithLogElementEnabled() =
         { __ with
             LogElementEnabled = true
+            Id = Globals.NextId()
         }
+        |> reportId __
 
     member __.WithLogEnabled() =
         __.WithLogElementEnabled().WithLogPatchEnabled()
@@ -132,45 +143,62 @@ and BuildContext =
 
         { __ with
             Parent = node
+            Id = Globals.NextId()
         }
+        |> reportId __
 
     member __.WithAppendNode(append: Node -> Node -> unit) =
         { __ with
             AppendNode = append
+            Id = Globals.NextId()
         }
+        |> reportId __
 
     member __.WithCurrent(node: Node) =
         { __ with
             Current = node
+            Id = Globals.NextId()
         }
 
     member __.WithVirtualElementMapperPost(p: VirtualElementMapper) =
         { __ with
             VirtualElementMapper = __.VirtualElementMapper >> p
+            Id = Globals.NextId()
         }
+        |> reportId __
 
     member __.WithVirtualElementMapperPre(p: VirtualElementMapper) =
         { __ with
             VirtualElementMapper = __.VirtualElementMapper << p
+            Id = Globals.NextId()
         }
+        |> reportId __
 
     // member __.WithElementCtor( create : string -> HTMLElement ) =
     //             { __ with ElementCtor = create }
 
     member __.WithOnImportedNode(f: Node -> unit) =
         { __ with
+            Id = Globals.NextId()
             OnImportedNode =
-                fun node ->
-                    f node
-                    __.OnImportedNode node
+                __.OnImportedNode 
+                |> Option.map (fun f0 ->
+                    fun node ->
+                        f node
+                        f0 node)
+                |> Option.orElse (Some f)
         }
+        |> reportId __
+
+    member __.NotifyNodeImported (node : Node) =
+        __.OnImportedNode |> Option.iter (fun f -> f node)
 
 and VirtualElementMapper = VirtualElement -> VirtualElement
 
 /// Implementation of a SutilElement.SideEffect
 and SutilEffect = string * (BuildContext -> SutilResult)
 
-and SutilBindEffect = string * (BuildContext -> unit)
+and SutilBindEffect = string * SutilElement * (BuildContext -> unit)
 
 and SutilElement =
 
@@ -191,11 +219,27 @@ and SutilElement =
     | Fragment of (SutilElement[])
 
     /// Custom element that operates on a BuildContext. Bindings are SideEffects, for example
-    | SideEffect of SutilEffect
+    //    | SideEffect of SutilEffect
 
-    /// Custom element that will a sub-element at this DOM location.
+    /// Custom element that will manage a sub-element at this DOM location.
+    /// An initial element is created and the effect is called when the initial element 
+    /// is mounted
     /// Eg Bind.el, Html.parse
     | BindElement of SutilBindEffect
+
+    | MappingElement of (string * (BuildContext -> BuildContext) * SutilElement)
+
+    with
+        override __.ToString() =
+            match __ with
+            | Text s -> "Text '" + s + "'"
+            | Element (tag, children) -> "Element '" + tag + "' [" + (children |> Array.map _.ToString() |> String.concat ", ") + "]"
+            | Attribute (name,value) -> "Attr '" + name + "'='" + (string value) + "'"
+            | Event (name,_,_) -> "Event '" + name + "'"
+            | Fragment (children) -> "Fragment [" + (children |> Array.map _.ToString() |> String.concat ", ") + "]"
+            //| SideEffect (name,_) -> "SideEffect '" + name + "'"
+            | BindElement (name,_,_) -> "Bind '" + name + "'"
+            | MappingElement (name, _, child) -> "Map '" + name + "' [" + child.ToString() + "]"
 
 type 'T observable = System.IObservable<'T>
 

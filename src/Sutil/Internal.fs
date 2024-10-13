@@ -250,6 +250,15 @@ module DomHelpers =
     open Browser.Types
     open Browser.Dom
 
+    let namedNodeMapToArray (n: NamedNodeMap) =
+        [|
+            for i in 0 .. (n.length - 1) do
+                let a = n.item (i)
+                a.name, a.value
+        |]
+
+    let attributes (el : HTMLElement) = el.attributes |> namedNodeMapToArray
+    
     let outerHTML (n: Node) =
         n
         |> tryAsElement
@@ -530,6 +539,26 @@ module Dispose =
 
     let internal dispose (node: Node) = disposeTree node
 
+
+    let composeUU (u1 : Unsubscriber) (u2 : Unsubscriber) =
+        (u1>>u2) |> makeDisposable
+            
+    let composeDD (d1 : System.IDisposable)  (d2 : System.IDisposable)=
+        (fun () ->
+            d1.Dispose()
+            d2.Dispose()) |> makeDisposable
+
+    let composeDU (d : System.IDisposable) (u : Unsubscriber) =
+        (fun () ->
+            d.Dispose()
+            u()) |> makeDisposable
+            
+    let composeUD (u : Unsubscriber)  (d : System.IDisposable)=
+        (fun () ->
+            d.Dispose()
+            u()) |> makeDisposable
+
+            
 /// Support for editing classes
 module ClassHelpers =
     open System

@@ -152,7 +152,7 @@ module Log =
             if (m.Message.StartsWith("Error")) then
                 Fable.Core.JS.debugger ()
 
-            Console.log (sprintf "%04d" m.Id, m.Category, m.Source, m.Message)
+            Console.log (sprintf "%04d|%s|%s|%s" m.Id m.Category m.Source m.Message)
 
     /// Log message with a given source, category, message and context
     let private logm (src: string) (cat: string) (msg: string) (ctx: obj) =

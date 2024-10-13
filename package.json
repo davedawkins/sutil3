@@ -6,6 +6,7 @@
   "scripts": {
     "build": "dotnet fable src/App -o fable-build && vite fable-build",
     "start": "dotnet fable watch src/App --verbose -o fable-build --run vite",
+    "start:small": "dotnet fable watch src/SmallApp --verbose -o fable-build --run vite",
     "preview": "vite preview",
     "clean": "dotnet fable clean -o fable-build --yes"
   },

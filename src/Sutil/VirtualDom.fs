@@ -20,6 +20,7 @@ type VirtualElement with
             Children = Array.empty
             Attributes = Array.empty
             Events = Array.empty
+            Mapper = None
         }
 
     static member TextNode(s: string) =
@@ -78,6 +79,12 @@ type VirtualElement with
                 else
                     yield (-1, child)
         |]
+
+    member __.MapContext( ctx : BuildContext ) : BuildContext=
+        __.Mapper |> Option.map (fun m -> m ctx) |> Option.defaultValue ctx
+
+    member __.AddMapper( map : BuildContext -> BuildContext ) =
+        { __ with Mapper = __.Mapper |> Option.map (fun current -> current<<map) |> Option.orElse (Some map) }
 
     member __.AddChild(ch: VirtualElement) =
         { __ with
@@ -146,6 +153,9 @@ type VirtualElement with
                    |> Array.map (fun (n, v) -> sprintf "%s=\"%A\"" n v)
                    |> String.concat " ")
 
+        let attrs =
+            if __.Mapper.IsNone then (attrs) else (" map" + attrs)
+
         match __.Type with
         | NullNode -> "<null/>"
         | TextNode s -> s
@@ -197,14 +207,13 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
 
     | Event(name, handler, options) -> parent.AddEvent(name, handler, options)
 
-    | BindElement(name, handler) ->
-        (VirtualElement.ElementNode "div")
+    | MappingElement(name, map, child) ->
+        (fromSutil child)
+        |> _.AddMapper(map) 
+        |> parent.AddChild
 
-        |> fun ve ->
-            (if _log.enabled then
-                 ve.AddChild(VirtualElement.TextNode("binding:" + name))
-             else
-                 ve.AddAttr("style", "display:none;"))
+    | BindElement(name, init, handler) ->
+        fromSutil init
 
         |> _.AddAttr("data-binding", name)
 
@@ -212,8 +221,12 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
             CustomEvents.MOUNT,
             fun e ->
                 let el = e.target.asElement
-
                 let ctx: BuildContext = JsMap.getKey el "__sutil_ctx"
+
+                // Log.Console.log("MOUNT BINDING: el=", el |> DomHelpers.toString ) 
+                // Log.Console.log("MOUNT BINDING: el.Parent  =", el.parentNode |> DomHelpers.toString ) 
+                // Log.Console.log("MOUNT BINDING: ctx.Parent =", ctx.Parent |> DomHelpers.toString ) 
+                // Log.Console.log("MOUNT BINDING: ctx.Current=", ctx.Current |> DomHelpers.toString ) 
 
                 if isNull (ctx :> obj) then
                     Log.Console.error (
@@ -234,14 +247,15 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
 
         |> parent.AddChild
 
-    | SideEffect effect -> parent.AddEffect(effect)
+    //| SideEffect effect -> parent.AddEffect(effect)
 
 /// Create a VirtualDom element from a SutilElement.
 /// This function will also be able to hoist fragment children up into the parent element
 and fromSutil (se: SutilElement) : VirtualElement =
+
     let root = addSutilElement (emptyDiv ()) se
 
-    let noAttributes = root.Attributes.Length = 0 && root.Events.Length = 0
+    let noAttributes = root.Attributes.Length = 0 && root.Events.Length = 0 && root.Mapper.IsNone
 
     let el =
 
@@ -256,13 +270,16 @@ and fromSutil (se: SutilElement) : VirtualElement =
         elif root.Children.Length = 0 && noAttributes then
             invisibleDiv ()
 
+        elif root.Mapper.IsSome then
+            root
+
+        else
         // Every other case. We have a non-empty fragment
         // Eg
         // fragment [ div [] div [] ... ]
         // fragment [ div [] Attr.xx  ... ]
         // fragment [ Attr.xx ... ]
         //
-        else
             root |> addClass "fragment" |> addAttr "style" "display:contents;"
 
     if not (el.IsElementNode) && not (el.IsTextNode) && not (el.IsEffectNode) then
@@ -304,10 +321,13 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
         Id.setId el (_id |> string)
 
         if (ve.Attributes |> Array.exists (fun (name, value) -> name = "data-binding")) then
+            let mapped = context |> ve.MapContext
+            JsMap.setKey el "__sutil_ctx" mapped
+
             if _log.enabled then
                 _log.trace ("toDom: -- set __sutil_ctx ", el |> DomHelpers.toStringSummary)
+                _log.trace ("toDom: -- set __sutil_ctx: ctx.Parent ", mapped.Parent |> DomHelpers.toStringSummary)
 
-            JsMap.setKey el "__sutil_ctx" context
 
         ve.Attributes
         |> Array.iter (fun (name, value) ->
@@ -343,7 +363,7 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
                         el |> Internal.DomHelpers.toStringSummary
                     )
 
-                toDom (context.WithParent(el).WithAppendNode(DomEdit.append)) child
+                toDom (context.WithParent(el).WithAppendNode(DomEdit.append) |> child.MapContext) child
 
             // Maybe toDom should return an enum to be very specific about what
             // happened?
@@ -351,6 +371,7 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
                 DomEdit.append el childEl
         )
 
+        context.NotifyNodeImported el
         el
 
     | SideEffectNode(name, effect) ->

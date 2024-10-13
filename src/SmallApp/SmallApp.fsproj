@@ -8,6 +8,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sutil\Sutil.fsproj" />
+    <ProjectReference Include="..\Sutil.Html\Sutil.Html.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Feliz.Engine.Bulma" Version="1.*" />

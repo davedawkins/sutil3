@@ -19,10 +19,9 @@ let css =
     ]
 
 let view () =
-    withStyle css
-    <| Html.div [
+    Html.div [
         Html.p [
             text "These styles..."
         ]
         Nested()
-    ]
+    ] |> withStyle css

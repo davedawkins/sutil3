@@ -290,21 +290,27 @@ describe "Sutil.Binding" <| fun () ->
         let app() =
             Html.span [
                 Bind.el(
+                    "bind",
                     content,
                     fun html ->
-                        do renderCount <- renderCount + 1
-                        Html.parse html
+                        Html.fragment [
+                            do renderCount <- renderCount + 1
+                            Html.parse html
+                            Html.parse ("<pre>Wrapper" + html + "</pre>")
+                        ]
+                        // do renderCount <- renderCount + 1
+                        // Html.parse html
                     )
             ]
 
         app() |> mountTestApp
 
-        Expect.queryText "span>div:nth-child(1)" "Loading.." 
+        Expect.queryText "span>*:nth-child(1)>*" "Loading.." 
         Expect.queryNumChildren "span" 1
 
         "Content" |> Store.set content
 
-        Expect.queryText "span>div:nth-child(1)" "Content" 
+        Expect.queryText "span>*:nth-child(1)>*" "Content" 
         Expect.queryNumChildren "span" 1
 
         return ()

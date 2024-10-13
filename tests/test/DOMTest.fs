@@ -637,6 +637,20 @@ describe "DOM" <| fun () ->
         return ()
     }
 
+    it "disposeOnUnmount doesn't create real elements" <| fun _ -> promise {
+        let view() = 
+            Html.div [
+                Html.fragment [
+                    Attr.custom("data-test", "hello")
+                ]
+                disposeOnUnmount []
+            ]
+
+        view() |> mountTestApp
+
+        return ()
+    }
+
     //testCaseP "400ms" <| fun () ->
     //    promise {
     //        do! Promise.sleep(400)

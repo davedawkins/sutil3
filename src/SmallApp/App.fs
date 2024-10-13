@@ -2,84 +2,71 @@
 
 open Sutil
 
-open Dsl
-open Bind
-open Core
-open Style
+open Sutil.Html
+open Sutil.Styling
+open Sutil.Bind
+open type Feliz.length
 
+// let css (s: string) = s
 
-let css (s: string) = s
-
-let _style = css $"""
-    .red {{
-        color: red;
-    }}
-"""
+// let _style = css $"""
+//     .red {{
+//         color: red;
+//     }}
+// """
 
 let style = [
     rule ".red" [
-        "color", "red"
+        Css.color "red"
     ]
 ]
+
+module Nested = 
+
+    let Nested () =
+        Html.p [
+            text "...don't affect this element"
+        ]
+        |> withStyle []
+
+    let css =
+        [
+            rule "p" [
+                Css.color "orange"
+                Css.fontFamily "'Comic Sans MS', cursive"
+                Css.fontSize (em 2.0)
+            ]
+        ]
+
+    let view () =
+        Html.div [
+            Html.p [
+                text "These styles..."
+            ]
+            Html.p [
+                text "...don't affect this element"
+            ] |> withStyle []
+        ] |> withStyle css
+
 
 let view() = 
     let counter = Store.make 0
     let nameS = Store.make ""
 
     Html.div [
-        Ev.onMount (fun _ ->
-            Fable.Core.JS.console.log("Mounted")
-        )
-
-        Html.divc "red" [ text "Hello World" ]
-        
-        let store2 = Store.make "xx"
-        Html.div [
-            Html.div "Header"
-            Bind.el(store2, Html.div)
-            Html.div "Footer"
-        ]
-
-        Html.button [
-            text "+"
-            Ev.onClick (fun _ ->  
-                counter.Value + 1 |> Store.set counter
-                counter.Value |> string |> Store.set store2
-            )
-        ]
-
-        Html.button [
-            text "-"
-            Ev.onClick (fun _ ->  counter.Value - 1 |> Store.set counter)
-        ]
+        text "Container"
 
         Html.div [
-            Bind.el( counter, fun n -> text (sprintf "n=%d" n))
-        ]
 
-        Bind.el( counter, fun n -> 
-            Html.fragment [ 
-                for i in 0 .. n-1 do Html.div (sprintf "%d" i)
-            ] )
+            Bind.el( counter, fun _ -> Html.divc "red" [ text "Hello world " ] )
 
-        Bind.el( nameS, fun name ->
-            Html.div [
-                Html.input [
-                    Attr.placeholder ("Enter name")
-                    Ev.onInputT( fun e ->
-                        e.targetElement.value |> Store.set nameS
-                    )
-                ]
-                if name = "" then
-                    Html.p "Hello stranger"
-                else
-                    Html.div [
-                        Ev.onMount (fun _ -> Fable.Core.JS.console.log "mounted")
-                        Ev.onUnmount (fun _ -> Fable.Core.JS.console.log "unmounted")
-                        text (sprintf "Hello %s" name)
-                    ]
-            ]
-        )
-    ] |> withStyle style
+            Html.divc "red" [
+                text "Unstyled"
+            ] |> withStyle []
 
-view() |> Program.mount
+        ] |> withStyle style
+
+
+    ]
+
+Nested.view() |> Program.mount

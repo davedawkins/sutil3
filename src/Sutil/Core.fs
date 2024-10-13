@@ -19,19 +19,40 @@ _log.enabled <- false
 module CoreExtensions =
 
     type SutilElement with
-        static member Define(name: string, f: BuildContext -> SutilResult) =
-            SutilElement.SideEffect(name, f)
+        // static member Define(name: string, f: BuildContext -> SutilResult) =
+        //     SutilElement.SideEffect(name, f)
 
-        static member Define(name: string, f: BuildContext -> unit) =
-            SutilElement.SideEffect(
-                name,
-                fun ctx ->
-                    f (ctx)
-                    SutilResult.Of(Effected name, ctx.ParentElement)
+        // static member Define(name: string, f: BuildContext -> unit) =
+        //     SutilElement.SideEffect(
+        //         name,
+        //         fun ctx ->
+        //             f (ctx)
+        //             SutilResult.Of(Effected name, ctx.ParentElement)
+        //     )
+
+        static member DefineBinding(name: string, init : SutilElement, f: BuildContext -> unit) =
+            SutilElement.BindElement(
+                name, 
+                init, 
+                f
             )
 
-        static member DefineBinding(name: string, f: BuildContext -> unit) =
-            SutilElement.BindElement(name, f)
+        static member DefineBinding(name: string, init : SutilElement, f: BuildContext -> System.IDisposable) =
+            SutilElement.DefineBinding(
+                name, 
+                init, 
+                (fun ctx -> ctx |> f |> Dispose.addDisposable ctx.ParentElement name)
+            )
+
+        static member DefineBinding(name: string, f: BuildContext -> System.IDisposable) =
+            SutilElement.DefineBinding(
+                name,
+                Basic.el "div" [],
+                f
+        )
+
+        static member DefineMapping(name : string, f: BuildContext -> BuildContext, child : SutilElement ) =
+            SutilElement.MappingElement(name, f, child)
 
         static member HiddenDiv(name: string) =
             SutilElement.Element(
@@ -42,22 +63,32 @@ module CoreExtensions =
                 |]
             )
 
-let private logElement (context: BuildContext) (current: Node) (velement: VirtualElement) =
+let private forceLog (f : unit -> unit) =
+    let save = _log.enabled
+    _log.enabled <- true
+    f()
+    _log.enabled <- save
+
+let private logElement (context: BuildContext) (velement: VirtualElement) =
     if context.LogElementEnabled then
-        _log.trace (">> -------------------------------------------------------")
-        _log.trace (sprintf "New element: %s" (velement.AsString()))
+        fun () ->
+            _log.trace (">> -------------------------------------------------------")
+            _log.trace (sprintf "New element: %s" (velement.AsString()))
+        |> forceLog
 
     velement
 
-let private logPatch (context: BuildContext) (current: Node) (patchAction: NodeAction) =
+let private logPatch (context: BuildContext) (patchAction: NodeAction) =
     if context.LogPatchEnabled then
-        _log.trace (
-            sprintf
-                "Patch action:\n current= %s\n action=%s\n parent=%s"
-                (outerHTML current)
-                (patchAction.ToString())
-                (context.ParentElement.outerHTML)
-        )
+        fun () ->
+            _log.trace (
+                sprintf
+                    "Patch action:\n current= %s\n action=%s\n parent=%s"
+                    (outerHTML context.Current)
+                    (patchAction.ToString())
+                    (context.ParentElement.outerHTML)
+            )
+        |> forceLog
 
     patchAction
 
@@ -75,10 +106,12 @@ let internal notifyMount (node: Node) =
     CustomDispatch<_>.dispatch (node, MOUNT)
 
 let internal notifySutilEvents (node: Node) =
+    // _log.enabled <- true
+
     if _log.enabled then
         _log.trace ("Mount: New node", node |> DomHelpers.toString)
 
-    if isConnected (node.parentNode) then
+    if isConnected (node) then
         CustomDispatch<_>.dispatch (node, CONNECTED)
         notifyMount node
 
@@ -93,36 +126,41 @@ let internal notifySutilEvents (node: Node) =
     else if _log.enabled then
         _log.trace ("Not connected: ", Internal.DomHelpers.toStringSummary node)
 
+let tryFindNewNode ( result : SutilResult ) : Node option =
+    match result.Result with
+    | Replaced
+    | Appended -> Some result.Node
+    | Patched(results) -> Some result.Node
+    | _ -> None
+
 /// Find new nodes that were created during the
 /// patch operation, and welcome them into the DOM
 /// so they can run their onMount handlers etc
-let rec private notifyNewNodes (result: SutilResult) =
-    match result.Result with
-    | Replaced
-    | Appended -> notifySutilEvents result.Node
-    | Patched(results) -> notifySutilEvents result.Node
-    // results |> Array.iter (fun patchResult ->
-    //     match patchResult with
-    //     | ChildResult result | EffectResult result -> notifyNewNodes result
-    //     | _ -> ())
-    | _ -> ()
+let notifyNewNodes (result: SutilResult) =
+    result |> tryFindNewNode |> Option.iter notifySutilEvents
 
-let mount (context: BuildContext) (current: Node) (se: SutilElement) : SutilResult =
+let build (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
     if _log.enabled then
         _log.trace ("Mount: building", "parent=", context.Parent |> DomHelpers.toStringOutline)
 
     let context = context.WithLogEnabled()
 
-    se
+    sutilElement
     |> VirtualDom.fromSutil
     |> context.VirtualElementMapper
-    |> logElement context current // SutilElement -> VirtualDom.Element
-    |> Patch.calculate current // Calculate patch for new element
-    |> logPatch context current // Log the patch (debug)
-    |> Patch.apply context current // Apply patch
-    |> fun (result) ->
-        notifyNewNodes result // Notify new nodes
-        result
+    |> logElement context // SutilElement -> VirtualDom.Element
+    |> Patch.calculate context.Current // Calculate patch for new element
+    |> logPatch context // Log the patch (debug)
+    |> Patch.apply context  // Apply patch
+
+let notify (result : SutilResult) =
+    notifyNewNodes result
+    result
+
+let mount (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
+    sutilElement
+    |> build context
+    |> notify
 
 /// Helper functions in porting core library from Sutil2.
 /// TODO: Refactor these away
@@ -146,7 +184,7 @@ module Sutil2 =
 
         let set data name value = JsMap.setKey data name value
 
-    let build (se: SutilElement) (ctx: BuildContext) = mount ctx null se
+//    let build (se: SutilElement) (ctx: BuildContext) = mount ctx null se
 
     module Logging =
         let error (s: string) = _log.trace ("Error: " + s)
@@ -158,23 +196,3 @@ module Sutil2 =
             member __.Document = document
 
     let documentOf (node: Node) = node.ownerDocument
-
-
-module Retry =
-
-    let mount (context: BuildContext) (current: Node) (se: SutilElement) : SutilResult =
-        if _log.enabled then
-            _log.trace ("Mount: building", "parent=", context.Parent |> DomHelpers.toStringOutline)
-
-        let context = context.WithLogEnabled()
-
-        se
-        |> VirtualDom.fromSutil
-        |> context.VirtualElementMapper
-        |> logElement context current // SutilElement -> VirtualDom.Element
-        |> Patch.calculate current // Calculate patch for new element
-        |> logPatch context current // Log the patch (debug)
-        |> Patch.apply context current // Apply patch
-        |> fun (result) ->
-            notifyNewNodes result // Notify new nodes
-            result

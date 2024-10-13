@@ -18,6 +18,7 @@ type CommandNameArgs(cmdName: string, cmdArgs: string) =
     inherit Command<EmptySettings>()
 
     override _.Execute(context, settings) =
+        System.Console.WriteLine(System.Environment.CurrentDirectory)
         Command.Run(cmdName, cmdArgs)
         0
 
@@ -68,6 +69,13 @@ type DeployCommand() =
         CommandNameArgs(
             "bash",
             "deployToLinode.sh ./dist sutil3 '' deploy@213.52.129.104 /home/deploy/apps"
+        )
+
+type FormatCommand() =
+    inherit
+        CommandNameArgs(
+            "dotnet",
+            "fantomas src/Sutil/*.fs ./src/Sutil.Html/*.fs ./src/App"
         )
 
 type SutilXmlCommand() =
@@ -213,6 +221,11 @@ let main args =
         config
             .AddCommand<FsDocsCommand.FsDocsCommand>("fsdocs")
             .WithDescription("Generate API docs using fsdocs")
+        |> ignore
+
+        config
+            .AddCommand<FormatCommand>("format")
+            .WithDescription("Run Fantomas on *.fs files")
         |> ignore
 
         config.AddCommand<PackCommand>("pack").WithDescription("Create nuget package")

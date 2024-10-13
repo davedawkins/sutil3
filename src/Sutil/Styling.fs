@@ -311,20 +311,6 @@ let private SUTIL_SCOPE = "sutil-scope"
 
 open VirtualDom
 
-let rec private addScope (scopeName: string) (virtualElement: VirtualElement) : VirtualElement =
-
-    let isScoped =
-        virtualElement.ClassList |> Array.exists (fun cls -> cls.StartsWith SUTIL_SCOPE)
-
-    match virtualElement.Type with
-
-    | VirtualElementType.TagNode _ when not isScoped ->
-        { virtualElement.AddClass(scopeName) with
-            Children = virtualElement.Children |> Array.map (addScope scopeName)
-        }
-
-    | _ -> virtualElement
-
 open Browser.Types
 
 let private addScopeForNode (scopeName: string) (node: Node) : unit =
@@ -339,13 +325,16 @@ let private addScopeForNode (scopeName: string) (node: Node) : unit =
                 |> Seq.exists (fun name -> (name.StartsWith SUTIL_SCOPE))
 
             if not isScoped then
-                // Log.Console.log("Adding scope '" + scopeName + "' to " + (DomHelpers.toStringSummary(node)) )
+                // Log.Console.log("run: Adding scope '" + scopeName + "' to " + (DomHelpers.toStringSummary(node)) )
                 el.classList
                 |> ClassHelpers.toArray
                 |> (Array.append (Array.singleton scopeName))
                 |> ClassHelpers.setClassList el
 
                 el |> DomHelpers.children |> Seq.iter (run scopeName)
+            // else
+            //     Log.Console.log("run: ALREADY scoped: " + (DomHelpers.toStringSummary(node)) )
+
         )
 
     run scopeName node
@@ -353,24 +342,25 @@ let private addScopeForNode (scopeName: string) (node: Node) : unit =
 open Core
 
 let withStyle (rules: SutilStyleRule seq) (sutilElement: SutilElement) =
-    let addStyle (context: BuildContext) =
-
-        let scopeName = sprintf "%s-%d" SUTIL_SCOPE (context.NextId())
+    let buildScope() =
+        let scopeName = sprintf "%s-%d" SUTIL_SCOPE (Globals.NextId())
+        // Log.Console.log("Building scope " + scopeName)
 
         rules
         |> SutilStyleSheet.Of
         |> Renderer.styleSheetWithScopeAsText scopeName
         |> StyleDomHelpers.addGlobalStyleSheet
         |> ignore
-        //|> Dispose.addUnsubscribe context.Parent
 
-        let context2 =
-            context
-                .WithAppendNode(DomEdit.append)
-                .WithVirtualElementMapperPre(addScope scopeName)
-                .WithOnImportedNode(addScopeForNode scopeName)
-        //.WithLogEnabled()
+        scopeName
 
-        sutilElement |> Sutil.Core.mount context2 null
+    SutilElement.DefineMapping(
+        WITH_STYLE,
 
-    SutilElement.Define(WITH_STYLE, addStyle)
+        (fun context ->
+                context
+                    .WithOnImportedNode(addScopeForNode (buildScope()))
+        ),
+
+        sutilElement 
+    )

@@ -440,8 +440,11 @@ let pageView title source () =
                     content,
                     fun t ->
                         Html.parse $"{parse source t}"
-                        |> CoreElements.postProcessElementsWithName "addReplButtons" addReplButtons
-                //|> CoreElements.postProcessElementsWithName "addReplButtons" (fun node -> DomHelpers.timeout (fun () -> addReplButtons node) 3000 |> ignore)
+                        |> CoreElements.postProcessElementsWithName 
+                            "addReplButtons"
+                            // Need to allow highlighter decorate the new HTML first
+                            // FIXME: Call the highlighter from this handler (it's in index.html right now)
+                            (fun el -> Internal.DomHelpers.rafu (fun () -> addReplButtons el))
                 )
             ]
             |> withStyle Markdown.style

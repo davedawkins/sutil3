@@ -61,6 +61,7 @@ let rec private calculatePatch (existing: Node) (ve: VirtualElement) : NodeActio
 
         if existing.textContent <> ve.InnerText then
             Patch(
+                ve,
                 [|
                     SetInnerText ve.InnerText
                 |]
@@ -135,7 +136,7 @@ let rec private calculatePatch (existing: Node) (ve: VirtualElement) : NodeActio
         |]
         |> (fun patches ->
             if patches.Length > 0 then
-                Patch patches
+                Patch (ve,patches)
             else
                 AsIs
         )
@@ -163,6 +164,7 @@ let rec private calculatePatch (existing: Node) (ve: VirtualElement) : NodeActio
         // and apply the virtual element.
         if isNull existing then
             Patch(
+                ve,
                 [|
                     ApplyEffect(ve.AsEffect())
                 |]
@@ -244,10 +246,12 @@ let rec private applyPatchAction (context: BuildContext) (a: PatchAction) : Patc
 
         let childResult =
             applyNodeAction
-                (context.WithAppendNode(fun parent node ->
-                    DomEdit.insertAfter parent node (nodeChild (ix - 1))
-                ))
-                (nodeChild ix)
+                (context
+                    .WithAppendNode(fun parent node ->
+                        DomEdit.insertAfter parent node (nodeChild (ix - 1))
+                    )
+                    .WithCurrent(nodeChild ix)
+                )
                 action
 
         ChildResult childResult
@@ -263,10 +267,11 @@ let rec private applyPatchAction (context: BuildContext) (a: PatchAction) : Patc
 
 and private applyNodeAction
     (context: BuildContext)
-    (current: Node)
     (action: NodeAction)
     : SutilResult
     =
+
+    let current = context.Current
 
     match action with
     | AsIs -> (Unchanged, current) |> SutilResult.Of
@@ -285,6 +290,7 @@ and private applyNodeAction
             effect context
         //            (Replaced, de) |> SutilResult.Of
         else
+            let context = ve.MapContext context
             let de = VirtualDom.toDom context ve
 
             if _log.enabled then
@@ -296,18 +302,21 @@ and private applyNodeAction
                 )
 
             DomEdit.replace context.ParentElement current de
+//            context.OnImportedNode de
             (Replaced, de) |> SutilResult.Of
 
     | Insert ve ->
+        let context = ve.MapContext context
         let de = VirtualDom.toDom context ve
 
         if not (de.isSameNode (context.ParentElement)) then
             _log.trace ("Append: ", (de |> Internal.DomHelpers.toStringSummary))
             context.AppendNode context.ParentElement de
+//            context.OnImportedNode de
 
         (Appended, de) |> SutilResult.Of
 
-    | Patch patches ->
+    | Patch (ve,patches) ->
         if _log.enabled then
             _log.trace ("Patch: ", (current |> Internal.DomHelpers.toStringSummary))
 
@@ -321,11 +330,12 @@ and private applyNodeAction
             patches
             |> Array.map (
                 applyPatchAction (
-                    context.WithParent(current).WithAppendNode(DomEdit.append) //|> ve.MapContext
+                    context.WithParent(current).WithAppendNode(DomEdit.append) |> ve.MapContext
                 )
             )
 
+        context.NotifyNodeImported current
         (Patched result, current) |> SutilResult.Of
 
-let apply (context: BuildContext) (current: Node) (action: NodeAction) : SutilResult =
-    applyNodeAction context current action
+let apply (context: BuildContext) (action: NodeAction) : SutilResult =
+    applyNodeAction context action
