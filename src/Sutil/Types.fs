@@ -51,7 +51,7 @@ type VirtualElementType =
     | NullNode
     | TextNode of string
     | TagNode of string
-    | SideEffectNode of SutilEffect
+    //| SideEffectNode of SutilEffect
 
 and VirtualElement =
     {
@@ -196,7 +196,7 @@ and BuildContext =
 and VirtualElementMapper = VirtualElement -> VirtualElement
 
 /// Implementation of a SutilElement.SideEffect
-and SutilEffect = string * (BuildContext -> SutilResult)
+//and SutilEffect = string * (BuildContext -> SutilResult)
 
 and SutilBindEffect = string * SutilElement * (BuildContext -> unit)
 
@@ -218,7 +218,7 @@ and SutilElement =
     /// Collection of SutilElements that apply to the parent element
     | Fragment of (SutilElement[])
 
-    /// Custom element that operates on a BuildContext. Bindings are SideEffects, for example
+    // Custom element that operates on a BuildContext. Bindings are SideEffects, for example
     //    | SideEffect of SutilEffect
 
     /// Custom element that will manage a sub-element at this DOM location.

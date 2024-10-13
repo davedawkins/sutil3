@@ -43,7 +43,7 @@ type PatchAction =
     | AddEvent of string * (Browser.Types.Event -> unit) * (Internal.CustomEvents.EventOption[])
     | RemoveEvent of string * (Browser.Types.Event -> unit)
     | SetInnerText of string
-    | ApplyEffect of SutilEffect
+    // | ApplyEffect of SutilEffect
     | ChildAction of (int * NodeAction)
     // | InsertChild of VirtualElement
     // | RemoveChild of VirtualElement
@@ -56,7 +56,7 @@ type PatchAction =
         // | InsertChild(ve) -> "InsertChild " + ve.Tag + "'"
         // | RemoveChild(ve) -> "RemoveChild " + ve.Tag + "'"
         | SetInnerText(s) -> "SetInnerText '" + s + "'"
-        | ApplyEffect(name, _) -> "ApplyEffect '" + name + "'"
+        // | ApplyEffect(name, _) -> "ApplyEffect '" + name + "'"
         | ChildAction(i, action) -> "ChildAction #" + (string i) + "[" + action.ToString() + "]"
 
 /// We do exactly one of the following when we calculate what to do with a given VirtualElement and

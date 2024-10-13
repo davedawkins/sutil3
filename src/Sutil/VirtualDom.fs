@@ -33,10 +33,10 @@ type VirtualElement with
             Type = TagNode tag
         }
 
-    static member SideEffectNode(effect: SutilEffect) =
-        { VirtualElement.Empty with
-            Type = SideEffectNode(effect)
-        }
+    // static member SideEffectNode(effect: SutilEffect) =
+    //     { VirtualElement.Empty with
+    //         Type = SideEffectNode(effect)
+    //     }
 
     member __.GetKey() =
         match __.Key with
@@ -53,20 +53,20 @@ type VirtualElement with
         | TagNode _ -> true
         | _ -> false
 
-    member __.IsEffectNode =
-        match __.Type with
-        | SideEffectNode _ -> true
-        | _ -> false
+    // member __.IsEffectNode =
+    //     match __.Type with
+    //     | SideEffectNode _ -> true
+    //     | _ -> false
 
     member __.IsDomNode = __.IsTextNode || __.IsElementNode
 
-    member __.AsEffect() =
-        match __.Type with
-        | SideEffectNode(namedEffect) -> namedEffect
-        | _ -> failwith "Not an effect"
+    // member __.AsEffect() =
+    //     match __.Type with
+    //     | SideEffectNode(namedEffect) -> namedEffect
+    //     | _ -> failwith "Not an effect"
 
     member __.DomChildren = __.Children |> Array.filter _.IsDomNode
-    member __.EffectChildren = __.Children |> Array.filter _.IsEffectNode
+    // member __.EffectChildren = __.Children |> Array.filter _.IsEffectNode
 
     member __.ChildrenWithDomIndex =
         let mutable i = -1
@@ -103,8 +103,8 @@ type VirtualElement with
                 |> Array.append __.Events
         }
 
-    member __.AddEffect(effect: SutilEffect) =
-        __.AddChild(VirtualElement.SideEffectNode(effect))
+    // member __.AddEffect(effect: SutilEffect) =
+    //     __.AddChild(VirtualElement.SideEffectNode(effect))
 
     member __.RemoveAttr(name: string) =
         { __ with
@@ -133,7 +133,7 @@ type VirtualElement with
         | NullNode -> "#null#"
         | TextNode _ -> "#text#"
         | TagNode tag -> tag
-        | SideEffectNode(name, _) -> sprintf "#%s#" name
+        //| SideEffectNode(name, _) -> sprintf "#%s#" name
 
     member __.InnerText =
         let rec inner (e: VirtualElement) =
@@ -160,11 +160,11 @@ type VirtualElement with
         | NullNode -> "<null/>"
         | TextNode s -> s
         | TagNode tag -> "<" + tag + attrs + ">" + children + "</" + tag + ">"
-        | SideEffectNode(tag, _) ->
-            if children = "" then
-                sprintf "<%s%s/>" tag attrs
-            else
-                sprintf "<%s%s>%s</%s>" tag attrs children tag
+        // | SideEffectNode(tag, _) ->
+        //     if children = "" then
+        //         sprintf "<%s%s/>" tag attrs
+        //     else
+        //         sprintf "<%s%s>%s</%s>" tag attrs children tag
 
     member __.AsString() =
         __.AsString(__.Children |> Array.map _.AsString() |> String.concat "")
@@ -282,7 +282,7 @@ and fromSutil (se: SutilElement) : VirtualElement =
         //
             root |> addClass "fragment" |> addAttr "style" "display:contents;"
 
-    if not (el.IsElementNode) && not (el.IsTextNode) && not (el.IsEffectNode) then
+    if not (el.IsElementNode) && not (el.IsTextNode) (* && not (el.IsEffectNode) *) then
         failwith "Not an element or a text node"
 
     el
@@ -374,12 +374,12 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
         context.NotifyNodeImported el
         el
 
-    | SideEffectNode(name, effect) ->
-        if _log.enabled then
-            _log.trace (
-                "toDom: Effect",
-                name,
-                context.ParentNode |> Internal.DomHelpers.toStringSummary
-            )
+    // | SideEffectNode(name, effect) ->
+    //     if _log.enabled then
+    //         _log.trace (
+    //             "toDom: Effect",
+    //             name,
+    //             context.ParentNode |> Internal.DomHelpers.toStringSummary
+    //         )
 
-        (effect context).Node //|> Option.defaultValue context.Parent
+    //     (effect context).Node //|> Option.defaultValue context.Parent

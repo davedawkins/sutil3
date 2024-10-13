@@ -49,7 +49,13 @@ module private Helpers =
         else
             None
 
-    let getImportedBy (el: HTMLElement) : string option = el |> tryGetData SUTIL_IMPORTED
+    let getImportedBy (el: HTMLElement) : string option = 
+        el |> tryGetData SUTIL_IMPORTED
+
+    let getImportedByFromVirtualElement( ve : VirtualElement ) : string option =
+        ve.Attributes 
+        |> Array.tryFind (fun (name, _) -> name = SUTIL_IMPORTED)
+        |> Option.map (snd>>string)
 
 open Helpers
 
@@ -77,10 +83,9 @@ let rec private calculatePatch (existing: Node) (ve: VirtualElement) : NodeActio
         if
             (existing.asElement
              |> Option.bind getImportedBy
-             |> Option.map (fun importedBy ->
-                 match ve.Type with
-                 | SideEffectNode(name, _) -> name = importedBy
-                 | _ -> false
+             |> Option.bind (fun importedBy ->
+                    getImportedByFromVirtualElement ve 
+                    |> Option.map (fun name -> name = importedBy)
              )
              |> Option.defaultValue false)
         then
@@ -119,11 +124,11 @@ let rec private calculatePatch (existing: Node) (ve: VirtualElement) : NodeActio
                     | false, true -> // No existing DOM node, create VE as Dom
                         ChildAction(domIndex, Insert child)
 
-                    | true, false -> // Can't happen, since we didn't append existing DOM nodes to this array
+                    | _, _ -> // Can't happen, since we didn't append existing DOM nodes to this array
                         failwith "Internal error"
 
-                    | false, false -> // Not a DOM child
-                        PatchAction.ApplyEffect(child.AsEffect())
+                    // | false, false -> // Not a DOM child
+                    //     PatchAction.ApplyEffect(child.AsEffect())
                 )
 
             yield! childPatches
@@ -154,23 +159,23 @@ let rec private calculatePatch (existing: Node) (ve: VirtualElement) : NodeActio
             // Instantiate the virtual element and replace the existing DOM node
             Replace (VirtualElement.Empty, ve)
 
-    elif (ve.IsEffectNode) then
+    // elif (ve.IsEffectNode) then
 
-        // We have a virtual element which is a side-effect, so we need to apply the effect.
-        // If there is a corresponding DOM node then we need to remove it, since it doesn't match
-        // this virtual element (the imported-by check further up for a case where an effect can
-        // match a DOM node).
-        // We overload the Replace action in this instance - it will remove the existing node
-        // and apply the virtual element.
-        if isNull existing then
-            Patch(
-                ve,
-                [|
-                    ApplyEffect(ve.AsEffect())
-                |]
-            )
-        else
-            Replace (VirtualElement.Empty,ve)
+    //     // We have a virtual element which is a side-effect, so we need to apply the effect.
+    //     // If there is a corresponding DOM node then we need to remove it, since it doesn't match
+    //     // this virtual element (the imported-by check further up for a case where an effect can
+    //     // match a DOM node).
+    //     // We overload the Replace action in this instance - it will remove the existing node
+    //     // and apply the virtual element.
+    //     if isNull existing then
+    //         Patch(
+    //             ve,
+    //             [|
+    //                 ApplyEffect(ve.AsEffect())
+    //             |]
+    //         )
+    //     else
+    //         Replace (VirtualElement.Empty,ve)
 
     else
         failwith "Unexpected virtual node"
@@ -256,14 +261,14 @@ let rec private applyPatchAction (context: BuildContext) (a: PatchAction) : Patc
 
         ChildResult childResult
 
-    | PatchAction.ApplyEffect(name, effect) ->
-        if isNull current then
-            failwith "Cannot apply effect to null node"
+    // | PatchAction.ApplyEffect(name, effect) ->
+    //     if isNull current then
+    //         failwith "Cannot apply effect to null node"
 
-        if _log.enabled then
-            _log.trace ("Apply Effect: ", (current |> Internal.DomHelpers.toStringSummary), name)
+    //     if _log.enabled then
+    //         _log.trace ("Apply Effect: ", (current |> Internal.DomHelpers.toStringSummary), name)
 
-        EffectResult(effect context)
+    //     EffectResult(effect context)
 
 and private applyNodeAction
     (context: BuildContext)
@@ -284,12 +289,12 @@ and private applyNodeAction
         (Removed, current) |> SutilResult.Of
 
     | Replace(_,ve) ->
-        if ve.IsEffectNode then
-            DomEdit.remove current
-            let (_, effect) = ve.AsEffect()
-            effect context
-        //            (Replaced, de) |> SutilResult.Of
-        else
+        // if ve.IsEffectNode then
+        //     DomEdit.remove current
+        //     let (_, effect) = ve.AsEffect()
+        //     effect context
+        // //            (Replaced, de) |> SutilResult.Of
+        // else
             let context = ve.MapContext context
             let de = VirtualDom.toDom context ve
 
