@@ -182,22 +182,24 @@ describe "DOM" <| fun () ->
         mountTestApp app
 
         Expect.queryText "div >div >div:nth-child(1)" "Binding 1"
-        Expect.queryText "div >div.fragment >div:nth-child(2)" "10"
+        Expect.queryText "div >div >div:nth-child(2)" "10"
 
         Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(1)" "Binding 2"
         Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(2)" "20"
 
         store1 |> Store.modify ((+)1)
 
-        Expect.queryText "div >div.fragment >div:nth-child(1)" "Binding 1"
-        Expect.queryText "div >div.fragment >div:nth-child(2)" "11"
+        Expect.queryText "div >div >div:nth-child(1)" "Binding 1"
+        Expect.queryText "div >div >div:nth-child(2)" "11"
+
         Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(1)" "Binding 2"
         Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(2)" "20"
 
         store2 |> Store.modify ((+)1)
 
-        Expect.queryText "div >div.fragment >div:nth-child(1)" "Binding 1"
-        Expect.queryText "div >div.fragment >div:nth-child(2)" "11"
+        Expect.queryText "div >div >div:nth-child(1)" "Binding 1"
+        Expect.queryText "div >div >div:nth-child(2)" "11"
+
         Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(1)" "Binding 2"
         Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(2)" "21"
     }

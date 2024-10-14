@@ -204,7 +204,7 @@ module VDomV2 =
                     failwith s)
 
 let makeOptions() =
-    VDomV1.makeOptions()
+    VDomV2.makeOptions()
 
 let notify (result : SutilResult) =
     notifyNewNodes result
