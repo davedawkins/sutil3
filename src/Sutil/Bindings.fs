@@ -106,6 +106,8 @@ let elementFromException (x: exn) =
 let private bindLog = Log.create ("Bind")
 bindLog.enabled <- true
 
+open VirtualDom
+
 let bindElementWithName<'T>
     (name: string)
     (source: IObservable<'T>)
@@ -114,6 +116,13 @@ let bindElementWithName<'T>
     =
     let _log = Log.create("Bind:" + name)
     _log.enabled <- true
+
+    let mapOptions (options : BuildOptions) : BuildOptions =
+        options
+            .WithPostBuildVirtualElement(
+                fun (ve : VirtualElement) -> 
+                    ve.WithKey("host-for-" + name)
+            )
 
     SutilElement.DefineBinding(
         name,
@@ -136,66 +145,23 @@ let bindElementWithName<'T>
             |> Store.subscribe (fun value ->
                 try
                     if _log.enabled then
-                        _log.trace (
-                            sprintf "rebuilding with value %A" value
-                        )
-
-                    // let tmpRoot = 
-                    //     value 
-                    //     |> view 
-                    //     |> (fun viewSutilElement ->
-                    //         Basic.el ("tmp-root-" + name) [ viewSutilElement ]
-                    //     )
-                    //     |> build (context) 
-                    //     |> _.Node
-
-                    // _log.trace("ctxprnt: ", context.Parent |> DomHelpers.toString )
-                    // _log.trace("tmpRoot: ", tmpRoot |> DomHelpers.toString )
-
-                    // let newNode = tmpRoot.firstChild
-                    
-                    // if (newNode.attributes 
-                    //     |> DomHelpers.namedNodeMapToArray 
-                    //     |> Array.exists( fun (name,value) -> name = "data-binding")) then
-                    //     JsMap.setKey newNode "__sutil_ctx" (context.WithCurrent(newNode))
-
-                    // tmpRoot.removeChild( newNode ) |> ignore
-                    // DomEdit.replace context.Parent currentNode newNode
-                    // context.Parent.removeChild( tmpRoot ) |> ignore
-
-                    // newNode |> notifySutilEvents
-
-                    // currentNode <- newNode
-
-                    //currentNode <- context.ParentElement.firstChild
+                        _log.trace ( sprintf "rebuilding with value %A" (Fable.Core.JS.JSON.stringify value) )
 
                     currentNode <- 
                         value   
                         |> view
-                        |> mount (context.WithCurrent(currentNode))
+                        |> mountWith mapOptions (context.WithCurrent(currentNode))
                         |> _.Node
 
                     if _log.enabled then
-                        _log.trace (
-                            "next parent=",
-                            currentNode.parentNode |> DomHelpers.toString
-                        )
-
-                        _log.trace (
-                            "next current=",
-                            currentNode |> DomHelpers.toString
-                        )
-
-                        _log.trace (
-                            "next ctxprnt=",
-                            _context.ParentNode |> DomHelpers.toString
-                        )
+                        _log.trace ( "next parent=", currentNode.parentNode |> DomHelpers.toString )
+                        _log.trace ( "next current=", currentNode |> DomHelpers.toString )
+                        _log.trace ( "next ctxprnt=", _context.ParentNode |> DomHelpers.toString )
 
                 with x ->
                     JS.console.error (x)
                     currentNode <- (elementFromException x) |> mount (context.WithCurrent(null)) |> _.Node
             )
-            //|> Dispose.addDisposable (context.ParentElement) name
     )
 
 let bindElement source view compare =

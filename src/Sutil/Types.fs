@@ -56,7 +56,7 @@ type VirtualElementType =
 and VirtualElement =
     {
         /// Only set when this element has been rendered into the DOM
-        Key: string option
+        Key: string
         
         Type: VirtualElementType
         Children: VirtualElement[]
@@ -88,8 +88,8 @@ and BuildContext =
         /// Notify new Node created
         OnImportedNode: (Node -> unit) option
 
-        /// Observers / mutators for VirtualElement created from SutilElement
-        VirtualElementMapper: VirtualElementMapper
+        // /// Observers / mutators for VirtualElement created from SutilElement
+        // VirtualElementMapper: VirtualElementMapper
 
         LogElementEnabled: bool
         LogPatchEnabled: bool
@@ -107,7 +107,7 @@ and BuildContext =
             NextId = Globals.NextId
             AppendNode = BuildContext.DefaultAppendNode
             Current = null
-            VirtualElementMapper = (fun x -> x)
+            // VirtualElementMapper = (fun x -> x)
             OnImportedNode = None
             ElementCtor = Sutil.Internal.DomEdit.element
             LogElementEnabled = false
@@ -160,22 +160,19 @@ and BuildContext =
             Id = Globals.NextId()
         }
 
-    member __.WithVirtualElementMapperPost(p: VirtualElementMapper) =
-        { __ with
-            VirtualElementMapper = __.VirtualElementMapper >> p
-            Id = Globals.NextId()
-        }
-        |> reportId __
+    // member __.WithVirtualElementMapperPost(p: VirtualElementMapper) =
+    //     { __ with
+    //         VirtualElementMapper = __.VirtualElementMapper >> p
+    //         Id = Globals.NextId()
+    //     }
+    //     |> reportId __
 
-    member __.WithVirtualElementMapperPre(p: VirtualElementMapper) =
-        { __ with
-            VirtualElementMapper = __.VirtualElementMapper << p
-            Id = Globals.NextId()
-        }
-        |> reportId __
-
-    // member __.WithElementCtor( create : string -> HTMLElement ) =
-    //             { __ with ElementCtor = create }
+    // member __.WithVirtualElementMapperPre(p: VirtualElementMapper) =
+    //     { __ with
+    //         VirtualElementMapper = __.VirtualElementMapper << p
+    //         Id = Globals.NextId()
+    //     }
+    //     |> reportId __
 
     member __.WithOnImportedNode(f: Node -> unit) =
         { __ with

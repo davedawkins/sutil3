@@ -13,7 +13,7 @@ open CalculatePatch
 
 let private _log = Log.create ("Core")
 
-_log.enabled <- false
+_log.enabled <- true
 
 [<AutoOpen>]
 module CoreExtensions =
@@ -139,28 +139,84 @@ let tryFindNewNode ( result : SutilResult ) : Node option =
 let notifyNewNodes (result: SutilResult) =
     result |> tryFindNewNode |> Option.iter notifySutilEvents
 
-let build (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
-    if _log.enabled then
-        _log.trace ("Mount: building", "parent=", context.Parent |> DomHelpers.toStringOutline)
+type BuildOptions =
+    {
+        BuildVirtualElement : BuildContext -> SutilElement -> VirtualElement
+        CalculatePatches : BuildContext -> VirtualElement -> NodeAction
+        ApplyPatches : BuildContext -> NodeAction -> SutilResult
+    }
+    with
+        static member Create() =
+            {
+                BuildVirtualElement = fun _ se -> VirtualDom.fromSutil se
+                CalculatePatches = fun ctx ve -> Patch.calculate (ctx.Current) ve
+                ApplyPatches = Patch.apply
+            }
+
+        member __.WithBuildVirtualElement ( create : BuildContext -> SutilElement -> VirtualElement ) =
+            {  __ with BuildVirtualElement = create }
+
+        member __.WithCalculatePatches ( calc : BuildContext -> VirtualElement -> NodeAction ) =
+            {  __ with CalculatePatches = calc }
+
+        member __.WithApplyPatchess ( apply : BuildContext -> NodeAction -> SutilResult ) =
+            {  __ with ApplyPatches = apply }
+
+        member __.WithPostBuildVirtualElement ( post : VirtualElement -> VirtualElement ) =
+            __.WithBuildVirtualElement( fun ctx se -> __.BuildVirtualElement ctx se |> post )
+
+        member __.WithPostCalculatePatches ( post : NodeAction -> NodeAction ) =
+            __.WithCalculatePatches( fun ctx action -> __.CalculatePatches ctx action |> post )
+
+let buildWith (options : BuildOptions) (context : BuildContext) (sutilElement : SutilElement) : SutilResult =
+    sutilElement
+    |> options.BuildVirtualElement context
+    |> options.CalculatePatches context
+    |> options.ApplyPatches context
+
+let buildWithLogging (options : BuildOptions) (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
+    let options = 
+        if _log.enabled then
+            _log.trace ("Mount: building", "parent=", context.Parent |> DomHelpers.toStringOutline)
+            options
+                .WithPostBuildVirtualElement( logElement context )
+                .WithPostCalculatePatches( logPatch context )
+        else
+            options
 
     let context = context.WithLogEnabled()
 
-    sutilElement
-    |> VirtualDom.fromSutil
-    |> context.VirtualElementMapper
-    |> logElement context // SutilElement -> VirtualDom.Element
-    |> Patch.calculate context.Current // Calculate patch for new element
-    |> logPatch context // Log the patch (debug)
-    |> Patch.apply context  // Apply patch
+    buildWith options context sutilElement
+
+module VDomV1 =
+    let makeOptions() =
+        BuildOptions.Create()
+
+module VDomV2 =
+    let makeOptions() =
+        BuildOptions
+            .Create()
+            .WithCalculatePatches( fun ctx ve -> CalculatePatch.calculate (ctx.Current) ve)
+            .WithApplyPatchess( fun ctx action -> 
+                match CalculatePatch.apply ctx action with
+                | Ok r -> r
+                | Error s -> 
+                    failwith s)
+
+let makeOptions() =
+    VDomV1.makeOptions()
 
 let notify (result : SutilResult) =
     notifyNewNodes result
     result
 
-let mount (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
+let mountWith (mapOptions : BuildOptions -> BuildOptions) (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
     sutilElement
-    |> build context
+    |> buildWithLogging (makeOptions() |> mapOptions) context
     |> notify
+
+let mount (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
+    mountWith (id) context sutilElement
 
 /// Helper functions in porting core library from Sutil2.
 /// TODO: Refactor these away

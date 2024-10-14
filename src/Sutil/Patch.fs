@@ -32,7 +32,7 @@ module private Helpers =
         let mb = Map b
 
         [|
-            for name in allnames do
+            for name in allnames |> Array.filter ((<>)"data-sutil-key") do
                 match ma.TryFind name, mb.TryFind name |> Option.map string with
                 | Some va, Some vb when va <> vb -> SetAttr(name, vb)
                 | None, Some vb -> SetAttr(name, vb)

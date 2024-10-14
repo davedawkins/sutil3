@@ -359,9 +359,10 @@ module DomHelpers =
                     |> String.concat " "
 
                 sprintf
-                    "<%s%s%s>%s</%s>"
+                    "<%s%s%s%s>%s</%s>"
                     tn
                     (_s (cs) " class='%s'")
+                    (_s (e.getAttribute("data-sutil-key")) " key='%s'")
                     (_s (_id node) " sutil-id='%s'")
                     tc
                     tn

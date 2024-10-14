@@ -8,14 +8,22 @@ type EventHandler = (Browser.Types.Event -> unit)
 [<Literal>]
 let private CLASS = "class"
 
+let [<Literal>] VIRTUAL_ELEMENT_KEY = "__sutil_ve"
+
 let private _log = Log.create ("VirtualDom")
 
 _log.enabled <- false
 
 type VirtualElement with
 
+    static member TryFind( node : Browser.Types.Node ) : VirtualElement option =
+        if isNull node then 
+            None
+        else
+            JsMap.tryGetKey node VIRTUAL_ELEMENT_KEY
+
     static member Empty =
-        {   Key = None
+        {   Key = ""
             Type = NullNode
             Children = Array.empty
             Attributes = Array.empty
@@ -33,15 +41,10 @@ type VirtualElement with
             Type = TagNode tag
         }
 
-    // static member SideEffectNode(effect: SutilEffect) =
-    //     { VirtualElement.Empty with
-    //         Type = SideEffectNode(effect)
-    //     }
+    member __.GetKey() = __.Key
 
-    member __.GetKey() =
-        match __.Key with
-        | Some k -> k
-        | None -> failwith "Key is not set"
+
+    member __.WithKey k = { __ with Key = k }
 
     member __.IsTextNode =
         match __.Type with
@@ -53,20 +56,9 @@ type VirtualElement with
         | TagNode _ -> true
         | _ -> false
 
-    // member __.IsEffectNode =
-    //     match __.Type with
-    //     | SideEffectNode _ -> true
-    //     | _ -> false
-
     member __.IsDomNode = __.IsTextNode || __.IsElementNode
 
-    // member __.AsEffect() =
-    //     match __.Type with
-    //     | SideEffectNode(namedEffect) -> namedEffect
-    //     | _ -> failwith "Not an effect"
-
     member __.DomChildren = __.Children |> Array.filter _.IsDomNode
-    // member __.EffectChildren = __.Children |> Array.filter _.IsEffectNode
 
     member __.ChildrenWithDomIndex =
         let mutable i = -1
@@ -87,8 +79,12 @@ type VirtualElement with
         { __ with Mapper = __.Mapper |> Option.map (fun current -> current<<map) |> Option.orElse (Some map) }
 
     member __.AddChild(ch: VirtualElement) =
+        let getKey() = if ch.Key = "" then sprintf "k%d" __.Children.Length else ch.Key
+
         { __ with
-            Children = Array.singleton ch |> Array.append __.Children
+            Children = 
+                Array.singleton { ch with Key = getKey() } 
+                |> Array.append __.Children
         }
 
     member __.AddAttr(name, value: obj) =
@@ -102,9 +98,6 @@ type VirtualElement with
                 Array.singleton (name, handler, options |> Option.defaultValue Array.empty)
                 |> Array.append __.Events
         }
-
-    // member __.AddEffect(effect: SutilEffect) =
-    //     __.AddChild(VirtualElement.SideEffectNode(effect))
 
     member __.RemoveAttr(name: string) =
         { __ with
@@ -133,7 +126,6 @@ type VirtualElement with
         | NullNode -> "#null#"
         | TextNode _ -> "#text#"
         | TagNode tag -> tag
-        //| SideEffectNode(name, _) -> sprintf "#%s#" name
 
     member __.InnerText =
         let rec inner (e: VirtualElement) =
@@ -156,15 +148,13 @@ type VirtualElement with
         let attrs =
             if __.Mapper.IsNone then (attrs) else (" map" + attrs)
 
+        let attrs =
+            attrs + " key='" + __.Key + "'"
+
         match __.Type with
         | NullNode -> "<null/>"
         | TextNode s -> s
         | TagNode tag -> "<" + tag + attrs + ">" + children + "</" + tag + ">"
-        // | SideEffectNode(tag, _) ->
-        //     if children = "" then
-        //         sprintf "<%s%s/>" tag attrs
-        //     else
-        //         sprintf "<%s%s>%s</%s>" tag attrs children tag
 
     member __.AsString() =
         __.AsString(__.Children |> Array.map _.AsString() |> String.concat "")
@@ -215,8 +205,8 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
     | BindElement(name, init, handler) ->
         fromSutil init
 
+        |> _.WithKey("host-for-" + name)
         |> _.AddAttr("data-binding", name)
-
         |> _.AddEvent(
             CustomEvents.MOUNT,
             fun e ->
@@ -268,6 +258,7 @@ and fromSutil (se: SutilElement) : VirtualElement =
         // No elements found, and no attributes (and events etc) given
         // Eg fragment []
         elif root.Children.Length = 0 && noAttributes then
+            Log.Console.log("Fragment created for " + (se.ToString()))
             invisibleDiv ()
 
         elif root.Mapper.IsSome then
@@ -291,7 +282,8 @@ and fromSutil (se: SutilElement) : VirtualElement =
 let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node =
 
     match ve.Type with
-    | NullNode -> failwith "Cannot create DOM node from null node"
+    | NullNode -> 
+        failwith "Cannot create DOM node from null node"
 
     | TextNode s ->
         if _log.enabled then
@@ -301,7 +293,9 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
                 context.ParentNode |> Internal.DomHelpers.toStringSummary
             )
 
-        DomEdit.text s
+        let text = DomEdit.text s
+        JsMap.setKey text VIRTUAL_ELEMENT_KEY ve
+        text
 
     | TagNode tag ->
         if _log.enabled then
@@ -320,6 +314,10 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
 
         Id.setId el (_id |> string)
 
+        JsMap.setKey el VIRTUAL_ELEMENT_KEY ve
+
+        el.setAttribute("data-sutil-key", ve.Key)
+
         if (ve.Attributes |> Array.exists (fun (name, value) -> name = "data-binding")) then
             let mapped = context |> ve.MapContext
             JsMap.setKey el "__sutil_ctx" mapped
@@ -327,7 +325,6 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
             if _log.enabled then
                 _log.trace ("toDom: -- set __sutil_ctx ", el |> DomHelpers.toStringSummary)
                 _log.trace ("toDom: -- set __sutil_ctx: ctx.Parent ", mapped.Parent |> DomHelpers.toStringSummary)
-
 
         ve.Attributes
         |> Array.iter (fun (name, value) ->
