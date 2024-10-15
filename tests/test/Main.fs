@@ -12,7 +12,7 @@ ObservableTest.init()
 StoreTest.init()
 
 BrowserFramework.runAll( 
-    "*", "*"
+    "*", "*" //"withStyle colors text after binding"
     )
 
 #endif

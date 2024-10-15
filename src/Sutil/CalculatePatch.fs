@@ -373,6 +373,7 @@ and applyNodeAction (context : BuildContext) (nodeAction : NodeAction) : Result<
                     (results |> List.rev |> Array.ofList |> Array.choose (function Ok r -> Some r | _ -> None))
 
                 JsMap.setKey current VIRTUAL_ELEMENT_KEY latest
+                context.NotifyNodeImported current
 
                 ((Patched patchResults), current)
                 |> SutilResult.Of

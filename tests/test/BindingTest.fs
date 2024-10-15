@@ -1,6 +1,5 @@
 module BindingTest
 
-
 open Describe
 
 #if HEADLESS
@@ -26,6 +25,55 @@ let viewItemO (r : System.IObservable<Record>) =
     Bind.el( r, viewItem )
 
 describe "Sutil.Binding" <| fun () ->
+
+    it "Binding has minimal required elements" <| fun () -> promise {
+        let data = Store.make 0
+        let app =
+
+            // We expect this to be nothing more complicated than this in terms of Node structure
+            // <div><div>0</div></div>
+            //
+            Html.div [
+                Bind.el( data, fun n -> 
+                    Html.div [
+                        text (string n)
+                    ] )
+            ]
+
+        mountTestApp app
+
+        Expect.querySingleTextChild"div>div" "0"
+        data |> Store.modify ((+)1)
+        Expect.querySingleTextChild"div>div" "1"
+
+        return ()
+    }
+
+    it "Binding allows change in element tag" <| fun () -> promise {
+        let data = Store.make 0
+        let app =
+
+            // We expect this to be nothing more complicated than this in terms of Node structure
+            //    <div><div>0</div></div>
+            // or when n > 0:
+            //    <div><span>1</span></div>
+            Html.div [
+                Bind.el( data, fun n -> 
+                    match n with
+                    | 0 -> Html.div [ text (string n) ] 
+                    | _ -> Html.span [ text (string n) ] 
+                )
+            ]
+
+        mountTestApp app
+
+        Expect.querySingleTextChild"div>div" "0"
+        data |> Store.modify ((+)1)
+        Expect.querySingleTextChild"div>span" "1"
+
+        return ()
+    }
+
 
 
     // it "Doesn't dispose internal state for observable view function" <| fun () -> promise {

@@ -3,6 +3,7 @@ open Fable.Core
 open System
 open Browser.Dom
 open Browser.Types
+open Browser.CssExtensions
 
 let mutable currentEl : HTMLElement = Unchecked.defaultof<_>
 
@@ -94,6 +95,11 @@ type Expect =
 
     static member notNull (actual:obj) = Expect.assertTrue (not(isNull actual)) "notNull: actual: '{obj}'"
 
+    static member queryStyle (query : string) (label : string) (condition : CSSStyleDeclaration -> bool) =
+        let el = currentEl.querySelector(":scope " + query) :?> HTMLElement
+        Expect.assertTrue (not(isNull el)) ("queryText: Query failed: " + query)
+        Expect.assertTrue (window.getComputedStyle(el) |> condition) label
+
     static member queryTextContains (query:string) (expected:string) =
         let el = currentEl.querySelector(":scope " + query) :?> HTMLElement
         Expect.assertTrue (not(isNull el)) ("queryText: Query failed: " + query)
@@ -104,6 +110,22 @@ type Expect =
         Expect.assertTrue (not(isNull el)) ("isElement '"  + expectedTag + "': not found: " + query)
         Expect.areEqual( el.tagName.ToLower(), expectedTag.ToLower(), ("isElement '"  + expectedTag + "' <> '" + (el.tagName.ToLower()) + "' : " + query))
         
+    static member queryChildIsText (query: string)=
+        let el = currentEl.querySelector(":scope " + query)
+        Expect.assertTrue (not(isNull el)) ("query failed: " + query)
+        Expect.assertTrue (Sutil.Internal.TypeHelpers.isTextNode (el.firstChild)) ("not a text node: " + query)
+        
+    static member querySingleTextChild (query : string) (expected : string)=
+        let el = currentEl.querySelector(":scope " + query)
+
+        Expect.assertTrue (not(isNull el)) ("query failed: " + query)
+
+        let child = el.firstChild :?> Browser.Types.Text
+
+        Expect.assertTrue (Sutil.Internal.TypeHelpers.isTextNode (el.firstChild)) ("not a text node: " + query)
+        Expect.areEqual( child.textContent, expected, "text node content is '" + expected + "'" )
+        Expect.assertTrue( isNull (child.nextSibling)) "text node is only child" 
+
     static member getInnerHtml() = currentEl.innerHTML
     static member getInnerText() = currentEl.innerText
 
