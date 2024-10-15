@@ -6,6 +6,7 @@
     <Compile Include="BrowserFramework.fs" />
     <Compile Include="Describe.fs" />
     <Compile Include="HelloWorldTest.fs" />
+    <Compile Include="StyleTests.fs" />
     <Compile Include="DOMTest.fs" />
     <Compile Include="BindingTest.fs" />
     <Compile Include="ObservableTest.fs" />

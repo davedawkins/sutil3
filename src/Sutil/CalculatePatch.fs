@@ -136,7 +136,23 @@ module private Helpers =
 
 open Helpers
 
-let rec private calculatePatch (existing: VirtualElement) (latest: VirtualElement) : NodeAction =
+let private getVirtualChildren (node : Node) : (VirtualElement * Node)[] =
+    let nodeChildren = node |> DomHelpers.children |> Seq.toArray
+
+    Fable.Core.JS.console.log("Node: ", nodeChildren )
+
+    nodeChildren
+    |> Array.choose (fun (node : Node) -> 
+            let ve : VirtualElement option = JsMap.tryGetKey node VIRTUAL_ELEMENT_KEY
+            ve |> Option.map (fun ve -> ve, node)
+        )
+
+let rec private calculatePatch (node : Node) (existing: VirtualElement) (latest: VirtualElement) : NodeAction =
+
+    // It'a important to ignore the children of existing. Bindings may have changed the children,
+    // so we must build the existing=children array by finding children of node that are have virtual
+    // elements
+
 
     if (existing.IsTextNode && latest.IsTextNode) then
 
@@ -159,11 +175,15 @@ let rec private calculatePatch (existing: VirtualElement) (latest: VirtualElemen
             Replace (existing,latest)
 
         else
+            let existingChildren = getVirtualChildren node
             [| 
                 // Add / remove attributes
                 yield! (diffAttributes (existing.Attributes) (latest.Attributes))
 
-                let existingN = existing.Children.Length
+                // Always add the events, we clear them out first
+                yield! (latest.Events |> Array.map AddEvent)
+
+                let existingN = existingChildren.Length
                 let latestN = latest.Children.Length
 
                 let n = System.Math.Min( existingN, latestN )
@@ -171,7 +191,8 @@ let rec private calculatePatch (existing: VirtualElement) (latest: VirtualElemen
                 // Compare child pairs
                 // TODO: We can calculate these pairs using user keys too
                 for i in 0 .. (n-1) do
-                    yield ChildAction( i, calculatePatch (existing.Children[i]) (latest.Children[i]) )
+                    let virtualChild, domChild = existingChildren[i]
+                    yield ChildAction( i, calculatePatch domChild virtualChild (latest.Children[i]) )
 
                 // Add children
                 if existingN < latestN then
@@ -183,9 +204,10 @@ let rec private calculatePatch (existing: VirtualElement) (latest: VirtualElemen
                 // Remove children
                 if existingN > latestN then
                     yield!
-                        existing.Children 
+                        existingChildren 
                         |> Seq.skip (latestN)
-                        |> Seq.mapi (fun i ve -> ChildAction(latestN + i, Remove ve))
+                        |> Seq.mapi (fun i ve -> ChildAction(latestN + i, Remove (fst ve)))
+                        |> Seq.rev
 
             |] |> (fun actions -> Patch (latest, actions))
 
@@ -205,7 +227,7 @@ let calculate (node: Node) (ve: VirtualElement) : NodeAction =
         Log.Console.log("calculate:")
         Log.Console.log(" ve0: ", ve0.AsString())
         Log.Console.log(" ve : ", ve.AsString())
-        calculatePatch ve0 ve
+        calculatePatch (node : Node) ve0 ve
     | Some ve0 when ve0.Key <> ve.Key ->
         Fable.Core.JS.console.log("Keys don't match")
         Fable.Core.JS.console.log(node.parentElement |> DomHelpers.children |> Seq.map (DomHelpers.toString) |> String.concat "\n")
@@ -220,20 +242,9 @@ let calculate (node: Node) (ve: VirtualElement) : NodeAction =
             failwith "Node was expected to have an associated VirtualElement"        
 
 let rec applyPatchAction (context : BuildContext) (patchAction : PatchAction) : Result<PatchResult,string> =
-    let current = context.Parent
+    let current = context.Current
 
-    let nodeChildren = current |> DomHelpers.children |> Seq.toArray
-
-    Fable.Core.JS.console.log("Node: ", nodeChildren )
-
-    let veChildren =
-        nodeChildren
-        |> Array.map (fun (node : Node) -> 
-                JsMap.getKeyWith node VIRTUAL_ELEMENT_KEY "", node
-//                node.attributes.getNamedItem("data-sutil-key"), node
-            )
-        |> Array.filter (fun (key, node) -> key <> "")
-        //|> Map
+    let veChildren = getVirtualChildren current
 
     let nodeChild ix =
         if ix >= 0 && ix < veChildren.Length then
@@ -294,13 +305,13 @@ let rec applyPatchAction (context : BuildContext) (patchAction : PatchAction) : 
         if _log.enabled then
             _log.trace ("Child: ", ix, nodeChild ix |> Internal.DomHelpers.toStringSummary)
 
-        // Error ""
         let childResult =
             applyNodeAction
                 (context
                     .WithAppendNode(fun parent node ->
                         DomEdit.insertAfter parent node (nodeChild (ix - 1))
                     )
+                    .WithParent(current)
                     .WithCurrent(nodeChild ix)
                 )
                 action
@@ -320,37 +331,32 @@ and applyNodeAction (context : BuildContext) (nodeAction : NodeAction) : Result<
         (Unchanged, (null : Node)) |> ok
 
     | Remove existing ->
-        existing |> tryWithDomNode context.Parent (fun domNode ->
-            DomEdit.remove domNode
-            (Removed, domNode) |> SutilResult.Of
-        ) 
+        DomEdit.remove current
+        (Removed, current) |> SutilResult.Of |> Ok
 
     | Replace (existing, latest) ->
-
-        // Log.Console.log("---- REPLACE ---------------")
-        // Log.Console.log(" current = ", current |> DomHelpers.toString )
-        // Log.Console.log(" parent  = ", context.ParentElement |> DomHelpers.toString )
-        // Log.Console.log(" existing = ", existing.AsString() )
-        // Log.Console.log(" latest   = ", latest.AsString() )
-
+        let context = latest.MapContext context
         let newNode = VirtualDom.toDom context latest
         DomEdit.replace current.parentElement current newNode
         (Replaced, newNode) |> SutilResult.Of |> Ok
 
     | Insert (latest) ->
+        let context = latest.MapContext context
         let newNode = VirtualDom.toDom context latest
         DomEdit.append context.Parent newNode
         (Appended, newNode) |> ok
 
     | Patch (latest, patchActions) ->
 
-        //match tryGetDomNode context.Parent existing with
-        match (isNull current) with
-        | false -> //Some existingNode ->
-            let existingNode = current
-            Dispose.disposeNode existingNode
+        if (isNull current) then
+            Error "Node to be patched cannot be found"
+        else
+            Dispose.disposeNode current // Does NOT delete the node! Unregisters event handlers, disposes associated subscriptions etc
 
-            let context = context.WithParent(existingNode).WithAppendNode(DomEdit.append) |> latest.MapContext
+            let context = 
+                context
+                |> _.WithAppendNode(DomEdit.append) 
+                |> latest.MapContext
 
             let results =
                 patchActions 
@@ -368,12 +374,10 @@ and applyNodeAction (context : BuildContext) (nodeAction : NodeAction) : Result<
 
                 JsMap.setKey current VIRTUAL_ELEMENT_KEY latest
 
-                ((Patched patchResults), existingNode)
+                ((Patched patchResults), current)
                 |> SutilResult.Of
                 |> Ok
 
-        | true ->
-            Error "Node to be patched cannot be found"
  
 
 let apply (context: BuildContext) (action: NodeAction) : Result<SutilResult,string> =

@@ -13,9 +13,6 @@ open Sutil.Bindings
 [<Erase>]
 type Bind =
 
-    // static member visibility( isVisible : IObservable<bool>) = Transition.transition [] isVisible
-    // static member visibility( isVisible : IObservable<bool>,trans : TransitionAttribute list) = Transition.transition trans isVisible
-
     /// <summary>
     /// For <c>input[type='radio']</c>
     /// Only the checkbox with store's current value will be checked at any one time.
@@ -127,13 +124,6 @@ type Bind =
         =
         bindElementK "bindElementK" value element key
 
-    // static member el<'T,'K when 'K : equality>  (value : IObservable<'T>, key:'T->'K, element: IObservable<'T> -> SutilElement) : SutilElement =
-    //     bindElementKO value element key
-
-    /// Deprecated naming, use Bind.el
-    static member fragment<'T> (value: IObservable<'T>) (element: 'T -> SutilElement) =
-        bindElement value element
-
     /// Binding from two values to a DOM fragment. See fragment<'T>
     static member el2<'A, 'B>
         (valueA: IObservable<'A>)
@@ -178,42 +168,11 @@ type Bind =
         =
         eachk (listWrapO items) view key
 
-    // /// Bind keyed lists to a simple template, with transitions
-    // static member each (items:IObservable<list<'T>>, view : IObservable<'T> -> SutilElement, key:'T -> 'K, trans : Core.Sutil2.TransitionAttribute list) : SutilElement =
-    //     //eachiko (listWrapO items) (snd>>view) (snd>>key) trans
-    //     eachiko (listWrapO items) (Live view) (snd>>key) trans
-
-    // /// Bind keyed lists to a simple template, with transitions
-    // static member each (items:IObservable<list<'T>>, view : IObservable<'T> -> SutilElement, key:'T -> 'K) : SutilElement =
-    //     //eachiko (listWrapO items) (snd>>view) (snd>>key) []
-    //     eachiko (listWrapO items) (Live view) (snd>>key) []
-
-    // static member each (items:IObservable<list<'T>>, view : IReadOnlyStore<'T> -> SutilElement, key:'T -> 'K) : SutilElement =
-    //     //eachiko (listWrapO items) (snd>>view) (snd>>key) []
-    //     eachiko (listWrapO items) (LiveStore view) (snd>>key) []
-
-    // -- Indexed Lists --------------------------------------------
-
     static member eachi
         (items: IObservable<list<'T>>, view: (int * 'T) -> SutilElement)
         : SutilElement
         =
         eachi (listWrapO items) view
-
-    // // -- Observable views
-    // static member eachi (items:IObservable<list<'T>>, view : IObservable<int> * IObservable<'T> -> SutilElement, trans : Core.Sutil2.TransitionAttribute list) : SutilElement =
-    //     eachio (listWrapO items) view trans
-
-    // static member eachi (items:IObservable<list<'T>>, view : IObservable<int> * IObservable<'T> -> SutilElement ) : SutilElement =
-    //     eachio (listWrapO items) view []
-
-    // static member eachi (items:IObservable<list<'T>>,view : IObservable<int> * IObservable<'T> -> SutilElement,key:int*'T->'K,trans : Core.Sutil2.TransitionAttribute list) : SutilElement =
-    //     //eachiko (listWrapO items) view key trans
-    //     eachiko (listWrapO items) (LiveIndexed view) key trans
-
-    // static member eachi (items:IObservable<list<'T>>,view : IObservable<int> * IObservable<'T> -> SutilElement,key:int*'T->'K) : SutilElement =
-    //     //eachiko (listWrapO items) view key []
-    //     eachiko (listWrapO items) (LiveIndexed view) key []
 
     static member promises
         (
@@ -312,18 +271,6 @@ type BindArray =
         =
         eachk (arrayWrapO items) view key
 
-    // /// Bind keyed arrays to a simple template, with transitions
-    // static member each (items:IObservable<array<'T>>, view : IObservable<'T> -> SutilElement, key:'T -> 'K, trans : Core.Sutil2.TransitionAttribute list) : SutilElement =
-    //     eachiko (arrayWrapO items) (Live view) (snd>>key) trans
-
-    // /// Bind keyed arrays to a simple template, with transitions
-    // static member each (items:IObservable<array<'T>>, view : IObservable<'T> -> SutilElement, key:'T -> 'K) : SutilElement =
-    //     eachiko (arrayWrapO items) (Live view) (snd>>key) []
-
-    // /// Bind keyed arrays to a simple template, with transitions
-    // static member eachs (items:IObservable<array<'T>>, view : IReadOnlyStore<'T> -> SutilElement, key:'T -> 'K) : SutilElement =
-    //     eachiko (arrayWrapO items) (LiveStore view) (snd>>key) []
-
     // -- Indexed Arrays --------------------------------------------
 
     static member eachi
@@ -350,7 +297,7 @@ module BindOperators =
     /// <code>
     ///     model .> errorMessage >/ fun msg -> Html.div [ text msg ]
     /// </code>
-    /// In fact, for this particular message, you can code golf this into
+    /// In fact, for this particular message, you can just write
     /// <code>
     ///     model .> errorMessage >/ Html.div
     /// </code>

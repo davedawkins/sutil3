@@ -331,12 +331,12 @@ and private applyNodeAction
         else if _log.enabled then
             _log.trace ("Patch: current is null")
 
+        let context =
+            context.WithParent(current).WithAppendNode(DomEdit.append) |> ve.MapContext            
         let result =
             patches
             |> Array.map (
-                applyPatchAction (
-                    context.WithParent(current).WithAppendNode(DomEdit.append) |> ve.MapContext
-                )
+                applyPatchAction context
             )
 
         context.NotifyNodeImported current

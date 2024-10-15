@@ -477,25 +477,27 @@ module Dispose =
     open DomHelpers
 
     [<Literal>]
-    let Disposables = "__sutil_ds"
+    let DISPOSABLES = "__sutil_ds"
 
     let makeDisposable (f: Unsubscriber) =
         { new System.IDisposable with
             member _.Dispose() = f ()
         }
 
-    let private hasDisposables (node: Node) : bool = hasKey (Disposables) node
+    let private hasDisposables (node: Node) : bool = hasKey (DISPOSABLES) node
 
     let private getDisposables (node: Node) : System.IDisposable[] =
-        getKeyWith Disposables node Array.empty
+        getKeyWith DISPOSABLES node Array.empty
 
     let private clearDisposables (node: Node) : unit =
-        deleteKey Disposables node
+        deleteKey DISPOSABLES node
 
         if (hasDisposables node) then
             failwith "Internal error"
 
-    let setDisposables (node: Node) (ds: System.IDisposable[]) = setKey (Disposables) node ds
+    let setDisposables (node: Node) (ds: System.IDisposable[]) = 
+        log.info("Setting disposables on ", node )
+        setKey (DISPOSABLES) node ds
 
     let addDisposable (node: Node) (name: string) (d: System.IDisposable) =
         log.info (

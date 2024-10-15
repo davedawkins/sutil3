@@ -74,19 +74,7 @@ module internal CollectionWrapper =
     let exists f (c: ICollectionWrapper<'T>) = c.Exists(f)
     let tryFind f (c: ICollectionWrapper<'T>) = c.TryFind(f)
 
-let private logEnabled () = false
-let private log s = Log.Console.log (s)
 let logEachEnabled key = false //Logging.isEnabled key
-
-// Binding helper
-// let bindSubCtx<'T> (source: IObservable<'T>) (handler: BuildContext -> 'T -> unit) =
-//     SutilElement.Define(
-//         "bindSub",
-//         fun ctx ->
-//             let unsub = source.Subscribe(handler ctx)
-//             SutilEffect.RegisterDisposable(ctx.Parent, "bindSub", unsub)
-//     )
-
 
 open Sutil2
 
@@ -97,12 +85,6 @@ let elementFromException (x: exn) =
         text ("sutil: exception in bind: " + x.Message)
     ]
 
-
-(*
-    span
-        bind <
-
-*)
 let private bindLog = Log.create ("Bind")
 bindLog.enabled <- true
 
@@ -160,15 +142,15 @@ let bindElementWithName<'T>
 
                 with x ->
                     JS.console.error (x)
-                    currentNode <- (elementFromException x) |> mount (context.WithCurrent(null)) |> _.Node
+                    currentNode <- 
+                        (elementFromException x) 
+                        |> mountWith mapOptions (context.WithCurrent(currentNode))
+                        |> _.Node
             )
     )
 
 let bindElement source view compare =
     bindElementWithName "bindElement" source view compare
-
-/// Backwards compatibility
-let bindFragment = bindElement
 
 let bindElement2<'A, 'B>
     (a: IObservable<'A>)
@@ -230,7 +212,7 @@ type BindFn<'T> = IObservable<'T> -> ('T -> SutilElement) -> SutilElement
 let private getInputChecked el = Interop.get el "checked"
 let private setInputChecked (el: Node) (v: obj) = Interop.set el "checked" v
 let private getInputValue el : string = Interop.get el "value"
-let private setInputValue el (v: string) = Interop.set el "value" v
+// let private setInputValue el (v: string) = Interop.set el "value" v
 
 let bindSelected<'T when 'T: equality>
     (selection: IObservable<List<'T>>)
@@ -276,7 +258,6 @@ let bindSelected<'T when 'T: equality>
             |> ignore
 
             unsubInput |> Dispose.makeDisposable
-//            SutilEffect.RegisterUnsubscribe(ctx.Parent, "bindSelected:unsubInput", unsubInput)
 
     )
 
@@ -342,8 +323,6 @@ let bindGroup<'T> (store: IStore<List<string>>) : SutilElement =
             store 
             |> Store.subscribe (updateChecked)
             |> Dispose.composeUD unsubInput 
-            // SutilEffect.RegisterDisposable(ctx.Parent, "bindGroup:unsub", unsub)
-            // SutilEffect.RegisterUnsubscribe(ctx.Parent, "bindGroup:unsubInput", unsubInput)
     )
 
 // T can realistically only be numeric or a string. We're relying (I think!) on JS's ability
@@ -398,10 +377,6 @@ let bindBoolAttr (toggle: IObservable<bool>) (boolAttr: string) =
         match active with
         | true -> DomEdit.setAttribute el boolAttr boolAttr
         | false -> el.removeAttribute (boolAttr)
-
-// Deprecated
-let bindClass (toggle: IObservable<bool>) (classes: string) = 
-    bindClassToggle toggle classes ""
 
 let bindClassNames (classNames: IObservable<#seq<string>>) =
     CoreElements.bindSubscribe 
@@ -491,7 +466,6 @@ let private bindAttrConvert<'T>
     CoreElements.bindDisposable(
         //"bindAttrConvert",
         fun parent ->
-            //let attrName' = if attrName = "value" then "__value" else attrName
             listen 
                 "input" 
                 parent
@@ -523,10 +497,7 @@ let private attrIsSizeRelated (attrName: string) =
 
 let listenToProp<'T> (attrName: string) (dispatch: 'T -> unit) : SutilElement =
     CoreElements.bindDisposable(
-        //sprintf "listenToProp %s" attrName,
         fun parent ->
-            //let parent = ctx.ParentNode
-
             let notify () =
                 Interop.get parent attrName |> convertObj<'T> |> dispatch
 
@@ -566,54 +537,14 @@ type KeyedStoreItem<'T, 'K> =
         Value: IStore<'T>
     }
 
-let private findCurrentNode doc (current: Node) (id: int) =
-    if (isNull current || isNull current.parentNode) then
-        if logEnabled () then
-            log ($"each: Find node with id {id}")
-
-        match Id.findNodeWithId doc id with
-        | None ->
-            if logEnabled () then
-                log ("each: Disaster: cannot find node")
-
-            null
-        | Some n ->
-            if logEnabled () then
-                log ($"each: Found it: {n}")
-
-            n
-    else
-        //log($"Cannot find node with id {id}")
-        current
-
-let private findCurrentElement doc (current: Node) (id: int) =
-    let node = findCurrentNode doc current id
-
-    match node with
-    | null -> null
-    | n when TypeHelpers.isElementNode n -> n :?> HTMLElement
-    | x ->
-        if logEnabled () then
-            log $"each: Disaster: found node but it's not an HTMLElement"
-
-        null
-
-let private genEachId = Helpers.createIdGenerator ()
-
 type EachItemRenderer<'T> =
     | Static of ('T -> SutilElement)
     | StaticIndexed of (int * 'T -> SutilElement)
-// | LiveStore of (IReadOnlyStore<'T> -> SutilElement)
-// | Live of (IObservable<'T> -> SutilElement)
-// | LiveIndexed of (IObservable<int> * IObservable<'T> -> SutilElement)
 
 let private eachItemRender (renderer: EachItemRenderer<'T>) (index: int) (item: 'T) : SutilElement =
     match renderer with
     | Static v -> v (item)
     | StaticIndexed v -> v (index, item)
-// | Live v -> v item
-// | LiveStore v -> v item
-// | LiveIndexed v -> v (index,item)
 
 let eachiko_wrapper
     (source: IObservable<ICollectionWrapper<'T>>)
@@ -621,7 +552,6 @@ let eachiko_wrapper
     (key: int * 'T -> 'K)
     : SutilElement
     =
-    //    Bind.el( source, (Array.map view >>  SutilElement.Fragment) )
     bindElement
         source
         (fun (items: ICollectionWrapper<'T>) ->
@@ -634,7 +564,6 @@ let private duc = Observable.distinctUntilChanged
 let eachiko = eachiko_wrapper
 
 let each (items: IObservable<ICollectionWrapper<'T>>) (view: 'T -> SutilElement) =
-    //eachiko_wrapper items (fun (_,item) -> bindElement (duc item) view) (fun (i,v) -> i,v.GetHashCode()) trans
     eachiko_wrapper items (Static view) (fun (i, v) -> i, v.GetHashCode())
 
 let eachi
@@ -642,12 +571,8 @@ let eachi
     (view: (int * 'T) -> SutilElement)
     : SutilElement
     =
-    //eachiko items (fun (index,item) -> bindElement2 (duc index) (duc item) view) fst trans
     eachiko items (StaticIndexed view) fst
 
-// let eachio (items:IObservable<ICollectionWrapper<'T>>) (view : (IObservable<int>*IObservable<'T>) -> SutilElement)   =
-//     //eachiko items view fst trans
-//     eachiko items (LiveIndexed view) fst trans
 
 let eachk (items: IObservable<ICollectionWrapper<'T>>) (view: 'T -> SutilElement) (key: 'T -> 'K) =
     eachiko
@@ -663,25 +588,11 @@ let bindStyle<'T> (value: IObservable<'T>) (f: CSSStyleDeclaration -> 'T -> unit
         value
         (fun el value -> f (el.style) value)
 
-    // SutilElement.Define(
-    //     "bindStyle",
-    //     fun ctx ->
-    //         let style = ctx.ParentElement.style
-    //         let unsub = value.Subscribe(f style)
-    //         SutilEffect.RegisterDisposable(ctx.Parent, "bindStyle", unsub)
-    // )
-
 let bindElementEffect<'T, 'Element when 'Element :> HTMLElement>
     (value: IObservable<'T>)
     (f: 'Element -> 'T -> unit)
     =
     CoreElements.bindSubscribe value f
-    // SutilElement.DefineBinding(
-    //     "bindElementEffect",
-    //     fun ctx ->
-    //         let el = ctx.ParentElement :?> 'E
-    //         value.Subscribe(f el)
-    // )
 
 let bindWidthHeight (wh: IObservable<float * float>) =
     bindStyle

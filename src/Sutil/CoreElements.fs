@@ -8,9 +8,13 @@ open Sutil.Internal.CustomEvents
 
 /// Call this function when the element is mounted
 let onElementMounted<'Element when 'Element :> HTMLElement> (f: 'Element -> unit) : SutilElement =
+    Log.Console.info("onElementMounted: ctor")
     Basic.event
         CustomEvents.MOUNT
-        (fun (e : Event) -> (e.target.asElement :?> 'Element) |> f)
+        (fun (e : Event) -> 
+            Log.Console.log("onElementMounted: ", e.target.asElement |> DomHelpers.toStringOutline)
+            (e.target.asElement :?> 'Element) |> f
+        )
 
 let hookParent (f : HTMLElement -> unit) = onElementMounted f
 

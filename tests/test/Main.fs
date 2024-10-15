@@ -6,6 +6,7 @@ Fable.Core.JS.console.log("Started tests: Main")
 
 HelloWorldTest.init()
 DOMTest.init()
+StyleTest.init()
 BindingTest.init()
 ObservableTest.init()
 StoreTest.init()

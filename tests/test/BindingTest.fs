@@ -258,6 +258,7 @@ describe "Sutil.Binding" <| fun () ->
 
         reset()
         storeOuter2 |> Store.modify ((+)1)
+        Expect.areEqual(disposed,1,"disposed")
 
         Expect.areEqual(storeInner |> Store.countSubscribers,1,"1 inner sub after modify #1")
         Expect.areEqual(storeOuter |> Store.countSubscribers,1,"1 outer sub after modify #1")
