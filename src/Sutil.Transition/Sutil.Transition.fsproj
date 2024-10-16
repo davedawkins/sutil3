@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Transition effects for Sutil</Description>
+    <Authors>David Dawkins</Authors>
+    <Version>3.0.0</Version>
+    <PackageVersion>3.0.0-alpha-001</PackageVersion>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RepositoryType>git</RepositoryType>
+    <UsesMarkdownComments>false</UsesMarkdownComments>
+    <DefineConstants>$(DefineConstants);FABLE_COMPILER;</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Easing.fs" />
+    <Compile Include="Transition.fs" />
+    <Compile Include="TransitionFunctions.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Browser.Css" Version="2.*" />
+    <PackageReference Include="Fable.Browser.Dom" Version="2.*" />
+    <PackageReference Include="Fable.Browser.Event" Version="1.*" />
+    <PackageReference Include="Fable.Core" Version="3.*" />
+    <PackageReference Include="Fable.Promise" Version="3.*" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Sutil\Sutil.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="5.0.2" />
+  </ItemGroup>
+  <!-- Add source files to "fable" folder in Nuget package -->
+  <ItemGroup>
+    <Content Include="*.fsproj; **\*.fs;" PackagePath="fable" />
+  </ItemGroup>
+  <Target Name="ReallyClean" AfterTargets="Clean">
+    <!-- Remove obj folder -->
+    <RemoveDir Directories="$(BaseIntermediateOutputPath)" />
+    <!-- Remove bin folder -->
+    <RemoveDir Directories="$(BaseOutputPath)" />
+  </Target>
+</Project>

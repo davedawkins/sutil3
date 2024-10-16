@@ -470,6 +470,26 @@ module DomHelpers =
 
         fun () -> Fable.Core.JS.clearTimeout id
 
+    let [<Literal>] private PROMISE_KEY = "__sutil_promise"
+
+    open Fable.Core
+
+    ///<summary>
+    /// Serialize tasks through an element. If the task already has a running task
+    /// wait for it to complete before starting the new task. Otherwise, run the
+    /// new task immediately
+    ///</summary>
+    let wait (el: HTMLElement) (andThen: unit -> JS.Promise<unit>) =
+        let key = PROMISE_KEY
+        let run () = andThen () |> JsMap.setKey el key
+
+        if JsMap.hasKey el key then
+            let p : JS.Promise<unit> = JsMap.getKey el key
+            JsMap.deleteKey el key
+            p.``then`` run |> ignore
+        else
+            run ()
+            
 /// Support for disposing of Node-related resources (subscriptions etc)
 module Dispose =
     open NodeKey
@@ -541,7 +561,6 @@ module Dispose =
         disposeNode node
 
     let internal dispose (node: Node) = disposeTree node
-
 
     let composeUU (u1 : Unsubscriber) (u2 : Unsubscriber) =
         (u1>>u2) |> makeDisposable

@@ -64,6 +64,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Sutil\Sutil.fsproj" />
     <ProjectReference Include="..\Sutil.Html\Sutil.Html.fsproj" />
+    <ProjectReference Include="..\Sutil.Transition\Sutil.Transition.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Formatting.Markdown" Version="1.0.1" />
