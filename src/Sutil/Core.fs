@@ -9,7 +9,7 @@ open Sutil.Internal.DomHelpers
 open Sutil.Internal.CustomEvents
 open Sutil.Internal.TypeHelpers
 open VirtualDom
-open CalculatePatch
+open Patch
 
 let private _log = Log.create ("Core")
 
@@ -19,16 +19,6 @@ _log.enabled <- true
 module CoreExtensions =
 
     type SutilElement with
-        // static member Define(name: string, f: BuildContext -> SutilResult) =
-        //     SutilElement.SideEffect(name, f)
-
-        // static member Define(name: string, f: BuildContext -> unit) =
-        //     SutilElement.SideEffect(
-        //         name,
-        //         fun ctx ->
-        //             f (ctx)
-        //             SutilResult.Of(Effected name, ctx.ParentElement)
-        //     )
 
         static member DefineBinding(name: string, init : SutilElement, f: BuildContext -> unit) =
             SutilElement.BindElement(
@@ -150,7 +140,11 @@ type BuildOptions =
             {
                 BuildVirtualElement = fun _ se -> VirtualDom.fromSutil se
                 CalculatePatches = fun ctx ve -> Patch.calculate (ctx.Current) ve
-                ApplyPatches = Patch.apply
+                ApplyPatches = fun ctx action -> 
+                    match Patch.apply ctx action with
+                    | Ok r -> r
+                    | Error s -> 
+                        failwith s
             }
 
         member __.WithBuildVirtualElement ( create : BuildContext -> SutilElement -> VirtualElement ) =
@@ -196,9 +190,9 @@ module VDomV2 =
     let makeOptions() =
         BuildOptions
             .Create()
-            .WithCalculatePatches( fun ctx ve -> CalculatePatch.calculate (ctx.Current) ve)
+            .WithCalculatePatches( fun ctx ve -> Patch.calculate (ctx.Current) ve)
             .WithApplyPatchess( fun ctx action -> 
-                match CalculatePatch.apply ctx action with
+                match Patch.apply ctx action with
                 | Ok r -> r
                 | Error s -> 
                     failwith s)
@@ -239,8 +233,6 @@ module Sutil2 =
         let get data name = JsMap.getKey data name
 
         let set data name value = JsMap.setKey data name value
-
-//    let build (se: SutilElement) (ctx: BuildContext) = mount ctx null se
 
     module Logging =
         let error (s: string) = _log.trace ("Error: " + s)

@@ -95,10 +95,6 @@ and BuildContext =
         LogPatchEnabled: bool
     }
 
-    static let reportId (c1 : BuildContext) (c2: BuildContext) =
-        //Log.Console.log(sprintf "Context: %d -> %d" c1.Id c2.Id)
-        c2
-
     static member DefaultAppendNode = Internal.DomEdit.append
     static member Create(parent: Node) : BuildContext =
         {
@@ -107,7 +103,6 @@ and BuildContext =
             NextId = Globals.NextId
             AppendNode = BuildContext.DefaultAppendNode
             Current = null
-            // VirtualElementMapper = (fun x -> x)
             OnImportedNode = None
             ElementCtor = Sutil.Internal.DomEdit.element
             LogElementEnabled = false
@@ -125,14 +120,12 @@ and BuildContext =
             LogPatchEnabled = true
             Id = Globals.NextId()
         }
-        |> reportId __
 
     member __.WithLogElementEnabled() =
         { __ with
             LogElementEnabled = true
             Id = Globals.NextId()
         }
-        |> reportId __
 
     member __.WithLogEnabled() =
         __.WithLogElementEnabled().WithLogPatchEnabled()
@@ -145,34 +138,18 @@ and BuildContext =
             Parent = node
             Id = Globals.NextId()
         }
-        |> reportId __
 
     member __.WithAppendNode(append: Node -> Node -> unit) =
         { __ with
             AppendNode = append
             Id = Globals.NextId()
         }
-        |> reportId __
 
     member __.WithCurrent(node: Node) =
         { __ with
             Current = node
             Id = Globals.NextId()
         }
-
-    // member __.WithVirtualElementMapperPost(p: VirtualElementMapper) =
-    //     { __ with
-    //         VirtualElementMapper = __.VirtualElementMapper >> p
-    //         Id = Globals.NextId()
-    //     }
-    //     |> reportId __
-
-    // member __.WithVirtualElementMapperPre(p: VirtualElementMapper) =
-    //     { __ with
-    //         VirtualElementMapper = __.VirtualElementMapper << p
-    //         Id = Globals.NextId()
-    //     }
-    //     |> reportId __
 
     member __.WithOnImportedNode(f: Node -> unit) =
         { __ with
@@ -185,15 +162,11 @@ and BuildContext =
                         f0 node)
                 |> Option.orElse (Some f)
         }
-        |> reportId __
 
     member __.NotifyNodeImported (node : Node) =
         __.OnImportedNode |> Option.iter (fun f -> f node)
 
 and VirtualElementMapper = VirtualElement -> VirtualElement
-
-/// Implementation of a SutilElement.SideEffect
-//and SutilEffect = string * (BuildContext -> SutilResult)
 
 and SutilBindEffect = string * SutilElement * (BuildContext -> unit)
 
@@ -215,9 +188,6 @@ and SutilElement =
     /// Collection of SutilElements that apply to the parent element
     | Fragment of (SutilElement[])
 
-    // Custom element that operates on a BuildContext. Bindings are SideEffects, for example
-    //    | SideEffect of SutilEffect
-
     /// Custom element that will manage a sub-element at this DOM location.
     /// An initial element is created and the effect is called when the initial element 
     /// is mounted
@@ -234,7 +204,6 @@ and SutilElement =
             | Attribute (name,value) -> "Attr '" + name + "'='" + (string value) + "'"
             | Event (name,_,_) -> "Event '" + name + "'"
             | Fragment (children) -> "Fragment [" + (children |> Array.map _.ToString() |> String.concat ", ") + "]"
-            //| SideEffect (name,_) -> "SideEffect '" + name + "'"
             | BindElement (name,_,_) -> "Bind '" + name + "'"
             | MappingElement (name, _, child) -> "Map '" + name + "' [" + child.ToString() + "]"
 

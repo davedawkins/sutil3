@@ -60,6 +60,8 @@ type VirtualElement with
 
     member __.DomChildren = __.Children |> Array.filter _.IsDomNode
 
+    member __.WithNoChildren = { __ with Children = Array.empty }
+
     member __.ChildrenWithDomIndex =
         let mutable i = -1
 
@@ -213,11 +215,6 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
                 let el = e.target.asElement
                 let ctx: BuildContext = JsMap.getKey el "__sutil_ctx"
 
-                // Log.Console.log("MOUNT BINDING: el=", el |> DomHelpers.toString ) 
-                // Log.Console.log("MOUNT BINDING: el.Parent  =", el.parentNode |> DomHelpers.toString ) 
-                // Log.Console.log("MOUNT BINDING: ctx.Parent =", ctx.Parent |> DomHelpers.toString ) 
-                // Log.Console.log("MOUNT BINDING: ctx.Current=", ctx.Current |> DomHelpers.toString ) 
-
                 if isNull (ctx :> obj) then
                     Log.Console.error (
                         "Key '__sutil_ctx' not set on ",
@@ -236,8 +233,6 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
         )
 
         |> parent.AddChild
-
-    //| SideEffect effect -> parent.AddEffect(effect)
 
 /// Create a VirtualDom element from a SutilElement.
 /// This function will also be able to hoist fragment children up into the parent element
@@ -314,7 +309,7 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
 
         Id.setId el (_id |> string)
 
-        JsMap.setKey el VIRTUAL_ELEMENT_KEY ve
+        JsMap.setKey el VIRTUAL_ELEMENT_KEY (ve.WithNoChildren)
 
         el.setAttribute("data-sutil-key", ve.Key)
 
@@ -371,12 +366,3 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
         context.NotifyNodeImported el
         el
 
-    // | SideEffectNode(name, effect) ->
-    //     if _log.enabled then
-    //         _log.trace (
-    //             "toDom: Effect",
-    //             name,
-    //             context.ParentNode |> Internal.DomHelpers.toStringSummary
-    //         )
-
-    //     (effect context).Node //|> Option.defaultValue context.Parent

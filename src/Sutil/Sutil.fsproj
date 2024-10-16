@@ -19,7 +19,6 @@
     <Compile Include="Store.fs" />
     <Compile Include="Elmish.fs" />
     <Compile Include="VirtualDom.fs" />
-    <Compile Include="CalculatePatch.fs" />
     <Compile Include="Patch.fs" />
     <Compile Include="Core.fs" />
     <Compile Include="ResizeObserver.fs" />
