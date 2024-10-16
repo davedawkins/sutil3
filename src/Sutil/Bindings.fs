@@ -157,21 +157,8 @@ let bindElement2<'A, 'B>
     (b: IObservable<'B>)
     (view: ('A * 'B) -> SutilElement)
     =
-    SutilElement.DefineBinding(
-        "bindElement2",
-        fun ctx ->
-            let mutable currentNode: Node = ctx.Current
+    bindElement (Store.zip a b) view (fun _ _ -> false)
 
-            Store.subscribe2
-                a
-                b
-                (fun value ->
-                    try
-                        currentNode <- value |> view |> mount (ctx.WithCurrent(currentNode)) |> _.Node
-                    with x ->
-                        Logging.error $"Exception in bind: {x.Message}"
-                )
-    )
 
 let bindElementK<'T, 'K when 'K: equality>
     (name: string)

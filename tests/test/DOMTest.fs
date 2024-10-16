@@ -653,10 +653,5 @@ describe "DOM" <| fun () ->
         return ()
     }
 
-    //testCaseP "400ms" <| fun () ->
-    //    promise {
-    //        do! Promise.sleep(400)
-    //    }
-
 let init() =
     ()

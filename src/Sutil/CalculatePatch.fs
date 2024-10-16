@@ -328,7 +328,7 @@ and applyNodeAction (context : BuildContext) (nodeAction : NodeAction) : Result<
     match nodeAction with
 
     | AsIs ->
-        (Unchanged, (null : Node)) |> ok
+        (Unchanged,context.Current) |> ok
 
     | Remove existing ->
         DomEdit.remove current

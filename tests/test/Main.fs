@@ -10,6 +10,7 @@ StyleTest.init()
 BindingTest.init()
 ObservableTest.init()
 StoreTest.init()
+ExamplesTests.init()
 
 BrowserFramework.runAll( 
     "*", "*" //"withStyle colors text after binding"
