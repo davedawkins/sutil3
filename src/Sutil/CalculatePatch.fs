@@ -343,7 +343,7 @@ and applyNodeAction (context : BuildContext) (nodeAction : NodeAction) : Result<
     | Insert (latest) ->
         let context = latest.MapContext context
         let newNode = VirtualDom.toDom context latest
-        DomEdit.append context.Parent newNode
+        context.AppendNode context.ParentElement newNode
         (Appended, newNode) |> ok
 
     | Patch (latest, patchActions) ->

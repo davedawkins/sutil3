@@ -313,7 +313,7 @@ let makeExample (code: string) =
 let replButton (wantExpandButton: bool) (code: Browser.Types.HTMLElement) =
     let expanded = Store.make false
 
-    Html.span [
+    Html.spanc "repl-button" [
         disposeOnUnmount [
             expanded
         ]
@@ -387,16 +387,26 @@ let replButton (wantExpandButton: bool) (code: Browser.Types.HTMLElement) =
 // Append a REPL button immediately after the <pre><code> block
 //
 let addReplButton (preCode: Browser.Types.HTMLElement) =
-    let wantExpandButton = preCode.clientHeight > 182.0
 
-    if wantExpandButton then
-        preCode.classList.add (
-            [|
-                "more"
-            |]
-        )
+    // if preCode.parentElement.querySelector ".repl-button" |> isNull then
+    if 
+        preCode.parentElement.nextElementSibling 
+        |> TypeHelpers.tryAsElement
+        |> Option.map (fun (el : Browser.Types.HTMLElement) -> not (el.classList.contains("repl-button")))
+        |> Option.defaultValue true 
+        then
 
-    Program.mountAfter (preCode.parentElement, replButton wantExpandButton preCode)
+        let wantExpandButton = preCode.clientHeight > 182.0
+
+        if wantExpandButton then
+            preCode.classList.add (
+                [|
+                    "more"
+                |]
+            )
+
+        Program.mountAfter (preCode.parentElement, replButton wantExpandButton preCode) 
+            |> ignore
 
 let addClasses (node: Browser.Types.HTMLElement) =
     node
@@ -415,12 +425,11 @@ let addClasses (node: Browser.Types.HTMLElement) =
 // Add "Open in REPL" buttons to all <pre><code> example code blocks
 //
 let addReplButtons (markdown: Browser.Types.HTMLElement) =
-
     markdown
     |> addClasses
     |> findPreCode
     |> Seq.filter processReplDirectives
-    |> Seq.iter (toEl >> addReplButton >> ignore)
+    |> Seq.iter (toEl >> addReplButton)
 
 let pageView title source () =
     let content = Store.make "Loading.."
