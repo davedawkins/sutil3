@@ -49,7 +49,7 @@
     <!-- <Compile Include="BarChart.fs" /> -->
     <Compile Include="Modal.fs" />
     <Compile Include="Evaluator.fs" />
-    <!-- <Compile Include="Spreadsheet.fs" /> -->
+    <Compile Include="Spreadsheet.fs" />
     <Compile Include="Login.fs" />
     <Compile Include="LoginExample.fs" />
     <!-- <Compile Include="TimerLogic.fs" /> -->

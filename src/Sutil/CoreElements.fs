@@ -107,3 +107,12 @@ let postProcessElementsWithName
 /// Pass the generated HTMLElement for child 'se' to the handler function
 let postProcessElements (handler: HTMLElement -> unit) (se: SutilElement) : SutilElement =
     postProcessElementsWithName ("postProcessElement") handler se
+
+let autofocus =
+    onElementMounted<HTMLInputElement>( fun el -> 
+        Timers.rafu (fun _ -> 
+            el.focus()
+            el.setSelectionRange(9999,9999)
+        ) 
+    )
+

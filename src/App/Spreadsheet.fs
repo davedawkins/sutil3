@@ -57,7 +57,7 @@ let styleSheet =
     ]
 
 let sample =
-    let c s = s // { Value = s; Evaluated = ""; NeedsEval = true }
+    let c s = s
 
     Map.ofList [
         ('B', 1), c "Fibonacci"
@@ -115,9 +115,8 @@ let renderCell m dispatch pos =
             Html.input [
                 Attr.typeText
                 Attr.value content
-                autofocus
-                Ev.onKeyDown (fun me ->
-                    if me.key = "Enter" then
+                CoreElements.autofocus
+                Ev.onBlur( fun me ->
                         (pos, me.target?value) |> UpdateValue |> dispatch
                 )
             ]
@@ -162,6 +161,7 @@ let view () : SutilElement =
                                 m.Cols
                                 |> List.map (fun col ->
                                     Html.td [
+                                        Attr.tabIndex 0
                                         renderCell m dispatch (col, row)
                                     ]
                                 )
