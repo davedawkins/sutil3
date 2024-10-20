@@ -1,12 +1,9 @@
 /// <summary>
 /// Adapter for <a href="">Feliz.Engine.Bulma</a>
 /// </summary>
-module Sutil.Bulma
+module Sutil.BulmaEngine
 
 open Sutil
-open Sutil.Styling
-open Sutil.Core
-open Sutil.CoreElements
 open Sutil.Html
 
 open type Feliz.length
@@ -43,46 +40,46 @@ module Helpers =
 
     let selectMultiple (props : SutilElement list) = Html.div [ Attr.className "select is-multiple"; Html.select ([ Attr.multiple true ] @ props) ]
 
-let styleHelpers = [
-    rule "h1" [ PseudoCss.addClass "title"; PseudoCss.addClass "is-1" ]
-    rule "h2" [ PseudoCss.addClass "title"; PseudoCss.addClass "is-2" ]
-    rule "h3" [ PseudoCss.addClass "title"; PseudoCss.addClass "is-3" ]
-    rule "h4" [ PseudoCss.addClass "title"; PseudoCss.addClass "is-4" ]
-    rule "h5" [ PseudoCss.addClass "title"; PseudoCss.addClass "is-5" ]
-    rule "button" [ PseudoCss.addClass "button" ]
+// let styleHelpers = [
+//     rule "h1" [ PseudoCss.addClass "title"; PseudoCss.addClass "is-1" ]
+//     rule "h2" [ PseudoCss.addClass "title"; PseudoCss.addClass "is-2" ]
+//     rule "h3" [ PseudoCss.addClass "title"; PseudoCss.addClass "is-3" ]
+//     rule "h4" [ PseudoCss.addClass "title"; PseudoCss.addClass "is-4" ]
+//     rule "h5" [ PseudoCss.addClass "title"; PseudoCss.addClass "is-5" ]
+//     rule "button" [ PseudoCss.addClass "button" ]
 
-    rule "input[type='file']" [ PseudoCss.addClass "file-cta" ]
+//     rule "input[type='file']" [ PseudoCss.addClass "file-cta" ]
 
-    rule "input[type='text']" [
-        PseudoCss.addClass "input"
-    ]
+//     rule "input[type='text']" [
+//         PseudoCss.addClass "input"
+//     ]
 
-    rule "input[type='radio']" [
-        PseudoCss.addClass "radio"
-    ]
+//     rule "input[type='radio']" [
+//         PseudoCss.addClass "radio"
+//     ]
 
-    rule "input[type='checkbox']" [
-        PseudoCss.addClass "checkbox"
-    ]
+//     rule "input[type='checkbox']" [
+//         PseudoCss.addClass "checkbox"
+//     ]
 
-    rule "input[type='number']" [
-        PseudoCss.addClass "input"
-        PseudoCss.addClass "is-small"
-        Css.maxWidth (percent 50)
-    ]
+//     rule "input[type='number']" [
+//         PseudoCss.addClass "input"
+//         PseudoCss.addClass "is-small"
+//         Css.maxWidth (percent 50)
+//     ]
 
-    rule "input[type='range']" [
-        PseudoCss.addClass "input"
-        PseudoCss.addClass "is-small"
-        Css.maxWidth (percent 50)
-    ]
+//     rule "input[type='range']" [
+//         PseudoCss.addClass "input"
+//         PseudoCss.addClass "is-small"
+//         Css.maxWidth (percent 50)
+//     ]
 
-    rule ".is-multiple option" [
-        Css.padding(em 0.5, em 1.0)
-    ]
-]
+//     rule ".is-multiple option" [
+//         Css.padding(em 0.5, em 1.0)
+//     ]
+// ]
 
-let withBulmaHelpers element = withCustomRules styleHelpers element
+//let withBulmaHelpers element = withCustomRules styleHelpers element
 
 /// Helper for creating FontAwesome icons: <c>&lt;i class='fa fa-name'/></c>
 [<AutoOpen>]

@@ -337,9 +337,9 @@ let private addScopeForNode (scopeName: string) (node: Browser.Types.Node) : uni
 open Core
 
 let withStyle (rules: SutilStyleRule seq) (sutilElement: SutilElement) =
+
     let buildScope() =
         let scopeName = sprintf "%s-%d" SUTIL_SCOPE (Globals.NextId())
-        // Log.Console.log("Building scope " + scopeName)
 
         rules
         |> SutilStyleSheet.Of

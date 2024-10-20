@@ -50,7 +50,8 @@
     <Compile Include="Modal.fs" />
     <Compile Include="Evaluator.fs" />
     <!-- <Compile Include="Spreadsheet.fs" /> -->
-    <!-- <Compile Include="Login.fs" /> -->
+    <Compile Include="Login.fs" />
+    <Compile Include="LoginExample.fs" />
     <!-- <Compile Include="TimerLogic.fs" /> -->
     <!-- <Compile Include="DragDropListSort.fs" /> -->
     <!-- <Compile Include="DataSim.fs" /> -->
@@ -64,6 +65,7 @@
     <ProjectReference Include="..\Sutil\Sutil.fsproj" />
     <ProjectReference Include="..\Sutil.Html\Sutil.Html.fsproj" />
     <ProjectReference Include="..\Sutil.Bulma\Sutil.Bulma.fsproj" />
+    <ProjectReference Include="..\Sutil.BulmaEngine\Sutil.BulmaEngine.fsproj" />
     <ProjectReference Include="..\Sutil.Transition\Sutil.Transition.fsproj" />
   </ItemGroup>
   <ItemGroup>

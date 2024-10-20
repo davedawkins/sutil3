@@ -3,6 +3,7 @@ module StaticEachBlocks
 // Adapted from
 // https://svelte.dev/examples
 
+open Sutil
 open Sutil.Html
 
 type Cat =

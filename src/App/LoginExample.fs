@@ -1,12 +1,15 @@
 module LoginExample
 
 open Sutil
-open Sutil.Bulma
+open Sutil.BulmaEngine
 open Sutil.Core
 open Sutil.CoreElements
+open Sutil.Html
+open Sutil.Bind
 
 open Login
 open Sutil.Styling
+open Sutil.Elmish
 
 module MockServer =
     // TODO: Make this function asynchronous
@@ -118,9 +121,7 @@ let view () =
                                         Html.a [
                                             Html.text "sign out"
                                             Attr.href "#"
-                                            onClick (fun _ -> dispatch SignOut) [
-                                                PreventDefault
-                                            ]
+                                            Ev.onClick (fun ev -> ev.preventDefault(); dispatch SignOut)
                                         ]
                                     ]
                                 | None ->
@@ -129,9 +130,7 @@ let view () =
                                         Html.a [
                                             Html.text "sign in"
                                             Attr.href "#"
-                                            onClick (fun _ -> dispatch SignIn) [
-                                                PreventDefault
-                                            ]
+                                            Ev.onClick (fun ev -> ev.preventDefault(); dispatch SignIn) 
                                         ]
                                     ]
                         )

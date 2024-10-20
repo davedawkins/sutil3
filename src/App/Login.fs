@@ -10,6 +10,8 @@ open Sutil.CoreElements
 open Sutil.Html
 open Sutil.Bind
 open Sutil.Elmish
+open Sutil.Internal
+open Sutil.BulmaEngine
 
 type LoginDetails =
     {
@@ -54,8 +56,12 @@ let private init details =
 
 module EventHelpers =
     open Browser.Types
+    open Browser.DomExtensions
+    open Browser.CssExtensions
+    open Browser
+    open Browser.Dom
 
-    let inputElement (target: EventTarget) = target |> asElement<HTMLInputElement>
+    let inputElement (target: EventTarget) : HTMLInputElement = target.asElement :?> HTMLInputElement
 
     let validity (e: Event) = inputElement(e.target).validity
 
@@ -81,13 +87,11 @@ let private defaultView model dispatch =
                         column.is8Desktop
                         column.is6Widescreen
                         bulma.box [
-                            on "submit" (fun _ -> AttemptLogin |> dispatch) [
-                                PreventDefault
-                            ]
+                            Ev.onSubmit(fun ev -> ev.preventDefault(); AttemptLogin |> dispatch)
                             Attr.action ""
 
                             bulma.field.div [
-                                class' "has-text-danger"
+                                Attr.className "has-text-danger"
                                 Html.text (model .> message)
                             ]
                             |> Transition.showIf (model .> messageIsSet)
@@ -105,14 +109,12 @@ let private defaultView model dispatch =
 
                                         Bind.toggleClass (isInvalid, "is-danger")
 
-                                        on
-                                            "input"
+                                        Ev.onInput
                                             (fun e ->
                                                 EventHelpers.validity(e).valid
                                                 |> not
                                                 |> Store.set isInvalid
                                             )
-                                            []
 
                                         Attr.placeholder "Hint: sutil@gmail.com"
                                         Attr.value (model .> username, SetUsername >> dispatch)
@@ -162,17 +164,13 @@ let private defaultView model dispatch =
                                     bulma.button.button [
                                         color.isSuccess
                                         Html.text "Login"
-                                        onClick (fun _ -> dispatch AttemptLogin) [
-                                            PreventDefault
-                                        ]
+                                        Ev.onClick (fun ev -> ev.preventDefault(); dispatch AttemptLogin) 
                                     ]
                                 ]
                                 bulma.control.div [
                                     bulma.button.button [
                                         Html.text "Cancel"
-                                        onClick (fun _ -> dispatch CancelLogin) [
-                                            PreventDefault
-                                        ]
+                                        Ev.onClick (fun ev -> ev.preventDefault(); dispatch CancelLogin)
                                     ]
                                 ]
                             ]

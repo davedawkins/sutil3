@@ -12,7 +12,7 @@ module TransitionInOut = let view = CompilationFailure
 module TransitionCustomCss = let view = CompilationFailure
 module TransitionCustom = let view = CompilationFailure
 module TransitionEvents = let view = CompilationFailure
-module LoginExample = let view = CompilationFailure
+// module LoginExample = let view = CompilationFailure
 module SortableTimerList = let view = CompilationFailure
 module SAFE = let view = CompilationFailure
 module CRUD = let view = CompilationFailure
@@ -80,7 +80,7 @@ let allExamples = [
 
         { Pass =false; Category = "Miscellaneous";   Title = "Spreadsheet";  Link = AppLink (Spreadsheet.view , ["Spreadsheet.fs"; "Evaluator.fs"; "Parser.fs"]) }
         { Pass =true; Category = "Miscellaneous";   Title = "Modal";  Link = AppLink (Modal.view , ["Modal.fs"]) }
-        { Pass =false; Category = "Miscellaneous";   Title = "Login";  Link = AppLink (LoginExample.view , ["LoginExample.fs"; "Login.fs"]) }
+        { Pass =true; Category = "Miscellaneous";   Title = "Login";  Link = AppLink (LoginExample.view , ["LoginExample.fs"; "Login.fs"]) }
         { Pass =false; Category = "Miscellaneous";   Title = "Drag-sortable list";  Link = AppLink (SortableTimerList.view , ["SortableTimerList.fs"; "DragDropListSort.fs"; "TimerWithButton.fs"; "TimerLogic.fs"]) }
         { Pass =false; Category = "Miscellaneous";   Title = "SAFE client";  Link = AppLink (SAFE.view , ["SafeClient.fs"]) }
         { Pass =false; Category = "Miscellaneous";   Title = "Data Simulation";  Link = AppLink (DataSim.view , ["DataSim.fs"]) }
