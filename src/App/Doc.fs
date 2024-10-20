@@ -391,7 +391,7 @@ let addReplButton (preCode: Browser.Types.HTMLElement) =
     // if preCode.parentElement.querySelector ".repl-button" |> isNull then
     if 
         preCode.parentElement.nextElementSibling 
-        |> TypeHelpers.tryAsElement
+        |> Node.tryAsElement
         |> Option.map (fun (el : Browser.Types.HTMLElement) -> not (el.classList.contains("repl-button")))
         |> Option.defaultValue true 
         then
@@ -453,7 +453,7 @@ let pageView title source () =
                             "addReplButtons"
                             // Need to allow highlighter decorate the new HTML first
                             // FIXME: Call the highlighter from this handler (it's in index.html right now)
-                            (fun el -> Internal.DomHelpers.rafu (fun () -> addReplButtons el))
+                            (fun el -> Internal.Timers.rafu (fun () -> addReplButtons el))
                 )
             ]
             |> withStyle Markdown.style

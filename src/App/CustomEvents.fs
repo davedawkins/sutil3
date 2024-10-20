@@ -1,11 +1,11 @@
 module CustomEvents
 
 open Sutil
+open Sutil.Internal
 open type Feliz.length
 open Sutil.CoreElements
 open Sutil.Html
 open Sutil.Bind
-open Sutil.Internal.CustomEvents
 
 open Browser.Types
 open System
@@ -14,13 +14,13 @@ let customDispatchButton () =
     let r = Random()
 
     let clickHandler (e: Event) =
-        let props: CustomDispatch<string> list =
+        let props: CustomEvents.CustomDispatch<string> list =
             [
-                Bubbles true
-                Detail($"Hello there! %i{r.Next(1000)}")
+                CustomEvents.Bubbles true
+                CustomEvents.Detail($"Hello there! %i{r.Next(1000)}")
             ]
 
-        CustomDispatch.dispatch<string> (e, "on-custom-click", props)
+        CustomEvents.CustomDispatch.dispatch<string> (e, "on-custom-click", props)
 
     Bulma.button [
         Ev.onClick clickHandler

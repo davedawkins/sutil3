@@ -4,7 +4,6 @@ open Sutil
 open Sutil.Core
 open Sutil.Internal
 open Browser.Types
-open Sutil.Internal.CustomEvents
 
 /// Call this function when the element is mounted
 let onElementMounted<'Element when 'Element :> HTMLElement> (f: 'Element -> unit) : SutilElement =
@@ -12,7 +11,7 @@ let onElementMounted<'Element when 'Element :> HTMLElement> (f: 'Element -> unit
     Basic.event
         CustomEvents.MOUNT
         (fun (e : Event) -> 
-            Log.Console.log("onElementMounted: ", e.target.asElement |> DomHelpers.toStringOutline)
+            Log.Console.log("onElementMounted: ", e.target.asElement |> Node.toStringOutline)
             (e.target.asElement :?> 'Element) |> f
         )
 
@@ -60,11 +59,11 @@ let html (text: string) : SutilElement =
             
             //Let styling (eg) know that a new node needs marking up
             host
-            |> DomHelpers.children
+            |> Node.children
             |> Seq.iter (ctx.NotifyNodeImported)
 
             // Let code highligher (index.html) know that new code could need marking up
-            Sutil.Internal.CustomEvents.notifySutilUpdated (host.ownerDocument)
+            //Sutil.Internal.CustomEvents.notifySutilUpdated (host.ownerDocument)
     )
 
 /// Call the dispatch function when the parent element is resized
@@ -77,7 +76,7 @@ let listenToResize (dispatch: HTMLElement -> unit) : SutilElement =
                 "listenToResize",
                 (ResizeObserver.getResizer parent).Subscribe( notify )
             )
-            DomHelpers.rafu notify
+            Timers.rafu notify
 
 let postProcessElementsWithName
     (name: string)

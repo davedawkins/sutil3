@@ -13,6 +13,8 @@ open Sutil.Html
 open Sutil.Elmish
 open Sutil.Elmish.Cmd
 
+let [<Literal>] LOADING = "[ Loading ]"
+
 open type Feliz.length
 
 //
@@ -189,14 +191,14 @@ let compareBook (a: BookPageView) (b: BookPageView) = a.Book.Title = b.Book.Titl
 let compareBookPage (a: BookPageView) (b: BookPageView) =
     a.Book.Title = b.Book.Title && a.Page.Title = b.Page.Title
 
-let fetchSource file dispatch =
+let fetchSource file dispatch : unit =
     let url = sprintf "%s/%s" urlBase file
 
     fetch url []
     |> Promise.bind (fun res -> res.text ())
     |> Promise.map (SetSource >> dispatch)
     |> ignore
-
+            
 let defaultBookPageView () =
     let currentBook = defaultBook initBooks
     let currentPage = currentBook.defaultPage
@@ -267,16 +269,15 @@ let update msg model : Model * Cmd<Message> =
             // Fetch the source file for section. Non-empty section refers to source file for example
             // This may change!
             let cmd, src =
-                let loadingString = "[ Loading ]"
 
                 match model.View with
                 | PageView bpv when
-                    (section <> "" && section <> bpv.Section && bpv.Source <> loadingString)
+                    (section <> "" && section <> bpv.Section && bpv.Source <> LOADING)
                     ->
                     [
                         fetchSource section
                     ],
-                    loadingString
+                    LOADING
                 | _ -> Cmd.none, ""
 
             { model with
@@ -300,6 +301,7 @@ let update msg model : Model * Cmd<Message> =
         Cmd.none
 
     | SetSource content ->
+        //Fable.Core.JS.console.log("HLJS: SetSource")
         match model.View with
         | PageView pageView ->
             { model with
@@ -533,7 +535,7 @@ let viewPage (view: System.IObservable<BookPageView>) =
 
         Attr.className "column app-page"
         Bind.el (
-            sectionView,
+            view, //sectionView,
             fun bpv ->
                 let page = getPage bpv
 
@@ -557,7 +559,21 @@ let viewPage (view: System.IObservable<BookPageView>) =
                         Html.div [
                             text $"Creating example {page.Title}: {x.Message}"
                         ]
-                | _ -> viewSource view
+                | _ when bpv.Source = LOADING -> 
+                    Html.div [
+                        text LOADING
+                    ]
+                | _  -> 
+                    Html.div [
+                        Html.pre [
+                            Html.code [
+                                Attr.className "language-fsharp"
+                                text (bpv.Source)
+                                //Bind.el (bookPage .> getSource, (*exclusive <<*) text)
+                            ]
+                        ]
+                    ]
+                //viewSource view
         )
     ]
 

@@ -15,39 +15,6 @@ module private Locals =
     let log = Sutil.Log.create "Dom"
     log.enabled <- false
 
-/// Helper functions for working with Node and its Element and Text subtypes
-module TypeHelpers =
-
-    open Browser.Types
-
-    [<Literal>]
-    let internal ElementNodeType = 1.0
-
-    [<Literal>]
-    let internal TextNodeType = 3.0
-
-    /// Return true if n is a Text node (nodeType = 3)
-    let isTextNode (n: Node) = n <> null && n.nodeType = TextNodeType
-
-    /// Return true if n is an Element node (nodeType = 1)
-    let isElementNode (n: Node) =
-        n <> null && n.nodeType = ElementNodeType
-
-    let asEl<'T when 'T :> HTMLElement> (n: Node) : 'T = n :?> 'T
-    let asElement (n: Node) : HTMLElement = n :?> HTMLElement
-
-    let tryAsElement (n: Node) =
-        if isElementNode n then
-            Some(asElement n)
-        else
-            None
-
-    let tryAsTextNode (node: Node) =
-        if isTextNode node then
-            Some(node :?> Browser.Types.Text)
-        else
-            None
-
 /// JS interop. This doesn't belong in DomHelpers
 module JsHelpers =
     open Fable.Core
@@ -59,6 +26,7 @@ module JsHelpers =
     let eq2 a b : bool = jsNative
 
 /// JS interop specifically for keyed JS objects
+[<RequireQualifiedAccess>]
 module JsMap =
     open Fable.Core.JsInterop
     open Fable.Core
@@ -99,37 +67,14 @@ module JsMap =
             setKey node key newVal
             newVal
 
-/// Anaemic wrapper for JsMap, which can now be refactored away
-module NodeKey =
-
-    open Fable.Core.JsInterop
-    open Fable.Core
-    open Browser.Types
-
-    [<Emit("delete $1[$0]")>]
-    let deleteKey (key: string) (node: Node) = jsNative
-
-    let hasKey (key: string) (node: Node) = jsIn key node
-
-    let setKey (key: string) (node: Node) (value: obj) : unit = node?(key) <- value
-
-    let tryGetKey (key: string) (node: Node) : 't option =
-        if hasKey key node then
-            node?(key) |> Some
-        else
-            None
-
-    let getKeyWith (key: string) (node: Node) (defaultValue: 't) : 't =
-        tryGetKey key node |> Option.defaultValue defaultValue
-
 // Support for managing Sutil identifiers
+[<RequireQualifiedAccess>]
 module Id =
-    open NodeKey
     open Browser.Types
-    open TypeHelpers
+    //open TypeHelpers
 
     [<Literal>]
-    let private Id = "__sutil_id"
+    let private SUTIL_ID = "__sutil_id"
 
     [<Literal>]
     let private NodeMap = "__sutil_nodemap"
@@ -138,12 +83,12 @@ module Id =
         JsMap.getCreate doc.body NodeMap (fun () -> upcast {| |})
 
     let setId (node: Node) (x: string) =
-        setKey Id node x
+        JsMap.setKey node SUTIL_ID  x
 
         let map = getNodeMap node.ownerDocument
         JsMap.setKey map (string id) node
 
-    let getId (node: Node) = getKeyWith Id node ""
+    let getId (node: Node) = JsMap.getKeyWith node SUTIL_ID ""
 
     let internal findNodeWithId (doc: Document) id : Node option =
         let map = getNodeMap doc
@@ -154,6 +99,7 @@ module Id =
         | _ -> None
 
 /// Support for custom events in general and the custom events that Sutil uses
+[<RequireQualifiedAccess>]
 module CustomEvents =
     open Fable.Core
     open Browser.Types
@@ -244,22 +190,50 @@ module CustomEvents =
                     ]
                 ))
 
-/// Catch-all for DOM related helpers. Mostly query functions
-module DomHelpers =
-    open TypeHelpers
+[<RequireQualifiedAccess>]
+module NamedNodeMap =
     open Browser.Types
-    open Browser.Dom
 
-    let namedNodeMapToArray (n: NamedNodeMap) =
+    let toArray (n: NamedNodeMap) =
         [|
             for i in 0 .. (n.length - 1) do
                 let a = n.item (i)
                 a.name, a.value
         |]
 
-    let attributes (el : HTMLElement) = el.attributes |> namedNodeMapToArray
-    
-    let outerHTML (n: Node) =
+[<RequireQualifiedAccess>]
+module Node =
+    open Browser.Types
+
+    [<Literal>]
+    let internal ElementNodeType = 1.0
+
+    [<Literal>]
+    let internal TextNodeType = 3.0
+
+    /// Return true if n is a Text node (nodeType = 3)
+    let isTextNode (n: Node) = n <> null && n.nodeType = TextNodeType
+
+    /// Return true if n is an Element node (nodeType = 1)
+    let isElementNode (n: Node) =
+        n <> null && n.nodeType = ElementNodeType
+
+    let asEl<'T when 'T :> HTMLElement> (n: Node) : 'T = n :?> 'T
+    let asElement (n: Node) : HTMLElement = n :?> HTMLElement
+
+    let tryAsElement (n: Node) =
+        if isElementNode n then
+            Some(asElement n)
+        else
+            None
+
+    let tryAsTextNode (node: Node) =
+        if isTextNode node then
+            Some(node :?> Browser.Types.Text)
+        else
+            None
+
+    let outerHTML (n: Browser.Types.Node) =
         n
         |> tryAsElement
         |> Option.map _.outerHTML
@@ -270,13 +244,13 @@ module DomHelpers =
                 n.textContent
         )
 
-    let elementTag (n: Node) =
+    let elementTag (n: Browser.Types.Node) =
         if isElementNode n then
             (asElement n).tagName
         else
             ""
 
-    let toStringSummary (node: Node) =
+    let toStringSummary (node: Browser.Types.Node) =
         let _id node = Id.getId node
 
         if isNull node then
@@ -295,7 +269,7 @@ module DomHelpers =
 
             match node.nodeType with
             | ElementNodeType ->
-                let e = node :?> HTMLElement
+                let e = node :?> Browser.Types.HTMLElement
                 let tn = (e.tagName.ToLower())
 
                 let cs =
@@ -316,8 +290,8 @@ module DomHelpers =
             | TextNodeType -> sprintf "<text sutil-id='%A'>%s</text>" (_id node) tc
             | _ -> $"?'{tc}'#{_id node}"
 
-    let children (node: Node) =
-        let rec visit (child: Node) =
+    let children (node: Browser.Types.Node) =
+        let rec visit (child: Browser.Types.Node) =
             seq {
                 if not (isNull child) then
                     yield child
@@ -329,7 +303,7 @@ module DomHelpers =
         else
             visit node.firstChild
 
-    let rec toString (node: Node) =
+    let rec toString (node: Browser.Types.Node) =
         let _id node = Id.getId node
 
         if isNull node then
@@ -348,7 +322,7 @@ module DomHelpers =
             match node.nodeType with
             | ElementNodeType ->
                 let mutable tc = children node |> Seq.map toString |> String.concat ""
-                let e = node :?> HTMLElement
+                let e = node |> asEl
                 let tn = (e.tagName.ToLower())
 
                 let cs =
@@ -370,7 +344,7 @@ module DomHelpers =
             | TextNodeType -> node.textContent
             | _ -> $"?'{node.textContent}'#{_id node}"
 
-    let rec toStringOutline (node: Node) =
+    let rec toStringOutline (node: Browser.Types.Node) =
         let _id node = Id.getId node
 
         if isNull node then
@@ -389,7 +363,7 @@ module DomHelpers =
             match node.nodeType with
             | ElementNodeType ->
                 let mutable tc = children node |> Seq.map toStringOutline |> String.concat ""
-                let e = node :?> HTMLElement
+                let e = node |> asEl
                 let tn = (e.tagName.ToLower())
 
                 let cs =
@@ -408,30 +382,30 @@ module DomHelpers =
                     ""
             | _ -> $"?'{node.textContent}'#{_id node}"
 
-    let rec descendants (node: Node) =
+    let rec descendants (node: Browser.Types.Node) =
         seq {
             for child in children node do
                 yield child
                 yield! descendants child
         }
 
-    let rec internal descendantsDepthFirst (node: Node) =
+    let rec internal descendantsDepthFirst (node: Browser.Types.Node) =
         seq {
             for child in children node do
                 yield! descendants child
                 yield child
         }
 
-    let rec internal descendantsDepthFirstReverse (node: Node) =
+    let rec internal descendantsDepthFirstReverse (node: Browser.Types.Node) =
         seq {
             for child in Seq.rev (children node) do
                 yield! descendants child
                 yield child
         }
 
-    let isConnected (node: Node) : bool = JsMap.getKey node "isConnected"
+    let isConnected (node: Browser.Types.Node) : bool = JsMap.getKey node "isConnected"
 
-    let findElement (doc: Document) selector = doc.querySelector (selector)
+    let findElement (doc: Browser.Types.Document) selector = doc.querySelector (selector)
 
     let internal nullToEmpty s =
         if isNull s then
@@ -439,9 +413,11 @@ module DomHelpers =
         else
             s
 
+module Timers =
+
     /// Wrapper for Window.requestAnimationFrame
     let raf (f: float -> unit) =
-        window.requestAnimationFrame (fun t ->
+        Browser.Dom.window.requestAnimationFrame (fun t ->
             try
                 f t
             with x ->
@@ -450,7 +426,7 @@ module DomHelpers =
 
     /// Wrapper for Window.requestAnimationFrame, ignoring the timestamp.
     let rafu (f: unit -> unit) =
-        window.requestAnimationFrame (fun _ ->
+        Browser.Dom.window.requestAnimationFrame (fun _ ->
             try
                 f ()
             with x ->
@@ -470,16 +446,18 @@ module DomHelpers =
 
         fun () -> Fable.Core.JS.clearTimeout id
 
-    let [<Literal>] private PROMISE_KEY = "__sutil_promise"
-
+module Promise =
     open Fable.Core
+
+    let [<Literal>] private PROMISE_KEY = "__sutil_promise"
 
     ///<summary>
     /// Serialize tasks through an element. If the task already has a running task
     /// wait for it to complete before starting the new task. Otherwise, run the
     /// new task immediately
     ///</summary>
-    let wait (el: HTMLElement) (andThen: unit -> JS.Promise<unit>) =
+
+    let wait (el: Browser.Types.HTMLElement) (andThen: unit -> JS.Promise<unit>) =
         let key = PROMISE_KEY
         let run () = andThen () |> JsMap.setKey el key
 
@@ -489,12 +467,17 @@ module DomHelpers =
             p.``then`` run |> ignore
         else
             run ()
-            
+
+    
+[<RequireQualifiedAccess>]
+module HTMLElement =
+
+    let attributes (el : Browser.Types.HTMLElement) = el.attributes |> NamedNodeMap.toArray
+
+                
 /// Support for disposing of Node-related resources (subscriptions etc)
 module Dispose =
-    open NodeKey
     open Browser.Types
-    open DomHelpers
 
     [<Literal>]
     let DISPOSABLES = "__sutil_ds"
@@ -504,25 +487,25 @@ module Dispose =
             member _.Dispose() = f ()
         }
 
-    let private hasDisposables (node: Node) : bool = hasKey (DISPOSABLES) node
+    let private hasDisposables (node: Node) : bool = JsMap.hasKey node DISPOSABLES
 
     let private getDisposables (node: Node) : System.IDisposable[] =
-        getKeyWith DISPOSABLES node Array.empty
+        JsMap.getKeyWith node DISPOSABLES Array.empty
 
     let private clearDisposables (node: Node) : unit =
-        deleteKey DISPOSABLES node
+        JsMap.deleteKey node DISPOSABLES
 
         if (hasDisposables node) then
             failwith "Internal error"
 
     let setDisposables (node: Node) (ds: System.IDisposable[]) = 
         log.info("Setting disposables on ", node )
-        setKey (DISPOSABLES) node ds
+        JsMap.setKey node (DISPOSABLES) ds
 
     let addDisposable (node: Node) (name: string) (d: System.IDisposable) =
         log.info (
             "disposeNode: adding disposable '" + name + "' to ",
-            node |> DomHelpers.toStringOutline
+            node |> Node.toStringOutline
         )
 
         Array.singleton d |> Array.append (getDisposables node) |> setDisposables node
@@ -535,7 +518,7 @@ module Dispose =
     let internal disposeNode (node: Node) =
         let _id = _disposeId
         _disposeId <- _disposeId + 1
-        let text = node |> DomHelpers.toStringOutline
+        let text = node |> Node.toStringOutline
         log.info ("disposeNode: ", _id, text)
 
         let disposables = getDisposables node |> Array.copy
@@ -556,7 +539,7 @@ module Dispose =
 
     let rec internal disposeTree (node: Node) =
 
-        descendantsDepthFirstReverse node |> Array.ofSeq |> Array.iter disposeNode
+        Node.descendantsDepthFirstReverse node |> Array.ofSeq |> Array.iter disposeNode
 
         disposeNode node
 
@@ -619,20 +602,17 @@ module ClassHelpers =
 /// Support for edits to the DOM: creating nodes, setting attributes etc
 module DomEdit =
 
-    open Browser.Types
-    open Browser.Dom
     open Browser.CssExtensions
-    open DomHelpers
 
-    let remove (node: Node) =
+    let remove (node: Browser.Types.Node) =
         Dispose.dispose node
 
         if not (isNull node.parentNode) then
             node.parentNode.removeChild (node) |> ignore
 
-    let append (parent: Node) (node: Node) = parent.appendChild (node) |> ignore
+    let append (parent: Browser.Types.Node) (node: Browser.Types.Node) = parent.appendChild (node) |> ignore
 
-    let replace (parent: Node) (current: Node) (node: Node) =
+    let replace (parent: Browser.Types.Node) (current: Browser.Types.Node) (node: Browser.Types.Node) =
         if isNull (current) then
             failwith "Attempt to replace null node"
 
@@ -641,14 +621,14 @@ module DomEdit =
             remove current
         with x ->
             Log.Console.error ("replace: ", x.Message)
-            Log.Console.info ("current: ", current |> DomHelpers.toStringOutline)
-            Log.Console.info ("node   : ", node |> DomHelpers.toStringOutline)
-            Log.Console.info ("parent : ", parent |> DomHelpers.toStringOutline)
+            Log.Console.info ("current: ", current |> Node.toStringOutline)
+            Log.Console.info ("node   : ", node |> Node.toStringOutline)
+            Log.Console.info ("parent : ", parent |> Node.toStringOutline)
 
-    let insertBefore (parent: Node) (child: Node) (refNode: Node) =
+    let insertBefore (parent: Browser.Types.Node) (child: Browser.Types.Node) (refNode: Browser.Types.Node) =
         parent.insertBefore (child, refNode) |> ignore
 
-    let insertAfter (parent: Node) (newChild: Node) (refChild: Node) =
+    let insertAfter (parent: Browser.Types.Node) (newChild: Browser.Types.Node) (refChild: Browser.Types.Node) =
         let beforeChild =
             if isNull refChild then
                 parent.firstChild
@@ -658,12 +638,12 @@ module DomEdit =
         insertBefore parent newChild beforeChild
 
     /// Remove all children of this node, cleaning up Sutil resources and dispatching "unmount" events
-    let clear (e: Node) =
-        e |> children |> Seq.toArray |> Array.iter remove
+    let clear (e: Browser.Types.Node) =
+        e |> Node.children |> Seq.toArray |> Array.iter remove
 
-    let text s : Node = document.createTextNode s
+    let text s : Browser.Types.Node = Browser.Dom.document.createTextNode s
 
-    let element tag = document.createElement tag
+    let element tag = Browser.Dom.document.createElement tag
 
     let invisibleElement tag =
         let e = element tag
@@ -689,7 +669,7 @@ module DomEdit =
         else
             string v <> "false"
 
-    let internal setAttribute (el: HTMLElement) (name: string) (value: obj) =
+    let internal setAttribute (el: Browser.Types.HTMLElement) (name: string) (value: obj) =
 
         let svalue = string value
 
@@ -711,30 +691,30 @@ module DomEdit =
         else
             el.setAttribute (name, svalue)
 
-    let removeAttribute (parent: HTMLElement) name = parent.removeAttribute (name)
+    let removeAttribute (parent: Browser.Types.HTMLElement) name = parent.removeAttribute (name)
 
-    let setHeadStylesheet (doc: Document) (url: string) =
-        let head = findElement doc "head"
+    let setHeadStylesheet (doc: Browser.Types.Document) (url: string) =
+        let head = Node.findElement doc "head"
         let styleEl = doc.createElement ("link")
         head.appendChild (styleEl) |> ignore
         styleEl.setAttribute ("rel", "stylesheet")
         styleEl.setAttribute ("href", url) |> ignore
 
-    let setHeadScript (doc: Document) (url: string) =
-        let head = findElement doc "head"
+    let setHeadScript (doc: Browser.Types.Document) (url: string) =
+        let head = Node.findElement doc "head"
         let el = doc.createElement ("script")
         head.appendChild (el) |> ignore
         el.setAttribute ("src", url) |> ignore
 
-    let setHeadEmbedScript (doc: Document) (source: string) =
-        let head = findElement doc "head"
+    let setHeadEmbedScript (doc: Browser.Types.Document) (source: string) =
+        let head = Node.findElement doc "head"
         let el = doc.createElement ("script")
         head.appendChild (el) |> ignore
         el.appendChild (doc.createTextNode (source)) |> ignore
 
-    let setHeadTitle (doc: Document) (title: string) =
-        let head = findElement doc "head"
-        let existingTitle = findElement doc "head>title"
+    let setHeadTitle (doc: Browser.Types.Document) (title: string) =
+        let head = Node.findElement doc "head"
+        let existingTitle = Node.findElement doc "head>title"
 
         if not (isNull existingTitle) then
             head.removeChild (existingTitle) |> ignore
@@ -772,6 +752,9 @@ module EventListeners =
 module Extensions =
     open Browser.Types
 
+    type Browser.Types.NamedNodeMap with
+        member __.ToArray() = NamedNodeMap.toArray __
+
     type NodeList with
         member __.toSeq() =
             seq {
@@ -780,8 +763,8 @@ module Extensions =
             }
 
     type Node with
-        member __.asTextNode = TypeHelpers.tryAsTextNode __
-        member __.asElement = TypeHelpers.tryAsElement __
+        member __.asTextNode = Node.tryAsTextNode __
+        member __.asElement = Node.tryAsElement __
 
     type EventTarget with
         member __.asElement: HTMLElement = __ :?> HTMLElement

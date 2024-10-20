@@ -4,25 +4,22 @@
 module Sutil.Transition
 // Adapted from svelte/transitions/index.js
 
-open Browser.CssExtensions
-open Browser.Types
-open Styling
 open Core
 open Sutil.Internal
-open Internal.DomHelpers
 open System.Collections.Generic
 open System
 open Fable.Core
-open Browser
 //open Interop
+
+type HTMLElement = Browser.Types.HTMLElement
 
 let [<Literal>] private TICK_TASK = "__sutil_ticktask"
 
 let private log = Log.create "Transition"
 
 let slowAnimations = false
-let documentOf (node : Node) = node.ownerDocument
-let nodeStr node = DomHelpers.toStringSummary node
+let documentOf (node : Browser.Types.Node) = node.ownerDocument
+let nodeStr node = Node.toStringSummary node
 
 module StyleHelpers =
 
@@ -85,7 +82,7 @@ module private LoopTasks =
                 task.F()
         )
         if tasks.Count <> 0 then
-            raf runTasks |> ignore
+            Timers.raf runTasks |> ignore
 
     (**
      * For testing purposes only!
@@ -101,7 +98,7 @@ module private LoopTasks =
         let mutable task = Unchecked.defaultof<Task>
 
         if tasks.Count = 0 then
-            raf runTasks |> ignore
+            Timers.raf runTasks |> ignore
 
         {
             Promise = Promise.create( fun fulfill _ ->
@@ -161,8 +158,8 @@ and CreateTransition =
 and TransitionBuilder = TransitionProp list -> HTMLElement -> CreateTransition
 
 type Animation = {
-    From: ClientRect
-    To: ClientRect
+    From: Browser.Types.ClientRect
+    To: Browser.Types.ClientRect
 }
 
 type AnimationBuilder = TransitionProp list -> HTMLElement -> Animation -> Transition
@@ -202,13 +199,13 @@ let applyProps (props : TransitionProp list) (tr:Transition) = props |> List.fol
 let makeTransition (props : TransitionProp list) = applyProps props Transition.Default
 let mapTrans (f: Transition -> TransitionProp list) t = applyProps (f t) t
 
-let element (doc:Document) tag = doc.createElement(tag)
+let element (doc:Browser.Types.Document) tag = doc.createElement(tag)
 
 let mutable private numActiveAnimations = 0
 let mutable private tasks : (unit -> unit) list = []
-let mutable private activeDocs : Map<int,Document> = Map.empty
+let mutable private activeDocs : Map<int,Browser.Types.Document> = Map.empty
 
-let private registerDoc (doc:Document) =
+let private registerDoc (doc:Browser.Types.Document) =
     activeDocs <- activeDocs.Add( doc.GetHashCode(), doc )
     if log.enabled then log.info($"Active docs: {activeDocs.Count}")
 
@@ -223,9 +220,9 @@ let private waitAnimationFrame f =
     let init = tasks.IsEmpty
     tasks <- f :: tasks
     if init then
-        rafu runTasks
+        Timers.rafu runTasks
 
-let private getSutilStyleElement (doc : Document) =
+let private getSutilStyleElement (doc : Browser.Types.Document) =
     let mutable e = doc.querySelector("head style#__sutil_keyframes")
     if (isNull e) then
         e <- element doc "style"
@@ -233,13 +230,15 @@ let private getSutilStyleElement (doc : Document) =
         doc.head.appendChild(e) |> ignore
     e
 
-let private dotSheet styleElem : CSSStyleSheet = JsMap.getKey styleElem "sheet"
+let private dotSheet styleElem : Browser.Types.CSSStyleSheet = JsMap.getKey styleElem "sheet"
 
-let private getSutilStylesheet (doc : Document) = getSutilStyleElement doc |> dotSheet
+let private getSutilStylesheet (doc : Browser.Types.Document) = getSutilStyleElement doc |> dotSheet
 
 let private nextRuleId = Sutil.Helpers.createIdGenerator()
 
 let private toEmptyStr s = if System.String.IsNullOrEmpty(s) then "" else s
+
+open Browser.CssExtensions
 
 let createRule (node : HTMLElement) (a:float) (b:float) tr (uid:int) =
     registerDoc (node.ownerDocument)
@@ -281,7 +280,7 @@ let createRule (node : HTMLElement) (a:float) (b:float) tr (uid:int) =
 let clearAnimations (node:HTMLElement) = node.style.animation <-""
 
 let private clearRules() =
-    rafu( fun _ ->
+    Timers.rafu( fun _ ->
         if (numActiveAnimations = 0) then
             for kv in activeDocs do
                 let doc = kv.Value
@@ -307,16 +306,16 @@ let private deleteRule (node:HTMLElement) (name:string) =
         numActiveAnimations <- numActiveAnimations - deleted
         if (numActiveAnimations = 0) then clearRules()
 
-let private rectToStr (c : ClientRect ) =
+let private rectToStr (c : Browser.Types.ClientRect ) =
     sprintf "[%f,%f -> %f,%f]" c.left c.top c.right c.bottom
 
-let flip props (node:Element) (animation:Animation) =
+let flip props (node:Browser.Types.Element) (animation:Animation) =
     let tr = applyProps props  {
             Transition.Default with
                 Delay = 0.0
                 DurationFn = Some (fun d -> System.Math.Sqrt(d) * 60.0)
                 Ease = Easing.quintOut }
-    let style = window.getComputedStyle(node)
+    let style = Browser.Dom.window.getComputedStyle(node)
     let transform = if style.transform = "none" then "" else style.transform
     let scaleX = animation.From.width / node.clientWidth
     let scaleY = animation.From.height / node.clientHeight
@@ -333,7 +332,7 @@ let flip props (node:Element) (animation:Animation) =
             CssGen = Some (fun t u -> sprintf "transform: %s translate(%fpx, %fpx);`" transform (u * dx) (u * dy))
     }
 
-let createAnimation (node:HTMLElement) (from:ClientRect) (animateFn : AnimationBuilder) props =
+let createAnimation (node:HTMLElement) (from:Browser.Types.ClientRect) (animateFn : AnimationBuilder) props =
     //if (!from)
     //    return noop;
     let tgt (* to *) = node.getBoundingClientRect()
@@ -483,7 +482,7 @@ let transitionNode  (el : HTMLElement)
                 ruleName <- createRule el a b tr 0
             if tr.Tick.IsSome then
                 // Wait for the cancelled runTick to finish
-                DomHelpers.wait el (fun () ->
+                Promise.wait el (fun () ->
                     let t = runTick tr b d
                     t.Promise)
 

@@ -45,7 +45,7 @@ and SutilResult =
     member __.Result = let (SutilResult(result, _)) = __ in result
 
     override __.ToString() : string =
-        sprintf "[%A,%s]" (__.Result) (Sutil.Internal.DomHelpers.toStringSummary __.Node)
+        sprintf "[%A,%s]" (__.Result) (Sutil.Internal.Node.toStringSummary __.Node)
 
 type VirtualElementType =
     | NullNode

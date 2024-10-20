@@ -13,28 +13,16 @@ type Cat =
         Id: string
         Name: string
     }
+    static member Create( id : string, name : string ) = { Id = id; Name = name }
 
 let view () =
-    let extraCat =
-        {
-            Id = "0Bmhjf0rKe8"
-            Name = "Surprise Kitten"
-        }
+    let extraCat = Cat.Create( "0Bmhjf0rKe8", "Surprise Kitten" )
 
     let cats =
         Store.make [
-            {
-                Id = "J---aiyznGQ"
-                Name = "Keyboard Cat"
-            }
-            {
-                Id = "z_AbfPXTKms"
-                Name = "Maru"
-            }
-            {
-                Id = "OUtn3pvWmpg"
-                Name = "Henri The Existential Cat"
-            }
+            Cat.Create( "J---aiyznGQ", "Keyboard Cat" )
+            Cat.Create( "z_AbfPXTKms", "Maru" )
+            Cat.Create( "OUtn3pvWmpg", "Henri The Existential Cat")
         ]
 
     let addCat cat =
@@ -72,7 +60,7 @@ let view () =
                 )
             )
         ]
-        Html.button [
+        Bulma.button [
             Attr.style [
                 Css.marginTop 12
             ]

@@ -5,7 +5,6 @@
   <ItemGroup>
     <Compile Include="Types.fs" />
     <Compile Include="Markdown.fs" />
-    <Compile Include="Bulma.fs" />
     <Compile Include="Doc.fs" />
     <Compile Include="Parsec.fs" />
     <Compile Include="Parser.fs" />
@@ -64,6 +63,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Sutil\Sutil.fsproj" />
     <ProjectReference Include="..\Sutil.Html\Sutil.Html.fsproj" />
+    <ProjectReference Include="..\Sutil.Bulma\Sutil.Bulma.fsproj" />
     <ProjectReference Include="..\Sutil.Transition\Sutil.Transition.fsproj" />
   </ItemGroup>
   <ItemGroup>

@@ -30,7 +30,7 @@ module RandomUser =
             let! response = Fetch.fetch "https://randomuser.me/api/?inc=name" []
             let! responseText = response.text ()
             let result = (Fable.Core.JS.JSON.parse responseText) :?> RandomUserResult
-            return result.results.[0]
+            return result.results[0]
         }
 
 let getRandomName () =
@@ -60,12 +60,12 @@ let view () =
                 randomNames,
                 (fun n -> text $"Please welcome {n}"),
                 (text "...waiting"),
-                (fun x ->
+                (fun exn ->
                     Html.p [
                         Attr.style [
                             Css.color "red"
                         ]
-                        text (string x.Message)
+                        text (string exn.Message)
                     ]
                 )
             )

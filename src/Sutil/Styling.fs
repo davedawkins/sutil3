@@ -1,7 +1,6 @@
 module Sutil.Styling
 
 open Sutil.Internal
-open Sutil.Internal.TypeHelpers
 
 [<Literal>]
 let private MODULE_NAME = "Styling"
@@ -117,7 +116,7 @@ module internal Renderer =
     //     el.setAttribute( "style", getStyleAttr el |> filterStyleAttr name )
 
     // let newStyleElement (doc : Document)=
-    //     let head = "head" |> Sutil.Internal.DomHelpers.findElement doc
+    //     let head = "head" |> Sutil.Internal.Node.findElement doc
     //     let style = doc.createElement("style")
     //     head.appendChild(style :> Node) |> ignore
     //     style
@@ -309,13 +308,9 @@ let private WITH_STYLE = "withStyle"
 [<Literal>]
 let private SUTIL_SCOPE = "sutil-scope"
 
-open VirtualDom
+let private addScopeForNode (scopeName: string) (node: Browser.Types.Node) : unit =
 
-open Browser.Types
-
-let private addScopeForNode (scopeName: string) (node: Node) : unit =
-
-    let rec run (scopeName: string) (node: Node) : unit =
+    let rec run (scopeName: string) (node: Browser.Types.Node) : unit =
         node.asElement
         |> Option.iter (fun el ->
 
@@ -325,15 +320,15 @@ let private addScopeForNode (scopeName: string) (node: Node) : unit =
                 |> Seq.exists (fun name -> (name.StartsWith SUTIL_SCOPE))
 
             if not isScoped then
-                // Log.Console.log("run: Adding scope '" + scopeName + "' to " + (DomHelpers.toStringSummary(node)) )
+                // Log.Console.log("run: Adding scope '" + scopeName + "' to " + (Node.toStringSummary(node)) )
                 el.classList
                 |> ClassHelpers.toArray
                 |> (Array.append (Array.singleton scopeName))
                 |> ClassHelpers.setClassList el
 
-                el |> DomHelpers.children |> Seq.iter (run scopeName)
+                el |> Node.children |> Seq.iter (run scopeName)
             // else
-            //     Log.Console.log("run: ALREADY scoped: " + (DomHelpers.toStringSummary(node)) )
+            //     Log.Console.log("run: ALREADY scoped: " + (Node.toStringSummary(node)) )
 
         )
 

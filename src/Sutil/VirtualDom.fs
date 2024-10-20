@@ -218,7 +218,7 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
                 if isNull (ctx :> obj) then
                     Log.Console.error (
                         "Key '__sutil_ctx' not set on ",
-                        el |> DomHelpers.toStringSummary
+                        el |> Node.toStringSummary
                     )
                 else
                     if _log.enabled then
@@ -226,7 +226,7 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
                             "Mount: init '",
                             name,
                             "'",
-                            e.target.asElement |> Internal.DomHelpers.toString
+                            e.target.asElement |> Internal.Node.toString
                         )
 
                     handler (ctx.WithCurrent(el))
@@ -285,7 +285,7 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
             _log.trace (
                 "toDom: TextNode",
                 s,
-                context.ParentNode |> Internal.DomHelpers.toStringSummary
+                context.ParentNode |> Internal.Node.toStringSummary
             )
 
         let text = DomEdit.text s
@@ -297,7 +297,7 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
             _log.trace (
                 "toDom: TagNode",
                 "<" + tag + "> parented to",
-                context.ParentNode |> Internal.DomHelpers.toStringSummary
+                context.ParentNode |> Internal.Node.toStringSummary
             )
 
         let el = context.CreateElement tag
@@ -318,8 +318,8 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
             JsMap.setKey el "__sutil_ctx" mapped
 
             if _log.enabled then
-                _log.trace ("toDom: -- set __sutil_ctx ", el |> DomHelpers.toStringSummary)
-                _log.trace ("toDom: -- set __sutil_ctx: ctx.Parent ", mapped.Parent |> DomHelpers.toStringSummary)
+                _log.trace ("toDom: -- set __sutil_ctx ", el |> Node.toStringSummary)
+                _log.trace ("toDom: -- set __sutil_ctx: ctx.Parent ", mapped.Parent |> Node.toStringSummary)
 
         ve.Attributes
         |> Array.iter (fun (name, value) ->
@@ -352,7 +352,7 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
                 if _log.enabled then
                     _log.trace (
                         "toDom: -- addChild to ",
-                        el |> Internal.DomHelpers.toStringSummary
+                        el |> Internal.Node.toStringSummary
                     )
 
                 toDom (context.WithParent(el).WithAppendNode(DomEdit.append) |> child.MapContext) child

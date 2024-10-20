@@ -7,8 +7,6 @@ module Sutil.TransitionFunctions
 
 open Browser.Types
 open Sutil.Transition
-open Sutil.Internal
-open Sutil.Internal.DomHelpers
 open System.Collections.Generic
 open Browser
 

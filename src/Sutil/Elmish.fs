@@ -428,7 +428,7 @@ module Elmish =
                 let u =
                     (fun f ->
                         s.Update(f)
-                        Sutil.Internal.CustomEvents.notifySutilUpdated doc
+                        //Sutil.Internal.CustomEvents.notifySutilUpdated doc
                     )
 
                 upcast s, u
@@ -454,7 +454,7 @@ module Elmish =
                 let u =
                     (fun f ->
                         s.Update(f)
-                        Sutil.Internal.CustomEvents.notifySutilUpdated doc
+                        //Sutil.Internal.CustomEvents.notifySutilUpdated doc
                     )
 
                 upcast s, u

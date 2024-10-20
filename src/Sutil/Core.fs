@@ -1,13 +1,7 @@
 module Sutil.Core
 
-open Browser.Dom
-open Browser.Types
-
 open Sutil
 open Sutil.Internal
-open Sutil.Internal.DomHelpers
-open Sutil.Internal.CustomEvents
-open Sutil.Internal.TypeHelpers
 open VirtualDom
 open Patch
 
@@ -74,7 +68,7 @@ let private logPatch (context: BuildContext) (patchAction: NodeAction) =
             _log.trace (
                 sprintf
                     "Patch action:\n current= %s\n action=%s\n parent=%s"
-                    (outerHTML context.Current)
+                    (Node.outerHTML context.Current)
                     (patchAction.ToString())
                     (context.ParentElement.outerHTML)
             )
@@ -83,40 +77,43 @@ let private logPatch (context: BuildContext) (patchAction: NodeAction) =
     patchAction
 
 type SutilEffect =
-    static member RegisterDisposable(node: Node, name: string, disposable: System.IDisposable) =
+    static member RegisterDisposable(node: Browser.Types.Node, name: string, disposable: System.IDisposable) =
         Dispose.addDisposable node name disposable
 
-    static member RegisterUnsubscribe(node: Node, name: string, disposable: Unsubscriber) =
+    static member RegisterUnsubscribe(node: Browser.Types.Node, name: string, disposable: Unsubscriber) =
         Dispose.addUnsubscribe node name disposable
 
-let internal notifyMount (node: Node) =
+let internal notifyMount (node: Browser.Types.Node) =
     if _log.enabled then
-        _log.trace ("Mount: notifying", Internal.DomHelpers.toStringOutline node)
+        _log.trace ("Mount: notifying", Internal.Node.toStringOutline node)
 
-    CustomDispatch<_>.dispatch (node, MOUNT)
+    CustomEvents.CustomDispatch<_>.dispatch (node, CustomEvents.MOUNT)
 
-let internal notifySutilEvents (node: Node) =
+let internal notifySutilEvents (node: Browser.Types.Node) =
     // _log.enabled <- true
 
     if _log.enabled then
-        _log.trace ("Mount: New node", node |> DomHelpers.toString)
+        _log.trace ("Mount: New node", node |> Node.toString)
 
-    if isConnected (node) then
-        CustomDispatch<_>.dispatch (node, CONNECTED)
+    if Node.isConnected (node) then
+        CustomEvents.CustomDispatch<_>.dispatch (node, CustomEvents.CONNECTED)
         notifyMount node
 
         node
         // The mount handlers for bindings can change the tree, so traverse the tree from the bottom
         // up, and in reverse child order. Edits *shouldn't* change the next pointers the nodes
         // we have yet to visit...
-        |> descendantsDepthFirstReverse
+        |> Node.descendantsDepthFirstReverse
         |> Seq.toArray // ... but just to be sure. Mount handlers should probably check that the node is connected (still)
-        |> Seq.filter isElementNode
+        |> Seq.filter Sutil.Internal.Node.isElementNode
         |> Seq.iter notifyMount
-    else if _log.enabled then
-        _log.trace ("Not connected: ", Internal.DomHelpers.toStringSummary node)
 
-let tryFindNewNode ( result : SutilResult ) : Node option =
+        Sutil.Internal.CustomEvents.notifySutilUpdated (node.ownerDocument)
+    else if _log.enabled then
+        _log.trace ("Not connected: ", Internal.Node.toStringSummary node)
+
+
+let tryFindNewNode ( result : SutilResult ) : Browser.Types.Node option =
     match result.Result with
     | Replaced
     | Appended -> Some result.Node
@@ -171,7 +168,7 @@ let buildWith (options : BuildOptions) (context : BuildContext) (sutilElement : 
 let buildWithLogging (options : BuildOptions) (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
     let options = 
         if _log.enabled then
-            _log.trace ("Mount: building", "parent=", context.Parent |> DomHelpers.toStringOutline)
+            _log.trace ("Mount: building", "parent=", context.Parent |> Node.toStringOutline)
             options
                 .WithPostBuildVirtualElement( logElement context )
                 .WithPostCalculatePatches( logPatch context )
@@ -190,7 +187,16 @@ module VDomV2 =
     let makeOptions() =
         BuildOptions
             .Create()
-            .WithCalculatePatches( fun ctx ve -> Patch.calculate (ctx.Current) ve)
+            .WithCalculatePatches( fun ctx ve -> 
+#if NO_PATCH
+                // Behave like Sutil 2.x
+                match isNull (ctx.Current) with 
+                | true -> NodeAction.Insert ve
+                | false -> NodeAction.Replace ve
+#else
+                Patch.calculate (ctx.Current) ve
+#endif
+            )
             .WithApplyPatchess( fun ctx action -> 
                 match Patch.apply ctx action with
                 | Ok r -> r
@@ -222,7 +228,7 @@ module Sutil2 =
 
     let text s = SutilElement.Text s
 
-    let listen event (target: EventTarget) fn = EventListeners.add target event fn
+    let listen event (target: Browser.Types.EventTarget) fn = EventListeners.add target event fn
 
     let once event node fn = EventListeners.once event node fn
 
@@ -241,6 +247,6 @@ module Sutil2 =
     module Ext =
         type BuildContext with
             member __.ParentNode = __.Parent
-            member __.Document = document
+            member __.Document = Browser.Dom.document
 
-    let documentOf (node: Node) = node.ownerDocument
+    let documentOf (node: Browser.Types.Node) = node.ownerDocument

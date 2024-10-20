@@ -3,7 +3,6 @@ module internal Sutil.Bindings
 
 open Core
 open Sutil.Internal
-open DomHelpers
 open Browser.Types
 open System
 open Fable.Core
@@ -118,9 +117,9 @@ let bindElementWithName<'T>
 
                 _log.trace (
                     "parent=",
-                    _context.ParentNode |> DomHelpers.toString
+                    _context.ParentNode |> Node.toString
                 )
-                _log.trace ("current=", currentNode |> DomHelpers.toString)
+                _log.trace ("current=", currentNode |> Node.toString)
 
             source
             |> Observable.distinctUntilChangedCompare compare
@@ -136,9 +135,9 @@ let bindElementWithName<'T>
                         |> _.Node
 
                     if _log.enabled then
-                        _log.trace ( "next parent=", currentNode.parentNode |> DomHelpers.toString )
-                        _log.trace ( "next current=", currentNode |> DomHelpers.toString )
-                        _log.trace ( "next ctxprnt=", _context.ParentNode |> DomHelpers.toString )
+                        _log.trace ( "next parent=", currentNode.parentNode |> Node.toString )
+                        _log.trace ( "next current=", currentNode |> Node.toString )
+                        _log.trace ( "next ctxprnt=", _context.ParentNode |> Node.toString )
 
                 with x ->
                     JS.console.error (x)
@@ -505,7 +504,7 @@ let listenToProp<'T> (attrName: string) (dispatch: 'T -> unit) : SutilElement =
                             listen "input" parent (fun _ -> notify ())
                         )
 
-                    rafu notify
+                    Timers.rafu notify
                 )
             |> ignore
 

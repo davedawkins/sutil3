@@ -24,7 +24,6 @@ module Sutil.Patch
 open Browser.Types
 open Sutil
 open Sutil.Internal
-open TypeHelpers
 
 open VirtualDom
 
@@ -77,9 +76,9 @@ type PatchAction =
 
 and NodeAction =
     | AsIs
-    | Remove of VirtualElement // Provides key of DOM node to remove
+    | Remove 
     | Insert of VirtualElement
-    | Replace of VirtualElement * VirtualElement
+    | Replace of VirtualElement
     | Patch of VirtualElement * PatchAction[]
 
     override __.ToString() : string =
@@ -87,7 +86,7 @@ and NodeAction =
         | Patch (_,actions) -> sprintf "[%s]" (actions |> Array.map (_.ToString()) |> String.concat ",")
         | Replace _ -> "Replace"
         | Insert e -> "Insert " + e.AsString()
-        | Remove e -> "Remove"
+        | Remove -> "Remove"
         | AsIs -> "AsIs"
 
 module private Helpers = 
@@ -96,7 +95,7 @@ module private Helpers =
     // child.
     let tryFindRoot (parent : Node) : VirtualElement option =
         parent 
-        |> DomHelpers.children
+        |> Node.children
         |> Seq.choose (VirtualElement.TryFind)
         |> Seq.tryHead
 
@@ -120,7 +119,7 @@ module private Helpers =
         |]
 
     let tryGetDomNode (parent : Node) (ve : VirtualElement) : Node option =
-        DomHelpers.children parent
+        Node.children parent
         |> Seq.tryFind (fun node -> JsMap.getKeyWith node VIRTUAL_ELEMENT_KEY "" = ve.Key)
         // ve.GetKey()
         // |> Key
@@ -137,7 +136,7 @@ module private Helpers =
 open Helpers
 
 let private getVirtualChildren (node : Node) : (VirtualElement * Node)[] =
-    let nodeChildren = node |> DomHelpers.children |> Seq.toArray
+    let nodeChildren = node |> Node.children |> Seq.toArray
 
     Fable.Core.JS.console.log("Node: ", nodeChildren )
 
@@ -172,7 +171,7 @@ let rec private calculatePatch (node : Node) (existing: VirtualElement) (latest:
             // This will remove all 3rd-party attributes, event handlers and children
             // It could be possible to transfer them all over to the element but is that
             // really a requirement?
-            Replace (existing,latest)
+            Replace (latest)
 
         else
             let existingChildren = getVirtualChildren node
@@ -206,7 +205,7 @@ let rec private calculatePatch (node : Node) (existing: VirtualElement) (latest:
                     yield!
                         existingChildren 
                         |> Seq.skip (latestN)
-                        |> Seq.mapi (fun i ve -> ChildAction(latestN + i, Remove (fst ve)))
+                        |> Seq.mapi (fun i _ -> ChildAction(latestN + i, Remove))
                         |> Seq.rev
 
             |] |> (fun actions -> Patch (latest, actions))
@@ -214,9 +213,9 @@ let rec private calculatePatch (node : Node) (existing: VirtualElement) (latest:
     elif existing.IsDomNode then
 
         if latest.IsDomNode then
-            Replace (existing,latest)
+            Replace (latest)
         else
-            Remove existing
+            Remove
 
     else
         failwith "Unexpected virtual element"
@@ -230,7 +229,7 @@ let calculate (node: Node) (ve: VirtualElement) : NodeAction =
         calculatePatch (node : Node) ve0 ve
     | Some ve0 when ve0.Key <> ve.Key ->
         Fable.Core.JS.console.log("Keys don't match")
-        Fable.Core.JS.console.log(node.parentElement |> DomHelpers.children |> Seq.map (DomHelpers.toString) |> String.concat "\n")
+        Fable.Core.JS.console.log(node.parentElement |> Node.children |> Seq.map (Node.toString) |> String.concat "\n")
         Fable.Core.JS.console.log("Fail: ", node)
         Fable.Core.JS.console.log("Fail: ", ve.AsString())
         failwith ("Virtual element found but keys don't match: " + ve0.Key + " <> " + ve.Key)
@@ -258,21 +257,21 @@ let rec applyPatchAction (context : BuildContext) (patchAction : PatchAction) : 
             JsMap.setKey current "__sutil_ctx" (context.WithParent(current.parentNode))
 
         if _log.enabled then
-            _log.trace ("SetAttr: ", (current |> Internal.DomHelpers.toStringSummary), name, value)
+            _log.trace ("SetAttr: ", (current |> Internal.Node.toStringSummary), name, value)
 
-        DomEdit.setAttribute (asElement current) name value
+        DomEdit.setAttribute (Node.asElement current) name value
         Ok AttrSet
 
     | RemoveAttr(name, _) ->
         if _log.enabled then
-            _log.trace ("RemoveAttr: ", (current |> Internal.DomHelpers.toStringSummary), name)
+            _log.trace ("RemoveAttr: ", (current |> Internal.Node.toStringSummary), name)
 
-        DomEdit.removeAttribute (asElement current) name
+        DomEdit.removeAttribute (Node.asElement current) name
         Ok AttrRemoved
 
     | AddEvent(name, value, options) ->
         if _log.enabled then
-            _log.trace ("AddEvent: ", (current |> Internal.DomHelpers.toStringSummary), name)
+            _log.trace ("AddEvent: ", (current |> Internal.Node.toStringSummary), name)
 
         if
             options
@@ -289,21 +288,21 @@ let rec applyPatchAction (context : BuildContext) (patchAction : PatchAction) : 
 
     | RemoveEvent(name, value) ->
         if _log.enabled then
-            _log.trace ("RemoveEvent: ", (current |> Internal.DomHelpers.toStringSummary), name)
+            _log.trace ("RemoveEvent: ", (current |> Internal.Node.toStringSummary), name)
 
-        (asElement current).removeEventListener (name, value)
+        (current |> Node.asElement).removeEventListener (name, value)
         Ok EventRemoved
 
     | SetInnerText text ->
         if _log.enabled then
-            _log.trace ("SetInnerText: ", (current |> Internal.DomHelpers.toStringSummary), text)
+            _log.trace ("SetInnerText: ", (current |> Internal.Node.toStringSummary), text)
 
         current.textContent <- text
         Ok TextSet
 
     | ChildAction(ix, action) ->
         if _log.enabled then
-            _log.trace ("Child: ", ix, nodeChild ix |> Internal.DomHelpers.toStringSummary)
+            _log.trace ("Child: ", ix, nodeChild ix |> Internal.Node.toStringSummary)
 
         let childResult =
             applyNodeAction
@@ -330,11 +329,11 @@ and applyNodeAction (context : BuildContext) (nodeAction : NodeAction) : Result<
     | AsIs ->
         (Unchanged,context.Current) |> ok
 
-    | Remove existing ->
+    | Remove ->
         DomEdit.remove current
         (Removed, current) |> SutilResult.Of |> Ok
 
-    | Replace (existing, latest) ->
+    | Replace (latest) ->
         let context = latest.MapContext context
         let newNode = VirtualDom.toDom context latest
         DomEdit.replace current.parentElement current newNode
