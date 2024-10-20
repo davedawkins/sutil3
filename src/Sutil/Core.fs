@@ -7,7 +7,7 @@ open Patch
 
 let private _log = Log.create ("Core")
 
-_log.enabled <- true
+_log.enabled <- false
 
 [<AutoOpen>]
 module CoreExtensions =
@@ -212,7 +212,8 @@ let notify (result : SutilResult) =
 
 let mountWith (mapOptions : BuildOptions -> BuildOptions) (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
     sutilElement
-    |> buildWithLogging (makeOptions() |> mapOptions) context
+    |> buildWith (makeOptions() |> mapOptions) context
+    //|> buildWithLogging (makeOptions() |> mapOptions) context
     |> notify
 
 let mount (context: BuildContext) (sutilElement: SutilElement) : SutilResult =

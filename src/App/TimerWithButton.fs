@@ -14,12 +14,12 @@ module TimerWithButton
 //
 
 open Sutil
-open Sutil.Bulma
-open type Feliz.length
+open Sutil.Elmish
+open Sutil.BulmaEngine
 
 open System
-open Sutil.Core
-open Sutil.CoreElements
+open Sutil.Bind
+open Sutil.Html
 
 type Model =
     {
@@ -76,9 +76,7 @@ let create (slot: IObservable<bool * float> -> SutilElement) =
                             "play"
                     )
                     |> icon
-                    onClick (fun _ -> dispatch Toggle) [
-                        PreventDefault
-                    ]
+                    Ev.onClick (fun ev -> ev.preventDefault();  dispatch Toggle)
                 ]
             ]
         ]

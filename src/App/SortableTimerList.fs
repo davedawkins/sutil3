@@ -1,14 +1,16 @@
 module SortableTimerList
 
-open Sutil
-open Sutil.Bulma
-open type Feliz.length
-
-open Sutil.Core
-open Sutil.CoreElements
 open System
+
+open Sutil
+open Sutil.Elmish
+open Sutil.BulmaEngine
+open Sutil.Html
 open Sutil.Styling
+
 open DragDropListSort
+
+open type Feliz.length
 
 type Label =
     {
@@ -54,8 +56,6 @@ let init () =
     Cmd.none
 
 let update msg (model: Model) =
-    Browser.Dom.console.log ($"{msg}")
-
     match msg with
     | Nop -> model, Cmd.none
     | Drag op ->
@@ -90,18 +90,11 @@ let update msg (model: Model) =
             Cmd.none
         | _ -> model, Cmd.none
 
-open Browser.Types
-open Sutil.Styling
-
 let buttonStyle =
     [
         rule ".timer-button" [
             Css.border (px 1, Feliz.borderStyle.solid, "gray")
             Css.borderRadius (px 5)
-            //Css.marginTop (px 4)
-            //Css.marginBottom (px 4)
-            //Css.marginLeft (px 12)
-            //Css.marginRight (px 12)
             Css.margin (px 12)
         ]
         rule ".timer-button.running" [
@@ -163,11 +156,15 @@ let view () =
             |> Html.text
 
         Html.li [
-            CoreElements.setValue "_key" label.Id // DragDropSortList looks for this. eachk could do this automatically
+            // DragDropSortList looks for this. eachk could do this automatically
+            CoreElements.onElementMounted (fun el ->
+                Internal.JsMap.setKey  el "_key" label.Id 
+            )
+
             TimerWithButton.create (displayTime label.Text)
-            |> CoreElements.inject [
-                class' "timer-button"
-            ] // Add this class to the TimerWithButton element
+                |> CoreElements.append [
+                    Attr.className "timer-button"
+                ] // Add this class to the TimerWithButton element
         ]
 
     bulma.columns [
@@ -181,5 +178,4 @@ let view () =
                 DragDropListSort.create labels makeLabel (fun l -> l.Id) [] (dispatch << Drag)
             ]
         ]
-    ]
-    |> withStyle (buttonStyle @ dragDropStyle)
+    ] |> withStyle (buttonStyle @ dragDropStyle)

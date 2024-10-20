@@ -61,7 +61,7 @@ module Types =
 
 open Types
 
-module internal Renderer =
+module Renderer =
 
     open System
     open Browser.Types
@@ -243,7 +243,7 @@ module internal Renderer =
         )
         |> Map
 
-    let internal styleSheetWithScopeAsText
+    let styleSheetWithScopeAsText
         (scopeName: string)
         (styleSheet: SutilStyleSheet)
         : string
@@ -255,7 +255,7 @@ module internal Renderer =
         |> Array.map (entryToText classMap scopeName)
         |> String.concat "\n"
 
-    let internal styleSheetAsText (styleSheet: SutilStyleSheet) =
+    let styleSheetAsText (styleSheet: SutilStyleSheet) =
         styleSheetWithScopeAsText "" styleSheet
 
 let makeMediaRule condition rules =

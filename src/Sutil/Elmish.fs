@@ -7,20 +7,21 @@ module Elmish =
     open Browser.Dom
     open Browser.Types
 
+    /// Dispatch - feed new message into the processing loop
+    type Dispatch<'Msg> = 'Msg -> unit // Message dispatcher
+
+    /// Effect - return immediately, but may schedule dispatch of a message at any time
+    type Effect<'msg> = Dispatch<'msg> -> unit
+
+    /// Cmd - container for effects that may produce messages
+    type Cmd<'Msg> = Effect<'Msg> list // List of commands. A command needs a dispatcher to execute
+
     module Cmd =
 
         open System
 
         // Ported from https://github.com/elmish/elmish
 
-        /// Dispatch - feed new message into the processing loop
-        type Dispatch<'Msg> = 'Msg -> unit // Message dispatcher
-
-        /// Effect - return immediately, but may schedule dispatch of a message at any time
-        type Effect<'msg> = Dispatch<'msg> -> unit
-
-        /// Cmd - container for effects that may produce messages
-        type Cmd<'Msg> = Effect<'Msg> list // List of commands. A command needs a dispatcher to execute
 
         //
         // All Cmd code take from Fable.Elmish/src/cmd.fs, by Maxel Mangime

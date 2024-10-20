@@ -1,10 +1,10 @@
 module CRUD
 
 open Sutil
-open Sutil.Core
-open Sutil.CoreElements
-
-open Sutil.Bulma
+open Sutil.Bind
+open Sutil.Html
+open Sutil.Elmish
+open Sutil.BulmaEngine
 
 open type Feliz.length
 
@@ -309,7 +309,7 @@ let view () =
             ]
             bulma.fieldBody [
                 bulma.control.div [
-                    class' "width100"
+                    Attr.className "width100"
                     bulma.input.text [
                         Attr.value (model, dispatch)
                     ]
@@ -322,7 +322,7 @@ let view () =
             bulma.button.button [
                 Attr.disabled (model .> (enabled >> not))
                 Html.text label
-                onClick (fun _ -> dispatch message) []
+                Ev.onClick (fun _ -> dispatch message)
             ]
         ]
 
@@ -338,23 +338,22 @@ let view () =
             bulma.column [
                 column.is6
 
-                Sutil.Bulma.Helpers.selectList [ // FIXME: Feliz.BulmaEngine should provide this
-                    Attr.size 6
+                Bind.el( model, fun m ->
+                    Sutil.BulmaEngine.Helpers.selectList [ // FIXME: Feliz.BulmaEngine should provide this
+                        Attr.size 6
 
-                    let viewNames = model .> filteredNames |> Observable.distinctUntilChanged
-
-                    Bind.each (
-                        viewNames,
-                        (fun n ->
-                            Html.option [
-                                Attr.value n.Id
-                                (sprintf "%s, %s" n.Surname n.Name) |> Html.text
-                            ]
-                        )
-                    )
-
-                    Bind.selected (model .> selection, List.exactlyOne >> Select >> dispatch)
-                ]
+                        yield! 
+                            m
+                            |> filteredNames 
+                            |> List.map 
+                                (fun n ->
+                                    Html.option [
+                                        Attr.value n.Id
+                                        (sprintf "%s, %s" n.Surname n.Name) |> Html.text
+                                    ]
+                                )
+                        Bind.selected (model .> selection, List.exactlyOne >> Select >> dispatch)
+                    ] )
             ]
             bulma.column [
                 column.is6

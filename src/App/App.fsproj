@@ -52,12 +52,17 @@
     <Compile Include="Spreadsheet.fs" />
     <Compile Include="Login.fs" />
     <Compile Include="LoginExample.fs" />
-    <!-- <Compile Include="TimerLogic.fs" /> -->
-    <!-- <Compile Include="DragDropListSort.fs" /> -->
-    <!-- <Compile Include="DataSim.fs" /> -->
-    <!-- <Compile Include="WebComponents.fs" /> -->
+    <Compile Include="SafeClient.fs" />
+    <Compile Include="TimerLogic.fs" />
+    <Compile Include="DragDropListSort.fs" />
+    <Compile Include="TimerWithButton.fs" />
+    <Compile Include="SortableTimerList.fs" />
+    <Compile Include="DataSimulation.fs" />
+    <Compile Include="DataSim.fs" />
+    <Compile Include="CRUD.fs" />
+    <Compile Include="WebComponents.fs" />
     <!-- <Compile Include="Draw.fs" /> -->
-    <!-- <Compile Include="Cells.fs" /> -->
+    <Compile Include="Cells.fs" />
     <Compile Include="Examples.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
@@ -67,6 +72,7 @@
     <ProjectReference Include="..\Sutil.Bulma\Sutil.Bulma.fsproj" />
     <ProjectReference Include="..\Sutil.BulmaEngine\Sutil.BulmaEngine.fsproj" />
     <ProjectReference Include="..\Sutil.Transition\Sutil.Transition.fsproj" />
+    <ProjectReference Include="..\Sutil.WebComponents\Sutil.WebComponents.fsproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Fable.Formatting.Markdown" Version="1.0.1" />

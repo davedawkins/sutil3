@@ -85,7 +85,7 @@ let elementFromException (x: exn) =
     ]
 
 let private bindLog = Log.create ("Bind")
-bindLog.enabled <- true
+bindLog.enabled <- false
 
 open VirtualDom
 
@@ -96,7 +96,7 @@ let bindElementWithName<'T>
     (compare: 'T -> 'T -> bool)
     =
     let _log = Log.create("Bind:" + name)
-    _log.enabled <- true
+    _log.enabled <- false
 
     let mapOptions (options : BuildOptions) : BuildOptions =
         options

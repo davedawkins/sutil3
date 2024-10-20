@@ -1,8 +1,9 @@
 module DataSim
 
 open Sutil
-
+open Sutil.Html
 open Sutil.CoreElements
+open Sutil.Bind
 
 type Record =
     {
@@ -96,7 +97,7 @@ let view () =
                 Css.minWidth (Feliz.length.percent 25)
             ]
             Html.table [
-                class' "table"
+                Attr.className "table"
                 Html.tbody [
                     Bind.each (
                         records,
@@ -115,7 +116,7 @@ let view () =
                 Css.minWidth (Feliz.length.percent 25)
             ]
             Html.table [
-                class' "table"
+                Attr.className "table"
                 Html.tbody [
                     Bind.each (
                         stocks,

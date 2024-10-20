@@ -12,13 +12,8 @@ module TransitionInOut = let view = CompilationFailure
 module TransitionCustomCss = let view = CompilationFailure
 module TransitionCustom = let view = CompilationFailure
 module TransitionEvents = let view = CompilationFailure
-module SortableTimerList = let view = CompilationFailure
-module SAFE = let view = CompilationFailure
-module CRUD = let view = CompilationFailure
 module BarChart = let view = CompilationFailure
-module DataSim = let view = CompilationFailure
-module WebComponents = let view = CompilationFailure
-module SevenGuisCells = let view = CompilationFailure
+// module WebComponents = let view = CompilationFailure
 
 #if !FANTOMAS
 let allExamples = [
@@ -79,16 +74,16 @@ let allExamples = [
         { Pass =true; Category = "Miscellaneous";   Title = "Spreadsheet";  Link = AppLink (Spreadsheet.view , ["Spreadsheet.fs"; "Evaluator.fs"; "Parser.fs"]) }
         { Pass =true; Category = "Miscellaneous";   Title = "Modal";  Link = AppLink (Modal.view , ["Modal.fs"]) }
         { Pass =true; Category = "Miscellaneous";   Title = "Login";  Link = AppLink (LoginExample.view , ["LoginExample.fs"; "Login.fs"]) }
-        { Pass =false; Category = "Miscellaneous";   Title = "Drag-sortable list";  Link = AppLink (SortableTimerList.view , ["SortableTimerList.fs"; "DragDropListSort.fs"; "TimerWithButton.fs"; "TimerLogic.fs"]) }
-        { Pass =false; Category = "Miscellaneous";   Title = "SAFE client";  Link = AppLink (SAFE.view , ["SafeClient.fs"]) }
-        { Pass =false; Category = "Miscellaneous";   Title = "Data Simulation";  Link = AppLink (DataSim.view , ["DataSim.fs"]) }
+        { Pass =true; Category = "Miscellaneous";   Title = "Drag-sortable list";  Link = AppLink (SortableTimerList.view , ["SortableTimerList.fs"; "DragDropListSort.fs"; "TimerWithButton.fs"; "TimerLogic.fs"]) }
+        { Pass =true; Category = "Miscellaneous";   Title = "SAFE client";  Link = AppLink (SAFE.view , ["SafeClient.fs"]) }
+        { Pass =true; Category = "Miscellaneous";   Title = "Data Simulation";  Link = AppLink (DataSim.view , ["DataSim.fs"]) }
         { Pass =false; Category = "Miscellaneous";   Title = "Web Components";  Link = AppLink (WebComponents.view , ["WebComponents.fs"]) }
 
         // Not in Sutil 2
         // { Pass =false; Category = "Miscellaneous";   Title = "Draw";  Link = AppLink (Draw.view , ["Draw.fs"]) }
         // { Pass =false; Category = "Miscellaneous";   Title = "Fragment";  Link = AppLink (Fragment.view , ["Fragment.fs"]) }
 
-        { Pass =false; Category = "7Guis";   Title = "Cells";  Link = AppLink (SevenGuisCells.view , ["Cells.fs"]) }
-        { Pass =false; Category = "7Guis";   Title = "CRUD";  Link = AppLink (CRUD.view , ["CRUD.fs"]) }
+        { Pass =true; Category = "7Guis";   Title = "Cells";  Link = AppLink (SevenGuisCells.view , ["Cells.fs"]) }
+        { Pass =true; Category = "7Guis";   Title = "CRUD";  Link = AppLink (CRUD.view , ["CRUD.fs"]) }
     ]
 #endif

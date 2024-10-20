@@ -728,7 +728,8 @@ module EventListeners =
     open Browser.Types
 
     let add (node: EventTarget) (event: string) (handler: Event -> unit) : Unsubscriber =
-        node.addEventListener (event, handler)
+        // Bug in Feliz.Engine that sends us "dragStart" instead of "dragstart"
+        node.addEventListener (event.ToLower(), handler)
 
         let remove = (fun () -> node.removeEventListener (event, handler))
 

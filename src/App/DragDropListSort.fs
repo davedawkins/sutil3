@@ -27,12 +27,11 @@ module DragDropListSort
 // - Can't drag to end of list. For now, drag to n-1, then move nth up 1 place
 
 open Sutil
-open type Feliz.length
-
-open Sutil.Core
-open Sutil.CoreElements
 open Browser.Types
 open Fable.Core.JsInterop
+open Sutil.Internal
+open Sutil.Bind
+open Sutil.Html
 
 let log s = Browser.Dom.console.log (s)
 
@@ -41,8 +40,6 @@ type DragOperation =
     | InsertAfter of (int * int)
     | Nothing
 
-open Fable.Core.JsInterop
-
 module private Private =
     let fromTarget (e: Browser.Types.EventTarget) = e :?> Browser.Types.Node
     let toElement (e: Node) = e :?> HTMLElement
@@ -50,10 +47,10 @@ module private Private =
     let iterElem (f: HTMLElement -> unit) (node: Node option) = node |> Option.iter (toElement >> f)
 
     let addClasses node classes =
-        node |> iterElem (DomHelpers.ClassHelpers.addToClasslist classes)
+        node |> iterElem (ClassHelpers.addToClasslist classes)
 
     let removeClasses node classes =
-        node |> iterElem (DomHelpers.ClassHelpers.removeFromClasslist classes)
+        node |> iterElem (ClassHelpers.removeFromClasslist classes)
 
     let getKey (n: Node) : int = n?_key
 
@@ -95,6 +92,8 @@ module private Private =
 
         // Event handlers
         member _.dragOver(e: Browser.Types.Event) =
+            e.preventDefault()
+
             e?dropEffect <- "move"
 
             removeDragOverClasses ()
@@ -107,12 +106,10 @@ module private Private =
             removeDragOverClasses ()
             overNode <- None
             dragOp <- Nothing
-            ()
 
         member _.dragEnd(e: Browser.Types.Event) =
             removeDragOverClasses ()
             removeDragClasses ()
-            ()
 
         member _.drop dispatch (e: Browser.Types.Event) = dragOp |> dispatch
 
@@ -129,24 +126,21 @@ module private Private =
             // NO effect on: Chrome MacOS
             addClasses draggingNode "dragging-init"
 
-            DomHelpers.rafu addDragInProcessClasses // class .dragging
+            Timers.rafu addDragInProcessClasses // class .dragging
 
-    let slotWrapper (state: DragState) slot dispatch item =
+    let slotWrapper (state: DragState) (slot : 'T -> SutilElement) (dispatch: DragOperation -> unit) (item : 'T) : SutilElement =
         slot item
-        |> CoreElements.inject [
+        |> CoreElements.append [
             Attr.draggable true
-            on "dragstart" state.dragStart []
-            on "dragover" state.dragOver [
-                PreventDefault
-            ] // Causes drop to fire
-            on "dragenter" ignore [
-                PreventDefault
-            ]
-            on "dragleave" state.dragLeave []
-            on "dragend" state.dragEnd []
-            on "drop" (state.drop dispatch) [
-                PreventDefault
-            ]
+            Ev.onDragStart (state.dragStart)
+            Ev.onDragOver state.dragOver // Causes drop to fire
+            Ev.onDragEnter (fun ev -> ev.preventDefault())
+            Ev.onDragLeave state.dragLeave
+            Ev.onDragEnd state.dragEnd
+            Ev.onDrop (fun ev -> 
+                ev.preventDefault()
+                (state.drop dispatch) ev
+            )
         ]
 
 open Private
@@ -161,4 +155,4 @@ let create
     (dispatch: DragOperation -> unit)
     =
     let state = DragState()
-    Bind.each (items, (slotWrapper state slot dispatch), key, trans)
+    Bind.each (items, (slotWrapper state slot dispatch), key (*, trans*) )

@@ -267,7 +267,7 @@ type SutilAttrEngine() =
             (fun key value -> _attr (key, string value))
         )
 
-    // member _.disabled<'T> (value: IObservable<'T>) = bindAttrIn "disabled" value
+    member _.disabled<'T> (value: IObservable<'T>) = Bind.attr( "disabled", value )
 
     member _.value(value: obj) = _attr ("value", value)
     member _.value(value: int) = _attr ("value", value)

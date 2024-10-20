@@ -9,7 +9,6 @@ open type Feliz.borderStyle
 open type Feliz.length
 open Sutil
 open Sutil.Styling
-
 open Sutil.Html
 open Sutil.Bind
 open Sutil.Elmish
@@ -249,7 +248,7 @@ let update (message: Message) (model: Model) : Model * Cmd<Message> =
         },
         []
 
-let renderCellAt (renderfn: Position -> SutilElement) (ctx: BuildContext) (cell: Position) =
+let renderCellAt (renderfn: Position -> SutilElement) (cell: Position) =
     let cellElement = cell |> renderfn
     Program.mount (nodeOfCell cell, cellElement) |> ignore
 
@@ -272,10 +271,9 @@ let view () : SutilElement =
             Html.input [
                 Attr.typeText
                 Attr.value content
-                autofocus
-                Ev.onKeyDown (fun me ->
-                    if me.key = "Enter" then
-                        (pos, me.target?value) |> UpdateValue |> dispatch
+                CoreElements.autofocus
+                Ev.onBlur (fun me ->
+                    (pos, me.target?value) |> UpdateValue |> dispatch
                 )
             ]
         ]
@@ -318,6 +316,7 @@ let view () : SutilElement =
                                 cols
                                 |> List.map (fun col ->
                                     Html.td [
+                                        Attr.tabIndex 0
                                         Attr.custom ("x-id", positionStr (col, row))
                                         renderPlainCell (col, row)
                                     ]
@@ -343,9 +342,9 @@ let view () : SutilElement =
                     // In this view, this will include the styling applied further up
 
                     CoreElements.subscribe activeS
-                    <| fun ctx (value, next) ->
-                        value |> Option.iter (renderCellAt renderPlainCell ctx)
-                        next |> Option.iter (renderCellAt renderActiveCell ctx)
+                    <| fun (value, next) ->
+                        value |> Option.iter (renderCellAt renderPlainCell)
+                        next |> Option.iter (renderCellAt renderActiveCell)
 
                     // model.Refresh (Potiion option) indicates which cell is requesting a refresh (re-evaluation)
                     // the observable stream strips out Option.None to leave only a stream of Positions

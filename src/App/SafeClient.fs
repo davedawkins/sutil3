@@ -1,7 +1,10 @@
 module SAFE
 
-open Sutil.CoreElements
+open Sutil
 open Sutil.Html
+open Sutil.Elmish
+open Sutil.Elmish.Cmd
+open Sutil.Bind
 
 module Shared =
 
@@ -34,7 +37,6 @@ module Shared =
         }
 
 open Shared
-open Sutil
 
 type Model =
     {
@@ -131,20 +133,15 @@ let update (msg: Msg) (model: Model) : Model * Cmd<Msg> =
         },
         Cmd.none
 
-open Sutil.Bulma
+open Sutil.BulmaEngine
 
 open System
 
 [<AutoOpen>]
 module Helpers =
-    let (|>>) store f = store |> Store.map f
     let mInput m = m.Input
     let mTodos m = m.Todos
     let tId t = t.Id
-
-    let inline xlog m =
-        Browser.Dom.console.log (string m)
-        m
 
 let navBrand =
     bulma.navbarBrand.div [
@@ -163,7 +160,7 @@ let containerBox (model: IObservable<Model>) (dispatch: Msg -> unit) =
         bulma.content [
             Html.ol [
                 Bind.each (
-                    model |>> mTodos,
+                    model .> mTodos,
                     (fun todo ->
                         Html.li [
                             Html.text todo.Description
@@ -178,15 +175,15 @@ let containerBox (model: IObservable<Model>) (dispatch: Msg -> unit) =
             bulma.control.p [
                 control.isExpanded
                 bulma.input.text [
-                    Attr.value (model |>> mInput, SetInput >> dispatch)
+                    Attr.value (model .> mInput, SetInput >> dispatch)
                     Attr.placeholder "What needs to be done?"
                 ]
             ]
             bulma.control.p [
                 bulma.button.a [
                     color.isPrimary
-                    Attr.disabled (model |>> (mInput >> Todo.isValid >> not >> xlog))
-                    onClick (fun _ -> dispatch AddTodo) []
+                    Attr.disabled (model .> (mInput >> Todo.isValid >> not))
+                    Ev.onClick (fun _ -> dispatch AddTodo)
                     Html.text "Add"
                 ]
             ]
@@ -208,11 +205,9 @@ let view () =
         ]
 
         bulma.heroHead [
-            //bulma.navbar [
             bulma.container [
                 navBrand
             ]
-        //]
         ]
         bulma.heroBody [
             bulma.container [

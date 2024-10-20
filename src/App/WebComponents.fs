@@ -4,7 +4,6 @@ open Sutil
 
 open Sutil.Html
 open Sutil.Bind
-open Browser.Types
 open Sutil.Styling
 
 type CounterProps =
@@ -27,7 +26,7 @@ let CounterStyles =
 
 let Counter (model: IStore<CounterProps>) =
     Html.div [
-        adoptStyleSheet CounterStyles
+        Sutil.AdoptStyleSheet.adoptStyleSheet CounterStyles
 
         Bind.el (model |> Store.map (fun m -> m.label), Html.span)
         Bind.el (model |> Store.map (fun m -> m.value), Html.text)

@@ -116,3 +116,29 @@ let autofocus =
         ) 
     )
 
+let subscribe (source : System.IObservable<'T>) (handler : 'T -> unit) =
+    onElementMounted (fun el ->
+       source.Subscribe( handler ) |> Dispose.addDisposable el "subscribe"
+    )
+
+/// Merge these `SutilElement`s with another `SutilElement`.
+let rec append (elements: SutilElement seq) (element: SutilElement) =
+    match element with
+    | SutilElement.Attribute _
+    | SutilElement.Event _
+    | SutilElement.Text _
+    | SutilElement.BindElement _ ->
+        Fable.Core.JS.console.error(sprintf "Cannot concatenate to a %A" element)
+        failwith (sprintf "Cannot concatenate to a %A" element)
+
+    | SutilElement.MappingElement (name, map, se) -> 
+        SutilElement.MappingElement (name, map, (append elements se))
+
+    | SutilElement.Element (tag, children) ->
+        SutilElement.Element (tag, elements |> Seq.toArray |> Array.append children)
+
+    | SutilElement.Fragment (children) ->
+        SutilElement.Fragment (elements |> Seq.toArray |> Array.append children)
+
+let inject (elements: SutilElement seq) (element: SutilElement) = 
+    append elements element

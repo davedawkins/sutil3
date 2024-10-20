@@ -5,11 +5,9 @@ module TimerLogic
 // to make use of componentized services or behaviour
 
 open Sutil
-open type Feliz.length
-open Sutil.Core
+open Sutil.Internal
 open Sutil.CoreElements
 open Sutil.Elmish
-open Sutil.Internal.DomHelpers
 open System
 
 type Model =
@@ -46,7 +44,7 @@ let update msg model =
             Elapsed = 0.0
         },
         [
-            fun d -> interval (fun _ -> Tick |> d) 1000 |> Some |> SetTask |> d
+            fun d -> Timers.interval (fun _ -> Tick |> d) 1000 |> Some |> SetTask |> d
         ]
     | StopTimer ->
         { model with
@@ -68,7 +66,6 @@ let update msg model =
 
 let create (run: IObservable<bool>) (view: IObservable<bool * float> -> SutilElement) =
 
-    let log s = Browser.Dom.console.log s
     let model, dispatch = () |> Store.makeElmish init update ignore
 
     let stop () = dispatch StopTimer
@@ -92,14 +89,14 @@ let create (run: IObservable<bool>) (view: IObservable<bool * float> -> SutilEle
     // Here we are just returning the user's view template for the timer, passing the
     // time as an observable. This component adds no view elements of its own, it
     // just provides the timer functionality
-    // Since we have resources to clean up, we 'inject' them into the view template
+    // Since we have resources to clean up, we 'append' them into the view template
     // So if the view creates a top-level div, then our cleanup functions will
     // be called when that div itself is cleaned up
 
     model
     |> Store.map (fun m -> isRunning m, m.Elapsed)
     |> view // User's view component
-    |> CoreElements.inject [ // Attach our cleanup to the view component
+    |> CoreElements.append [ // Attach our cleanup to the view component
         unsubscribeOnUnmount [
             cleanup
         ] // Clean up the timer subscription
