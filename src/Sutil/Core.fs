@@ -25,7 +25,7 @@ module CoreExtensions =
             SutilElement.DefineBinding(
                 name, 
                 init, 
-                (fun ctx -> ctx |> f |> Dispose.addDisposable ctx.ParentElement name)
+                (fun ctx -> ctx |> f |> Bindings.add ctx.ParentElement)
             )
 
         static member DefineBinding(name: string, f: BuildContext -> System.IDisposable) =

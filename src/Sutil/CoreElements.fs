@@ -94,7 +94,7 @@ let postProcessElementsWithName
         (fun context ->
                 context
                     .WithOnImportedNode(fun (node:Node) -> 
-                        Log.Console.log("postProcess: " + name + ": " + (node.textContent))
+                        //Log.Console.log("postProcess: " + name + ": " + (node.textContent))
                         node.asElement |> Option.iter f
                     )
         ),

@@ -342,7 +342,14 @@ and applyNodeAction (context : BuildContext) (nodeAction : NodeAction) : Result<
         if (isNull current) then
             Error "Node to be patched cannot be found"
         else
-            Dispose.disposeNode current // Does NOT delete the node! Unregisters event handlers, disposes associated subscriptions etc
+            // Internal.Dispose.disposeAll current
+            // // Remove subscriptions made by bindings
+            Internal.Bindings.clear current
+
+            // // Remove event listeners
+            Internal.EventListeners.clear current
+
+            // ^^ these will be added again, cannot be patched
 
             let context = 
                 context

@@ -36,6 +36,9 @@ module JsMap =
     [<Emit("delete $0[$1]")>]
     let deleteKey (node: obj) (key: string) = jsNative
 
+    [<Emit("Object.keys($0)")>]
+    let keyNames (node  : obj) : string[] = jsNative
+
     let hasKey (node: obj) (key: string) = jsIn key node
 
     let setKey (node: obj) (key: string) (value: obj) : unit = node?(key) <- value
@@ -71,7 +74,6 @@ module JsMap =
 [<RequireQualifiedAccess>]
 module Id =
     open Browser.Types
-    //open TypeHelpers
 
     [<Literal>]
     let private SUTIL_ID = "__sutil_id"
@@ -477,68 +479,89 @@ module HTMLElement =
                 
 /// Support for disposing of Node-related resources (subscriptions etc)
 module Dispose =
+
+    // A node will contain a JS map under key "__sutil_ds"
+    // Each keyed value within the map is an array of IDisposables
+    // The key name is the module that owns those disposables. There are
+    // three known pools at this time:
+    // - Default
+    // - Event Listeners
+    // - Bindings
+    // When patching elements, the event listeners and bindings are disposed
+    // and then re-added.
+
     open Browser.Types
 
     [<Literal>]
-    let DISPOSABLES = "__sutil_ds"
+    let MAP = "__sutil_ds"
+
+    [<Literal>]
+    let DEFAULT_KEY = "default"
 
     let makeDisposable (f: Unsubscriber) =
         { new System.IDisposable with
             member _.Dispose() = f ()
         }
 
-    let private hasDisposables (node: Node) : bool = JsMap.hasKey node DISPOSABLES
+    let private safeDispose (d: System.IDisposable) =
+        try
+            d.Dispose()
+        with x ->
+            log.error (sprintf "Error while disposing: %s" x.Message)
 
-    let private getDisposables (node: Node) : System.IDisposable[] =
-        JsMap.getKeyWith node DISPOSABLES Array.empty
+    let private disposeArray (ds : System.IDisposable[]) =
+        ds |> Array.iter safeDispose
 
-    let private clearDisposables (node: Node) : unit =
-        JsMap.deleteKey node DISPOSABLES
+    let private mapOf(node: Node) : obj =
+        JsMap.getKeyWith node MAP ({| |})
 
-        if (hasDisposables node) then
-            failwith "Internal error"
+    let private clearMap (node: Node) : unit =
+        JsMap.deleteKey node MAP
 
-    let setDisposables (node: Node) (ds: System.IDisposable[]) = 
-        log.info("Setting disposables on ", node )
-        JsMap.setKey node (DISPOSABLES) ds
+    let private getDisposablesForKey (node: Node) (key : string): System.IDisposable[] =
+        JsMap.getKeyWith (mapOf node) key Array.empty
+
+    let private clearDisposablesForKey (node: Node) (key : string) : unit =
+        JsMap.deleteKey (mapOf node) key
+
+    let internal disposeAllOfKey (node : Node) (key : string) : unit =
+        let ds = getDisposablesForKey node key |> Array.copy
+
+        clearDisposablesForKey node key
+
+        ds |> disposeArray
+
+    let private collectAllDisposables (node : Node) = 
+        JsMap.keyNames (mapOf node)
+        |> Array.collect (fun key -> getDisposablesForKey node key)
+
+    let internal disposeAll (node : Node) : unit =
+        let all = collectAllDisposables node
+        clearMap node
+        all |> disposeArray
+
+    let addDisposableForKey (node: Node) (key: string) (name : string) (d: System.IDisposable) =
+        let map = mapOf node
+        JsMap.arrayAppendKey map key d
+        JsMap.setKey node MAP map
 
     let addDisposable (node: Node) (name: string) (d: System.IDisposable) =
-        log.info (
-            "disposeNode: adding disposable '" + name + "' to ",
-            node |> Node.toStringOutline
-        )
+        addDisposableForKey node DEFAULT_KEY name d
 
-        Array.singleton d |> Array.append (getDisposables node) |> setDisposables node
+    let addUnsubscribeForKey (node: Node) (key : string) (name: string) (f: Unsubscriber) =
+        f |> makeDisposable |> addDisposableForKey node key name
 
     let addUnsubscribe (node: Node) (name: string) (f: Unsubscriber) =
-        f |> makeDisposable |> addDisposable node name
-
-    let mutable _disposeId = 0
+        addUnsubscribeForKey node DEFAULT_KEY name f
 
     let internal disposeNode (node: Node) =
-        let _id = _disposeId
-        _disposeId <- _disposeId + 1
-        let text = node |> Node.toStringOutline
-        log.info ("disposeNode: ", _id, text)
-
-        let disposables = getDisposables node |> Array.copy
-        clearDisposables node
+        let all = collectAllDisposables node
+        clearMap node
 
         CustomEvents.dispatchSimple node CustomEvents.UNMOUNT
-
-        let safeDispose (d: System.IDisposable) =
-            try
-                d.Dispose()
-            with x ->
-                log.error (sprintf "Error while disposing: %s" x.Message)
-
-        // EventListeners.clear node
-
-        disposables |> Array.iter safeDispose
-        log.info ("EXIT: disposeNode: ", _id, text)
+        all |> disposeArray
 
     let rec internal disposeTree (node: Node) =
-
         Node.descendantsDepthFirstReverse node |> Array.ofSeq |> Array.iter disposeNode
 
         disposeNode node
@@ -604,15 +627,14 @@ module ClassHelpers =
 /// Support for edits to the DOM: creating nodes, setting attributes etc
 module DomEdit =
 
-    open Browser.CssExtensions
-
     let remove (node: Browser.Types.Node) =
         Dispose.dispose node
 
         if not (isNull node.parentNode) then
             node.parentNode.removeChild (node) |> ignore
 
-    let append (parent: Browser.Types.Node) (node: Browser.Types.Node) = parent.appendChild (node) |> ignore
+    let append (parent: Browser.Types.Node) (node: Browser.Types.Node) = 
+        parent.appendChild (node) |> ignore
 
     let replace (parent: Browser.Types.Node) (current: Browser.Types.Node) (node: Browser.Types.Node) =
         if isNull (current) then
@@ -653,11 +675,6 @@ module DomEdit =
         else
             Browser.Dom.document.createElementNS(ns,tag)
 
-    let invisibleElement tag =
-        let e = element tag
-        e.style.display <- "none"
-        e
-
     let private booleanAttributes =
         [
             "hidden"
@@ -687,41 +704,36 @@ module DomEdit =
                 el.setAttribute (name, "")
             else
                 el.removeAttribute name
-
-        // The  (SutilElement -> VirtualElement) fn will collate all the classes into
-        // into a single class attribute, so that we don't need to addToClassList here
-
-        // elif (name.ToLower() = "class") then
-        //     ClassHelpers.addToClasslist svalue el
         elif name = "value" then
             JsMap.setKey el "__value" value
             el.setAttribute (name, svalue)
         else
             el.setAttribute (name, svalue)
 
-    let removeAttribute (parent: Browser.Types.HTMLElement) name = parent.removeAttribute (name)
+    let removeAttribute (parent: Browser.Types.HTMLElement) name = 
+        parent.removeAttribute (name)
 
     let setHeadStylesheet (doc: Browser.Types.Document) (url: string) =
-        let head = Node.findElement doc "head"
+        let head = doc.head
         let styleEl = doc.createElement ("link")
         head.appendChild (styleEl) |> ignore
         styleEl.setAttribute ("rel", "stylesheet")
         styleEl.setAttribute ("href", url) |> ignore
 
     let setHeadScript (doc: Browser.Types.Document) (url: string) =
-        let head = Node.findElement doc "head"
+        let head = doc.head
         let el = doc.createElement ("script")
         head.appendChild (el) |> ignore
         el.setAttribute ("src", url) |> ignore
 
     let setHeadEmbedScript (doc: Browser.Types.Document) (source: string) =
-        let head = Node.findElement doc "head"
+        let head = doc.head
         let el = doc.createElement ("script")
         head.appendChild (el) |> ignore
         el.appendChild (doc.createTextNode (source)) |> ignore
 
     let setHeadTitle (doc: Browser.Types.Document) (title: string) =
-        let head = Node.findElement doc "head"
+        let head = doc.head
         let existingTitle = Node.findElement doc "head>title"
 
         if not (isNull existingTitle) then
@@ -731,9 +743,31 @@ module DomEdit =
         titleEl.appendChild (doc.createTextNode (title)) |> ignore
         head.appendChild (titleEl) |> ignore
 
+[<RequireQualifiedAccess>]
+module Bindings =
+
+    open Browser.Types
+
+    let [<Literal>] BINDINGS = "__sutil_bnd"
+
+    let clear (node : Node) : unit =
+        Dispose.disposeAllOfKey node BINDINGS
+
+    let add (node : Node) (d: System.IDisposable) =
+        Dispose.addDisposableForKey node BINDINGS "" d
+
 /// Support for managing event listeners.
 module EventListeners =
     open Browser.Types
+
+    let [<Literal>] LISTENERS = "__sutil_lsn"
+
+    let clear (node : EventTarget) : unit =
+        let n = (node :?> Node)
+        Dispose.disposeAllOfKey n LISTENERS
+
+    let private addUnlisten (node : EventTarget) (event : string) (u : Unsubscriber) =
+        Dispose.addUnsubscribeForKey (node :?> Node) LISTENERS event u
 
     let add (event: string) (node: EventTarget) (handler: Event -> unit) : Unsubscriber =
         // Bug in Feliz.Engine that sends us "dragStart" instead of "dragstart"
@@ -741,8 +775,7 @@ module EventListeners =
 
         let remove = (fun () -> node.removeEventListener (event, handler))
 
-        remove |> Dispose.addUnsubscribe (node :?> Node) event
-
+        remove |> addUnlisten node event
         remove
 
     let listen (event: string) (node: EventTarget) (handler: Event -> unit) : Unsubscriber =
