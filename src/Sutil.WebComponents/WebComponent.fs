@@ -50,25 +50,15 @@ module private WebComponent =
     [<Import("makeWebComponent", "./webcomponentinterop.js")>]
     let makeWebComponent<'T> name (ctor : Node -> Callbacks<'T>) (init : 'T) : unit = jsNative
 
-open Fable.Core.JsInterop
 
-/// <exclude/>
-[<Global>]
-type ShadowRoot() =
-    member internal this.appendChild(el: Browser.Types.Node) = jsNative
+[<AutoOpen>]
+module NodeExt =
+    type Node with
+        [<Emit("$0.shadowRoot")>]
+        member _.shadowRoot : Node = jsNative
 
-    static member mount (app : SutilElement) (host: Node) : (unit -> unit) =
-        // TODO
-        // let el = Core.buildWith
-
-        // match el with
-        // | DomNode node ->
-        //     let shadowRoot: ShadowRoot = host?shadowRoot
-        //     shadowRoot.appendChild (node)
-        // let dispose () =
-        //     el.Dispose()
-
-        ignore
+        member __.mountOnShadowRoot( sutilElement : SutilElement ) =
+            Program.mount( __.shadowRoot, sutilElement )
 
 
 /// <summary>
@@ -86,16 +76,16 @@ type WebComponent =
             let model = initModel()
 
             let sutilElement = view model host
-            let disposeElement = ShadowRoot.mount sutilElement host
+            let disposeElement = host.mountOnShadowRoot sutilElement // ShadowRoot.mount sutilElement host
 
             let disposeWrapper() =
                 dispose(model)
-                disposeElement()
+                disposeElement.Dispose()
 
             {   OnDisconnected = disposeWrapper
                 GetModel = (fun () -> model |> Store.current)
                 SetModel = Store.set model
-                OnConnected = fun _ -> CustomEvents.CustomDispatch<_>.dispatch( (host?shadowRoot?firstChild) :> EventTarget, CustomEvents.CONNECTED ) //"sutil-connected"
+                OnConnected = fun _ -> CustomEvents.CustomDispatch<_>.dispatch( (host.shadowRoot.firstChild) :> EventTarget, CustomEvents.CONNECTED ) //"sutil-connected"
                 }
 
         WebComponent.makeWebComponent name wrapper initValue

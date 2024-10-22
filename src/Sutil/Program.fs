@@ -37,7 +37,7 @@ type Program() =
     ///<summary>
     /// Mount application on given HTMLElement. Existing children at that node will be removed. Return value can be disposed to unmount and clean up.
     ///</summary>
-    static member mount(host: HTMLElement, app: SutilElement) : IDisposable =
+    static member mount(host: Node, app: SutilElement) : IDisposable =
         Core.mount
             (BuildContext
                 .Create(host)

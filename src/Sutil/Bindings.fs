@@ -75,13 +75,11 @@ module internal CollectionWrapper =
 
 let logEachEnabled key = false //Logging.isEnabled key
 
-open Sutil2
-
 let elementFromException (x: exn) =
-    el "div" [
-        attr ("style", "color: #FF8888;")
-        attr ("title", "See console for details")
-        text ("sutil: exception in bind: " + x.Message)
+    Basic.el "div" [
+        Basic.attr "style" "color: #FF8888;"
+        Basic.attr "title" "See console for details"
+        Basic.text ("sutil: exception in bind: " + x.Message)
     ]
 
 let private bindLog = Log.create ("Bind")
@@ -195,10 +193,10 @@ let bindPromise<'T>
     bindPromiseStore x waiting result fail
 
 type BindFn<'T> = IObservable<'T> -> ('T -> SutilElement) -> SutilElement
-let private getInputChecked el = Interop.get el "checked"
-let private setInputChecked (el: Node) (v: obj) = Interop.set el "checked" v
-let private getInputValue el : string = Interop.get el "value"
-// let private setInputValue el (v: string) = Interop.set el "value" v
+let private getInputChecked el = JsMap.getKey el "checked"
+let private setInputChecked (el: Node) (v: obj) = JsMap.setKey el "checked" v
+let private getInputValue el : string = JsMap.getKey el "value"
+// let private setInputValue el (v: string) = JsMap.setKey el "value" v
 
 let bindSelected<'T when 'T: equality>
     (selection: IObservable<List<'T>>)
@@ -211,7 +209,7 @@ let bindSelected<'T when 'T: equality>
             //let selectElement = parent :?> HTMLSelectElement
             let selOps = selectElement.selectedOptions
             let op (coll: HTMLCollection) i = coll.[i] :?> HTMLOptionElement
-            let opValue op : 'T = Interop.get op "__value"
+            let opValue op : 'T = JsMap.getKey op "__value"
 
             let getValueList () =
                 [
@@ -230,7 +228,7 @@ let bindSelected<'T when 'T: equality>
                     o.selected <- v |> List.contains (opValue o)
 
             let unsubInput =
-                listen "input" selectElement <| fun _ -> getValueList () |> dispatch
+                EventListeners.add "input" selectElement <| fun _ -> getValueList () |> dispatch
 
             // We need to finalize checked status after all attrs have been processed for input,
             // in case 'value' hasn't been set yet
@@ -238,8 +236,8 @@ let bindSelected<'T when 'T: equality>
                 CustomEvents.ELEMENT_READY
                 selectElement
                 (fun _ ->
-                    let unsub = selection |> Store.subscribe (updateSelected)
-                    SutilEffect.RegisterDisposable(selectElement, "bindSelected:unsub", unsub)
+                    selection |> Store.subscribe (updateSelected)
+                    |> Dispose.addDisposable selectElement "bindSelected:unsub"
                 )
             |> ignore
 
@@ -276,15 +274,15 @@ let bindGroup<'T> (store: IStore<List<string>>) : SutilElement =
         //"bindGroup",
         fun parent ->
             let name =
-                match Interop.get parent "name" with
+                match JsMap.getKey parent "name" with
                 | s when isNullString s -> $"store-{getId store}"
                 | s -> s
 
             // Group this input with all other inputs that reference the same store
-            Interop.set parent "name" name
+            JsMap.setKey parent "name" name
 
             let getValueList () =
-                let inputs = (documentOf parent).querySelectorAll (@$"input[name=""{name}""]")
+                let inputs = (parent.ownerDocument).querySelectorAll (@$"input[name=""{name}""]")
 
                 [
                     0 .. (inputs.length - 1)
@@ -298,11 +296,11 @@ let bindGroup<'T> (store: IStore<List<string>>) : SutilElement =
 
             // Update the store when the radio box is clicked on
             let unsubInput =
-                listen "input" parent <| fun _ -> getValueList () |> Store.set store
+                EventListeners.add "input" parent <| fun _ -> getValueList () |> Store.set store
 
             // We need to finalize checked status after all attrs have been processed for input,
             // in case 'value' hasn't been set yet
-            once CustomEvents.ELEMENT_READY parent (fun _ -> store |> Store.get |> updateChecked)
+            EventListeners.once CustomEvents.ELEMENT_READY parent (fun _ -> store |> Store.get |> updateChecked)
             |> ignore
 
             // When store changes make sure check status is synced
@@ -320,25 +318,25 @@ let bindRadioGroup<'T> (store: IStore<'T>) : SutilElement =
         fun parent ->
 
             let name =
-                match Interop.get parent "name" with
+                match JsMap.getKey parent "name" with
                 | s when isNullString s -> $"store-{getId store}"
                 | s -> s
             // Group this input with all other inputs that reference the same store
-            Interop.set parent "name" name
+            JsMap.setKey parent "name" name
 
             let updateChecked (v: obj) =
                 setInputChecked parent ((string v) = getInputValue parent)
 
             // We need to finalize checked status after all attrs have been processed for input,
             // in case 'value' hasn't been set yet
-            once CustomEvents.ELEMENT_READY parent (fun _ -> store |> Store.get |> updateChecked)
+            EventListeners.once CustomEvents.ELEMENT_READY parent (fun _ -> store |> Store.get |> updateChecked)
             |> ignore
 
             // Update the store when the radio box is clicked on
-            listen 
+            EventListeners.add 
                 "input" 
                 parent 
-                (fun _ -> Interop.get parent "value" |> Store.set store)
+                (fun _ -> JsMap.getKey parent "value" |> Store.set store)
             |> Dispose.composeDU 
                 (store |> Store.subscribe updateChecked)
     )
@@ -389,7 +387,7 @@ let bindAttrOut<'T> (attrName: string) (onchange: 'T -> unit) : SutilElement =
     CoreElements.bindDisposable(
         //"bindAttrOut",
         fun parent ->
-            listen "input" parent (fun _ -> Interop.get parent attrName |> onchange)
+            EventListeners.add "input" parent (fun _ -> JsMap.getKey parent attrName |> onchange)
             |> Dispose.makeDisposable
     )
 
@@ -400,13 +398,13 @@ let attrNotify<'T> (attrName: string) (value: 'T) (onchange: 'T -> unit) : Sutil
     CoreElements.bindDisposable(
         // "attrNotify",
         fun parent ->
-            listen 
+            EventListeners.add 
                 "input" 
                 parent 
-                (fun _ -> Interop.get parent attrName |> onchange)
+                (fun _ -> JsMap.getKey parent attrName |> onchange)
 
             |> fun stop ->
-                Interop.set parent attrName value
+                JsMap.setKey parent attrName value
                 stop
 
             |> Dispose.makeDisposable
@@ -420,7 +418,7 @@ let bindAttrBoth<'T>
     (onchange: 'T -> unit)
     : SutilElement
     =
-    fragment [
+    Basic.fragment [
         bindAttrIn attrName value
         bindAttrOut attrName onchange
     ]
@@ -435,9 +433,9 @@ let bindListen<'T>
     CoreElements.bindDisposable(
         //"bindListen",
         fun parent ->
-            listen event parent handler
+            EventListeners.add event parent handler
             |> Dispose.composeDU 
-                (store |> Store.subscribe (Interop.set parent attrName))
+                (store |> Store.subscribe (JsMap.setKey parent attrName))
     )
 
         
@@ -452,11 +450,11 @@ let private bindAttrConvert<'T>
     CoreElements.bindDisposable(
         //"bindAttrConvert",
         fun parent ->
-            listen 
+            EventListeners.add 
                 "input" 
                 parent
-                (fun _ -> Interop.get parent attrName |> convert |> Store.set store)
-            |> Dispose.composeDU (store |> Store.subscribe (Interop.set parent attrName))
+                (fun _ -> JsMap.getKey parent attrName |> convert |> Store.set store)
+            |> Dispose.composeDU (store |> Store.subscribe (JsMap.setKey parent attrName))
     )
 
 // Unsure how to safely convert Element.getAttribute():string to 'T
@@ -470,10 +468,10 @@ let bindAttrStoreOut<'T> (attrName: string) (store: IStore<'T>) : SutilElement =
     CoreElements.bindDisposable(
 //        "bindAttrStoreOut",
         fun parent ->
-            listen 
+            EventListeners.add 
                 "input" 
                 parent
-                (fun _ -> Interop.get parent attrName |> convertObj<'T> |> Store.set store)
+                (fun _ -> JsMap.getKey parent attrName |> convertObj<'T> |> Store.set store)
             |> Dispose.makeDisposable
     )
 
@@ -485,24 +483,24 @@ let listenToProp<'T> (attrName: string) (dispatch: 'T -> unit) : SutilElement =
     CoreElements.bindDisposable(
         fun parent ->
             let notify () =
-                Interop.get parent attrName |> convertObj<'T> |> dispatch
+                JsMap.getKey parent attrName |> convertObj<'T> |> dispatch
 
-            once
+            EventListeners.once
                 CustomEvents.ELEMENT_READY
                 parent
                 (fun _ ->
                     if attrIsSizeRelated attrName then
-                        SutilEffect.RegisterDisposable(
-                            parent,
-                            "listenToProp",
-                            (ResizeObserver.getResizer parent).Subscribe(notify)
-                        )
+                        Dispose.addDisposable
+                            parent
+                            "EventListeners.addToProp"
+                            ((ResizeObserver.getResizer parent).Subscribe(notify))
+                        
                     else
-                        SutilEffect.RegisterUnsubscribe(
-                            parent,
-                            "listenToProp",
-                            listen "input" parent (fun _ -> notify ())
-                        )
+                        Dispose.addUnsubscribe
+                            parent
+                            "EventListeners.addToProp"
+                            (EventListeners.add "input" parent (fun _ -> notify ()))
+                        
 
                     Timers.rafu notify
                 )

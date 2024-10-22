@@ -19,7 +19,7 @@ type Media =
     static member listenMedia(query: string, handler: bool -> unit) : Unsubscriber =
         let mql = window.matchMedia (query)
         handler (mql.matches)
-        Sutil.Internal.EventListeners.add mql "change" (fun e -> e?matches |> handler)
+        EventListeners.add "change" mql (fun e -> e?matches |> handler)
 
     /// <summary>
     /// </summary>

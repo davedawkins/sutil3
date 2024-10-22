@@ -36,9 +36,14 @@ type VirtualElement with
             Type = TextNode s
         }
 
-    static member ElementNode(tag: string) =
+    static member ElementNode(ns: string, tag: string) =
         { VirtualElement.Empty with
-            Type = TagNode tag
+            Type = TagNode (ns,tag)
+        }
+
+    static member ElementNode( tag: string) =
+        { VirtualElement.Empty with
+            Type = TagNode ("",tag)
         }
 
     member __.GetKey() = __.Key
@@ -127,7 +132,7 @@ type VirtualElement with
         match __.Type with
         | NullNode -> "#null#"
         | TextNode _ -> "#text#"
-        | TagNode tag -> tag
+        | TagNode (ns,tag) -> if ns = "" then tag else sprintf "%s:%s" ns tag
 
     member __.InnerText =
         let rec inner (e: VirtualElement) =
@@ -156,7 +161,9 @@ type VirtualElement with
         match __.Type with
         | NullNode -> "<null/>"
         | TextNode s -> s
-        | TagNode tag -> "<" + tag + attrs + ">" + children + "</" + tag + ">"
+        | TagNode (ns,tag) -> 
+            let nstag = if ns = "" then tag else ns + ":" + tag
+            "<" + nstag + attrs + ">" + children + "</" + nstag + ">"
 
     member __.AsString() =
         __.AsString(__.Children |> Array.map _.AsString() |> String.concat "")
@@ -184,9 +191,9 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
     match se with
     | Text text -> parent.AddChild(VirtualElement.TextNode text)
 
-    | Element(tag, children) ->
+    | Element(ns, tag, children) ->
         children
-        |> Array.fold addSutilElement (VirtualElement.ElementNode tag)
+        |> Array.fold addSutilElement (VirtualElement.ElementNode (ns,tag))
         |> parent.AddChild
 
     | Fragment(children) -> children |> Array.fold addSutilElement parent
@@ -292,7 +299,7 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
         JsMap.setKey text VIRTUAL_ELEMENT_KEY ve
         text
 
-    | TagNode tag ->
+    | TagNode (ns,tag) ->
         if _log.enabled then
             _log.trace (
                 "toDom: TagNode",
@@ -300,7 +307,7 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
                 context.ParentNode |> Internal.Node.toStringSummary
             )
 
-        let el = context.CreateElement tag
+        let el = context.CreateElement(ns,tag)
 
         let _id = context.NextId()
 
@@ -343,7 +350,7 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
             then
                 EventListeners.once name el handler |> ignore
             else
-                EventListeners.add el name handler |> ignore
+                EventListeners.add name el handler |> ignore
         )
 
         ve.Children

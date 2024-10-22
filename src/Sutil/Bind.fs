@@ -238,15 +238,15 @@ type Bind =
 
     static member promise(name: string, p: JS.Promise<'T>, view: 'T -> SutilElement) =
         let w =
-            Core.Sutil2.el "div" [
-                Sutil2.attr ("class", "promise-waiting")
-                Core.Sutil2.text "waiting..."
+            Basic.el "div" [
+                Basic.attr "class" "promise-waiting"
+                Basic.text "waiting..."
             ]
 
         let e (x: Exception) =
-            Core.Sutil2.el "div" [
-                Sutil2.attr ("class", "promise-error")
-                Core.Sutil2.text x.Message
+            Basic.el "div" [
+                Basic.attr "class" "promise-error"
+                Basic.text x.Message
             ]
 
         Bind.promise (name, p, view, w, e)

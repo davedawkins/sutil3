@@ -577,7 +577,9 @@ module ClassHelpers =
             StringSplitOptions.RemoveEmptyEntries
         )
 
-    let setClass (className: string) (e: HTMLElement) = e.className <- className
+    let setClass (className: string) (e: HTMLElement) = 
+        e.setAttributeNS(null, "class", className)
+//        e.className <- className // Doesn't work for SVG nodes
 
     let toggleClass (className: string) (e: HTMLElement) =
         e.classList.toggle (className) |> ignore
@@ -645,6 +647,12 @@ module DomEdit =
 
     let element tag = Browser.Dom.document.createElement tag
 
+    let elementNS(ns : string, tag : string) : Browser.Types.Element =
+        if ns = "" then 
+            Browser.Dom.document.createElement tag
+        else
+            Browser.Dom.document.createElementNS(ns,tag)
+
     let invisibleElement tag =
         let e = element tag
         e.style.display <- "none"
@@ -669,7 +677,7 @@ module DomEdit =
         else
             string v <> "false"
 
-    let internal setAttribute (el: Browser.Types.HTMLElement) (name: string) (value: obj) =
+    let internal setAttribute (el: Browser.Types.Element) (name: string) (value: obj) =
 
         let svalue = string value
 
@@ -727,7 +735,7 @@ module DomEdit =
 module EventListeners =
     open Browser.Types
 
-    let add (node: EventTarget) (event: string) (handler: Event -> unit) : Unsubscriber =
+    let add (event: string) (node: EventTarget) (handler: Event -> unit) : Unsubscriber =
         // Bug in Feliz.Engine that sends us "dragStart" instead of "dragstart"
         node.addEventListener (event.ToLower(), handler)
 
@@ -737,6 +745,9 @@ module EventListeners =
 
         remove
 
+    let listen (event: string) (node: EventTarget) (handler: Event -> unit) : Unsubscriber =
+        add event node handler
+
     /// Listen for the given event, and remove the listener after the first occurrence of the evening firing.
     let once (event: string) (target: EventTarget) (fn: Event -> Unit) : Unsubscriber =
         let mutable remove: Unsubscriber = Unchecked.defaultof<_>
@@ -745,7 +756,7 @@ module EventListeners =
             remove ()
             fn (e)
 
-        remove <- add (target :?> Node) event inner
+        remove <- add event (target :?> Node) inner
         remove
 
 ///

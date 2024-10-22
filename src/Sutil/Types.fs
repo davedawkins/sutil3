@@ -50,8 +50,7 @@ and SutilResult =
 type VirtualElementType =
     | NullNode
     | TextNode of string
-    | TagNode of string
-    //| SideEffectNode of SutilEffect
+    | TagNode of string * string
 
 and VirtualElement =
     {
@@ -83,7 +82,7 @@ and BuildContext =
         Current: Node
 
         /// Create DOM element
-        ElementCtor: string -> HTMLElement
+        ElementCtor: string * string -> Element
 
         /// Notify new Node created
         OnImportedNode: (Node -> unit) option
@@ -104,14 +103,14 @@ and BuildContext =
             AppendNode = BuildContext.DefaultAppendNode
             Current = null
             OnImportedNode = None
-            ElementCtor = Sutil.Internal.DomEdit.element
+            ElementCtor = Sutil.Internal.DomEdit.elementNS
             LogElementEnabled = false
             LogPatchEnabled = false
         }
 
     member __.ParentNode = __.Parent
 
-    member __.CreateElement(tag: string) : HTMLElement = __.ElementCtor tag
+    member __.CreateElement(ns: string, tag: string) : Element = __.ElementCtor (ns,tag)
 
     member __.ParentElement = __.Parent :?> HTMLElement
 
@@ -177,7 +176,7 @@ and SutilElement =
 
     /// Element node with a given tag, and children. Children are SutilElements
     /// and so will include Elements, Texts, Attributes, Events, Fragments and SideEffects
-    | Element of (string * SutilElement[])
+    | Element of (string * string * SutilElement[])
 
     /// Attribute
     | Attribute of (string * obj)
@@ -200,7 +199,7 @@ and SutilElement =
         override __.ToString() =
             match __ with
             | Text s -> "Text '" + s + "'"
-            | Element (tag, children) -> "Element '" + tag + "' [" + (children |> Array.map _.ToString() |> String.concat ", ") + "]"
+            | Element (ns, tag, children) -> "Element '" + tag + "' [" + (children |> Array.map _.ToString() |> String.concat ", ") + "]"
             | Attribute (name,value) -> "Attr '" + name + "'='" + (string value) + "'"
             | Event (name,_,_) -> "Event '" + name + "'"
             | Fragment (children) -> "Fragment [" + (children |> Array.map _.ToString() |> String.concat ", ") + "]"
@@ -224,7 +223,10 @@ type IStore<'T> =
 module Basic =
 
     let el (tag: string) (children: SutilElement seq) =
-        SutilElement.Element(tag, children |> Seq.toArray)
+        SutilElement.Element("", tag, children |> Seq.toArray)
+
+    let elns (ns : string) (tag: string) (children: SutilElement seq) =
+        SutilElement.Element(ns, tag, children |> Seq.toArray)
 
     let fragment (children: SutilElement seq) =
         SutilElement.Fragment(children |> Seq.toArray)

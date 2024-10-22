@@ -40,6 +40,7 @@ module CoreExtensions =
 
         static member HiddenDiv(name: string) =
             SutilElement.Element(
+                "",
                 "div",
                 [|
                     SutilElement.Attribute("style", "display:none")
@@ -75,13 +76,6 @@ let private logPatch (context: BuildContext) (patchAction: NodeAction) =
         |> forceLog
 
     patchAction
-
-type SutilEffect =
-    static member RegisterDisposable(node: Browser.Types.Node, name: string, disposable: System.IDisposable) =
-        Dispose.addDisposable node name disposable
-
-    static member RegisterUnsubscribe(node: Browser.Types.Node, name: string, disposable: Unsubscriber) =
-        Dispose.addUnsubscribe node name disposable
 
 let internal notifyMount (node: Browser.Types.Node) =
     if _log.enabled then
@@ -179,32 +173,24 @@ let buildWithLogging (options : BuildOptions) (context: BuildContext) (sutilElem
 
     buildWith options context sutilElement
 
-module VDomV1 =
-    let makeOptions() =
-        BuildOptions.Create()
-
-module VDomV2 =
-    let makeOptions() =
-        BuildOptions
-            .Create()
-            .WithCalculatePatches( fun ctx ve -> 
-#if NO_PATCH
-                // Behave like Sutil 2.x
-                match isNull (ctx.Current) with 
-                | true -> NodeAction.Insert ve
-                | false -> NodeAction.Replace ve
-#else
-                Patch.calculate (ctx.Current) ve
-#endif
-            )
-            .WithApplyPatchess( fun ctx action -> 
-                match Patch.apply ctx action with
-                | Ok r -> r
-                | Error s -> 
-                    failwith s)
-
 let makeOptions() =
-    VDomV2.makeOptions()
+    BuildOptions
+        .Create()
+        .WithCalculatePatches( fun ctx ve -> 
+#if NO_PATCH
+            // Behave like Sutil 2.x
+            match isNull (ctx.Current) with 
+            | true -> NodeAction.Insert ve
+            | false -> NodeAction.Replace ve
+#else
+            Patch.calculate (ctx.Current) ve
+#endif
+        )
+        .WithApplyPatchess( fun ctx action -> 
+            match Patch.apply ctx action with
+            | Ok r -> r
+            | Error s -> 
+                failwith s)
 
 let notify (result : SutilResult) =
     notifyNewNodes result
@@ -218,36 +204,3 @@ let mountWith (mapOptions : BuildOptions -> BuildOptions) (context: BuildContext
 
 let mount (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
     mountWith (id) context sutilElement
-
-/// Helper functions in porting core library from Sutil2.
-/// TODO: Refactor these away
-module Sutil2 =
-    let attr (name, value) = SutilElement.Attribute(name, value)
-
-    let el (tag: string) (children: SutilElement seq) =
-        SutilElement.Element(tag, children |> Seq.toArray)
-
-    let text s = SutilElement.Text s
-
-    let listen event (target: Browser.Types.EventTarget) fn = EventListeners.add target event fn
-
-    let once event node fn = EventListeners.once event node fn
-
-    let fragment children =
-        SutilElement.Fragment(children |> Seq.toArray)
-
-    module Interop =
-        let get data name = JsMap.getKey data name
-
-        let set data name value = JsMap.setKey data name value
-
-    module Logging =
-        let error (s: string) = _log.trace ("Error: " + s)
-
-    [<AutoOpen>]
-    module Ext =
-        type BuildContext with
-            member __.ParentNode = __.Parent
-            member __.Document = Browser.Dom.document
-
-    let documentOf (node: Browser.Types.Node) = node.ownerDocument

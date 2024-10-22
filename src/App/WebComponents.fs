@@ -94,7 +94,6 @@ let view () =
     // current input value into the appropriate property. You can use setAttribute too.
     Html.div [
         // Consider this to be <script src='app.js'></script> for the 3rd party app
-        // Can't pass <script> tags to Core.html
         Html.script [
             text
                 """

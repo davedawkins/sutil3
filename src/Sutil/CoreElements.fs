@@ -71,11 +71,10 @@ let listenToResize (dispatch: HTMLElement -> unit) : SutilElement =
     onElementMounted <|
         fun parent -> 
             let notify() = dispatch parent
-            SutilEffect.RegisterDisposable(
-                parent,
-                "listenToResize",
-                (ResizeObserver.getResizer parent).Subscribe( notify )
-            )
+            Dispose.addDisposable
+                parent
+                "listenToResize"
+                ((ResizeObserver.getResizer parent).Subscribe( notify ))
             Timers.rafu notify
 
 let postProcessElementsWithName
@@ -134,8 +133,8 @@ let rec append (elements: SutilElement seq) (element: SutilElement) =
     | SutilElement.MappingElement (name, map, se) -> 
         SutilElement.MappingElement (name, map, (append elements se))
 
-    | SutilElement.Element (tag, children) ->
-        SutilElement.Element (tag, elements |> Seq.toArray |> Array.append children)
+    | SutilElement.Element (ns, tag, children) ->
+        SutilElement.Element (ns, tag, elements |> Seq.toArray |> Array.append children)
 
     | SutilElement.Fragment (children) ->
         SutilElement.Fragment (elements |> Seq.toArray |> Array.append children)

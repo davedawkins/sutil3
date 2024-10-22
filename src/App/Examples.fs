@@ -6,14 +6,11 @@ open Types
 let CompilationFailure() =
     Html.div "Compilation failure :-("
 
-// module EventModifiers = let view = CompilationFailure
 module TransitionParameters = let view = CompilationFailure
 module TransitionInOut = let view = CompilationFailure
 module TransitionCustomCss = let view = CompilationFailure
 module TransitionCustom = let view = CompilationFailure
 module TransitionEvents = let view = CompilationFailure
-module BarChart = let view = CompilationFailure
-// module WebComponents = let view = CompilationFailure
 
 #if !FANTOMAS
 let allExamples = [
@@ -69,7 +66,7 @@ let allExamples = [
 
         { Pass =true; Category = "Bindings";   Title = "Dimensions";  Link = AppLink (Dimensions.view , ["Dimensions.fs"]) }
 
-        { Pass =false; Category = "Svg";   Title = "Bar chart";  Link = AppLink (BarChart.view , ["BarChart.fs"]) }
+        { Pass =true; Category = "Svg";   Title = "Bar chart";  Link = AppLink (BarChart.view , ["BarChart.fs"]) }
 
         { Pass =true; Category = "Miscellaneous";   Title = "Spreadsheet";  Link = AppLink (Spreadsheet.view , ["Spreadsheet.fs"; "Evaluator.fs"; "Parser.fs"]) }
         { Pass =true; Category = "Miscellaneous";   Title = "Modal";  Link = AppLink (Modal.view , ["Modal.fs"]) }
@@ -77,7 +74,7 @@ let allExamples = [
         { Pass =true; Category = "Miscellaneous";   Title = "Drag-sortable list";  Link = AppLink (SortableTimerList.view , ["SortableTimerList.fs"; "DragDropListSort.fs"; "TimerWithButton.fs"; "TimerLogic.fs"]) }
         { Pass =true; Category = "Miscellaneous";   Title = "SAFE client";  Link = AppLink (SAFE.view , ["SafeClient.fs"]) }
         { Pass =true; Category = "Miscellaneous";   Title = "Data Simulation";  Link = AppLink (DataSim.view , ["DataSim.fs"]) }
-        { Pass =false; Category = "Miscellaneous";   Title = "Web Components";  Link = AppLink (WebComponents.view , ["WebComponents.fs"]) }
+        { Pass =true; Category = "Miscellaneous";   Title = "Web Components";  Link = AppLink (WebComponents.view , ["WebComponents.fs"]) }
 
         // Not in Sutil 2
         // { Pass =false; Category = "Miscellaneous";   Title = "Draw";  Link = AppLink (Draw.view , ["Draw.fs"]) }

@@ -9,7 +9,6 @@ open Browser.Types
 open Browser.Dom
 open Browser.CssExtensions
 open System
-open Core.Sutil2
 open Sutil.Internal
 
 let isCrossOrigin = false // TODO
@@ -45,7 +44,7 @@ type ResizeObserver(el: HTMLElement) =
         if computedStyle.position = "static" || computedStyle.position = "" then
             el.style.position <- "relative"
 
-        iframe <- downcast (documentOf el).createElement ("iframe")
+        iframe <- downcast (el.ownerDocument).createElement ("iframe")
 
         let style =
             sprintf
@@ -64,7 +63,7 @@ type ResizeObserver(el: HTMLElement) =
             )
 
             unsubscribe <-
-                listen
+                EventListeners.add
                     "message"
                     window
                     (fun e ->
@@ -73,7 +72,7 @@ type ResizeObserver(el: HTMLElement) =
                     )
         else
             iframe.setAttribute ("src", "about:blank")
-            iframe.onload <- (fun e -> unsubscribe <- listen "resize" iframe.contentWindow notify)
+            iframe.onload <- (fun e -> unsubscribe <- EventListeners.add "resize" iframe.contentWindow notify)
 
         el.appendChild (iframe) |> ignore
 

@@ -46,7 +46,7 @@
     <Compile Include="SelectBindings.fs" />
     <Compile Include="SelectMultiple.fs" />
     <Compile Include="Dimensions.fs" />
-    <!-- <Compile Include="BarChart.fs" /> -->
+    <Compile Include="BarChart.fs" />
     <Compile Include="Modal.fs" />
     <Compile Include="Evaluator.fs" />
     <Compile Include="Spreadsheet.fs" />

@@ -28,7 +28,7 @@ open Sutil.Internal
 open VirtualDom
 
 let private _log = Log.create ("Patch")
-_log.enabled <- true
+_log.enabled <- false
 
 // A way to find a DOM node given a parent node
 // type DomRef =
@@ -223,19 +223,11 @@ let rec private calculatePatch (node : Node) (existing: VirtualElement) (latest:
 let calculate (node: Node) (ve: VirtualElement) : NodeAction =
     match VirtualElement.TryFind node with
     | Some ve0 when ve0.Key = ve.Key ->
-        Log.Console.log("calculate:")
-        Log.Console.log(" ve0: ", ve0.AsString())
-        Log.Console.log(" ve : ", ve.AsString())
         calculatePatch (node : Node) ve0 ve
     | Some ve0 when ve0.Key <> ve.Key ->
-        Fable.Core.JS.console.log("Keys don't match")
-        Fable.Core.JS.console.log(node.parentElement |> Node.children |> Seq.map (Node.toString) |> String.concat "\n")
-        Fable.Core.JS.console.log("Fail: ", node)
-        Fable.Core.JS.console.log("Fail: ", ve.AsString())
         failwith ("Virtual element found but keys don't match: " + ve0.Key + " <> " + ve.Key)
     | _ ->
         if isNull node then
-            Log.Console.log("calculate: first render: Insert")
             Insert ve
         else
             failwith "Node was expected to have an associated VirtualElement"        
@@ -282,7 +274,7 @@ let rec applyPatchAction (context : BuildContext) (patchAction : PatchAction) : 
         then
             EventListeners.once name current value |> ignore
         else
-            EventListeners.add current name value |> ignore
+            EventListeners.add name current value |> ignore
 
         Ok EventAdded
 
