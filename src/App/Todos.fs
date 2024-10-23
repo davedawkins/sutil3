@@ -289,8 +289,7 @@ let view () : SutilElement =
     let completed = model |> Store.map (fun m -> m.Todos |> List.filter isDone)
     let lotsDone = completed |> Store.map (fun x -> (x |> List.length >= 3))
 
-    withStyle styleSheet
-    <| Html.divc "board" [
+    Html.divc "board" [
         disposeOnUnmount [
             model
         ]
@@ -300,9 +299,9 @@ let view () : SutilElement =
             Ev.onKeyDown (fun e ->
                 // This isn't the right test for mobile users
                 if e.key = "Enter" then
-                    (e.currentTarget :?> HTMLInputElement).value |> AddTodo |> dispatch
-
-                printfn ($"{e.key}")
+                    let inputEl = e.currentTarget :?> HTMLInputElement
+                    inputEl.value |> AddTodo |> dispatch
+                    inputEl.value <- ""
             )
         ]
 
@@ -336,4 +335,4 @@ let view () : SutilElement =
             todosList "todo" isPending model dispatch
             todosList "done" isDone model dispatch
         ]
-    ]
+    ] |> withStyle styleSheet

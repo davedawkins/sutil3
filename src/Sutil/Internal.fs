@@ -49,16 +49,24 @@ module JsMap =
         else
             None
 
-    let getKeyWith (node: obj) (key: string) (defaultValue: 't) : 't =
-        tryGetKey node key |> Option.defaultValue defaultValue
+    let getKeyWith (node: obj) (key: string) (defaultValue: unit ->'t) : 't =
+        match tryGetKey node key with
+        | Some v -> v
+        | None -> 
+            let v = defaultValue()
+            setKey node key v
+            v
+
+    let getKeyDefault (node: obj) (key: string) (defaultValue: 't) : 't =
+        getKeyWith node key (fun () -> defaultValue)
 
     let arrayAppendKey (node: obj) (key: string) (value: 't) : unit =
         Array.singleton value
-        |> Array.append (getKeyWith node key Array.empty)
+        |> Array.append (getKeyDefault node key Array.empty)
         |> setKey node key
 
     let arrayRemoveKey (node: obj) (key: string) (pred: 't -> bool) : unit =
-        getKeyWith node key (Array.empty: 't[])
+        getKeyDefault node key (Array.empty: 't[])
         |> Array.filter (pred >> not)
         |> setKey node key
 
@@ -90,7 +98,7 @@ module Id =
         let map = getNodeMap node.ownerDocument
         JsMap.setKey map (string id) node
 
-    let getId (node: Node) = JsMap.getKeyWith node SUTIL_ID ""
+    let getId (node: Node) = JsMap.getKeyDefault node SUTIL_ID ""
 
     let internal findNodeWithId (doc: Document) id : Node option =
         let map = getNodeMap doc
@@ -480,6 +488,12 @@ module HTMLElement =
 /// Support for disposing of Node-related resources (subscriptions etc)
 module Dispose =
 
+    type NamedDisposable( name : string, d : System.IDisposable ) = 
+        member __.Name = name
+        member __.Dispose() = d.Dispose()
+        interface System.IDisposable with
+            member __.Dispose() = __.Dispose()
+
     // A node will contain a JS map under key "__sutil_ds"
     // Each keyed value within the map is an array of IDisposables
     // The key name is the module that owns those disposables. There are
@@ -503,31 +517,37 @@ module Dispose =
             member _.Dispose() = f ()
         }
 
-    let private safeDispose (d: System.IDisposable) =
+    let private safeDispose (d: NamedDisposable) =
         try
+            Fable.Core.JS.console.log("Disposing '" + d.Name + "'")
             d.Dispose()
         with x ->
             log.error (sprintf "Error while disposing: %s" x.Message)
 
-    let private disposeArray (ds : System.IDisposable[]) =
+    let private disposeArray (ds : NamedDisposable[]) =
         ds |> Array.iter safeDispose
 
     let private mapOf(node: Node) : obj =
-        JsMap.getKeyWith node MAP ({| |})
+        JsMap.getKeyDefault node MAP ({| |})
 
     let private clearMap (node: Node) : unit =
         JsMap.deleteKey node MAP
 
-    let private getDisposablesForKey (node: Node) (key : string): System.IDisposable[] =
-        JsMap.getKeyWith (mapOf node) key Array.empty
+    let private getDisposablesForKey (node: Node) (key : string): NamedDisposable[] =
+        JsMap.getKeyDefault (mapOf node) key Array.empty
 
     let private clearDisposablesForKey (node: Node) (key : string) : unit =
-        JsMap.deleteKey (mapOf node) key
+        let map = mapOf node
+        JsMap.deleteKey map key
+        JsMap.setKey node MAP map
 
     let internal disposeAllOfKey (node : Node) (key : string) : unit =
         let ds = getDisposablesForKey node key |> Array.copy
-
+        Fable.Core.JS.console.log("Disposing 1 " + key + ": " + (string ds.Length))
         clearDisposablesForKey node key
+
+        let ds2 = getDisposablesForKey node key |> Array.copy
+        Fable.Core.JS.console.log("Disposing 2 " + key + ": " + (string ds2.Length))
 
         ds |> disposeArray
 
@@ -542,7 +562,7 @@ module Dispose =
 
     let addDisposableForKey (node: Node) (key: string) (name : string) (d: System.IDisposable) =
         let map = mapOf node
-        JsMap.arrayAppendKey map key d
+        JsMap.arrayAppendKey map key (new NamedDisposable(key + ":" + name,d))
         JsMap.setKey node MAP map
 
     let addDisposable (node: Node) (name: string) (d: System.IDisposable) =
@@ -756,11 +776,39 @@ module Bindings =
     let add (node : Node) (d: System.IDisposable) =
         Dispose.addDisposableForKey node BINDINGS "" d
 
+module AbortController =
+
+    open Fable.Core
+
+    // From Fable.Fetch
+
+    type AbortSignal =
+      inherit Browser.Types.EventTarget
+      abstract aborted : bool with get
+      abstract onabort : (unit -> unit) with get, set
+      abstract reason: obj with get
+      abstract throwIfAborted: unit -> unit
+
+    type AbortController =
+      abstract signal : AbortSignal with get
+      abstract abort : (unit -> unit) with get
+
+    [<Emit("new AbortController()")>]
+    let newAbortController () : AbortController = jsNative
+
 /// Support for managing event listeners.
 module EventListeners =
+
+    // For AbortController
+    open AbortController
+
     open Browser.Types
 
     let [<Literal>] LISTENERS = "__sutil_lsn"
+    let [<Literal>] ABORT = "__sutil_abort"
+
+    let private getAbort() : AbortController =
+        newAbortController()
 
     let clear (node : EventTarget) : unit =
         let n = (node :?> Node)
@@ -770,10 +818,18 @@ module EventListeners =
         Dispose.addUnsubscribeForKey (node :?> Node) LISTENERS event u
 
     let add (event: string) (node: EventTarget) (handler: Event -> unit) : Unsubscriber =
-        // Bug in Feliz.Engine that sends us "dragStart" instead of "dragstart"
-        node.addEventListener (event.ToLower(), handler)
+        
+        let abortC = getAbort()
 
-        let remove = (fun () -> node.removeEventListener (event, handler))
+        node.addEventListener( 
+            event.ToLower(), // Bug in Feliz.Engine that sends us "dragStart" instead of "dragstart"
+            handler,
+            {| signal = abortC.signal |} :> obj :?> AddEventListenerOptions
+        )
+
+        let remove = (fun () -> 
+            abortC.abort()
+        )
 
         remove |> addUnlisten node event
         remove

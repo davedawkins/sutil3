@@ -120,7 +120,7 @@ module private Helpers =
 
     let tryGetDomNode (parent : Node) (ve : VirtualElement) : Node option =
         Node.children parent
-        |> Seq.tryFind (fun node -> JsMap.getKeyWith node VIRTUAL_ELEMENT_KEY "" = ve.Key)
+        |> Seq.tryFind (fun node -> JsMap.getKeyDefault node VIRTUAL_ELEMENT_KEY "" = ve.Key)
         // ve.GetKey()
         // |> Key
         // |> _.TryFindNode(parent)
