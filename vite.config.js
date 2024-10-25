@@ -7,5 +7,5 @@ export default defineConfig({
             "ignored": (p => { return p.includes("ace-builds") || p.endsWith(".fs"); }),
             usePolling: true
         }
-    },
+    }
 }) 

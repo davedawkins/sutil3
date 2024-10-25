@@ -58,8 +58,11 @@ type PublishSutilHtmlPackageCommand() =
             pushNuget ("src" </> pkg </> pkg + ".fsproj") [] doNothing
         )
 
+type CompileCommand() =
+    inherit CommandNameArgs("dotnet", "fable src/App -o fable-build")
+
 type BuildCommand() =
-    inherit CommandNameArgs("dotnet", "fable src/App -o fable-build && vite fable-build")
+    inherit CommandNameArgs("sh", "vite_build.sh")
 
 type PackCommand() =
     inherit CommandNameArgs("dotnet", "pack -c Release src/Sutil/Sutil.fsproj")
@@ -90,6 +93,16 @@ type SutilXmlCommand() =
 
 let dependencies =
     [
+        "build:app",
+            [
+                "compile"
+            ]
+
+        "compile",
+            [
+                "clean"
+            ]
+
         "deploy:linode",
         [
         // "samples"
@@ -206,8 +219,18 @@ let main args =
         config.Settings.ApplicationName <- "./build.sh"
 
         config
-            .AddCommand<SamplesCommand>("build:app")
+            .AddCommand<BuildCommand>("build:app")
             .WithDescription("Build app and create bundle for sutil.dev")
+        |> ignore
+
+        config
+            .AddCommand<CompileCommand>("compile")
+            .WithDescription("Compile all Sutil libraries and App")
+        |> ignore
+
+        config
+            .AddCommand<SamplesCommand>("build:samples")
+            .WithDescription("Create samples for repl at sutil.dev")
         |> ignore
 
         config.AddCommand<CleanCommand>("clean").WithDescription("Clean the project")
