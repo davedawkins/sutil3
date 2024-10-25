@@ -5,7 +5,8 @@ module TransitionEvents
 
 open Sutil
 
-open Sutil.Core
+open Sutil.Bind
+open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Transition
 
@@ -20,18 +21,26 @@ let view () =
         ]
 
         Html.p [
-            class' "block"
+            Attr.className "block"
             text "status: "
             Bind.el (status, text)
         ]
+
         Html.label [
-            Html.input [
-                type' "checkbox"
+            Bulma.inputCheckbox [
                 Bind.attr ("checked", visible)
             ]
             text " visible"
         ]
-        transition
+
+        Html.p [
+            Ev.onCustomEvent("introstart", (fun _ -> status <~ "intro started"))
+            Ev.onCustomEvent("introend", (fun _ -> status <~ "intro ended"))
+            Ev.onCustomEvent("outrostart", (fun _ -> status <~ "outro started"))
+            Ev.onCustomEvent("outroend", (fun _ -> status <~ "outro ended"))
+            text "Flies in and out"
+        ]
+        |> transition
             [
                 fly
                 |> withProps [
@@ -41,11 +50,4 @@ let view () =
                 |> InOut
             ]
             visible
-        <| Html.p [
-            on "introstart" (fun _ -> status <~ "intro started") []
-            on "introend" (fun _ -> status <~ "intro ended") []
-            on "outrostart" (fun _ -> status <~ "outro started") []
-            on "outroend" (fun _ -> status <~ "outro ended") []
-            text "Flies in and out"
-        ]
     ]

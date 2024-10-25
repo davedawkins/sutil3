@@ -8,7 +8,8 @@ open type Feliz.transform
 open System
 open Sutil
 
-open Sutil.Core
+open Sutil.Bind
+open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Transition
 open Sutil.Styling
@@ -60,11 +61,10 @@ let view () =
     let visible = Store.make false
 
     Html.div [
-        class' "container"
+        Attr.className "container"
 
         Html.label [
-            Html.input [
-                type' "checkbox"
+            Bulma.inputCheckbox [
                 Bind.attr ("checked", visible)
             ]
             text " visible"
@@ -76,25 +76,23 @@ let view () =
                 Duration 8000.0
             ]
 
-        let fadeOut = fade
-
-        transition
-            [
-                In flyIn
-                Out fadeOut
-            ]
-            visible
-        <| Html.div [
-            class' "centered"
+        Html.div [
+            Attr.className "centered"
             Html.span [
                 text "transitions!"
             ]
         ]
+        |> transition
+            [
+                In flyIn
+                Out fade
+            ]
+            visible
 
         disposeOnUnmount [
             visible
         ]
 
-        onMount (fun _ -> true |> Store.set visible) [] // Force a transition upon first showing
+        Ev.onMount (fun _ -> true |> Store.set visible) // Force a transition upon first showing
     ]
     |> withStyle styleSheet

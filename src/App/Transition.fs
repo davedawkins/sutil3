@@ -9,7 +9,7 @@ open Sutil.Core
 open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Bind
-// open Sutil.Transition
+open Sutil.Transition
 
 let view () =
     let visible = Store.make true
@@ -20,14 +20,13 @@ let view () =
         ]
 
         Html.label [
-            Html.input [
-                Attr.typeCheckbox
+            Bulma.inputCheckbox [
                 Bind.attr ("checked", visible)
             ]
             text " visible"
         ]
-        //transition [InOut fade] visible <|
+        
         Html.p [
-            text "TODO: Fades in and out"
-        ]
+            text "Fades in and out"
+        ] |> transition [InOut fade] visible
     ]

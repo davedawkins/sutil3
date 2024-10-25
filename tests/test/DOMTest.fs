@@ -33,7 +33,7 @@ describe "DOM" <| fun () ->
         let counters = Array.zeroCreate 6
 
         let countMount i =
-            Ev.onMount (fun e -> counters.[i] <- counters.[i] + 1; log(sprintf "mount %d: %s" i (Sutil.Internal.DomHelpers.toStringSummary (!!e.target))))
+            Ev.onMount (fun e -> counters.[i] <- counters.[i] + 1; log(sprintf "mount %d: %s" i (Sutil.Internal.Node.toStringSummary (!!e.target))))
 
         let app =
             Html.div [

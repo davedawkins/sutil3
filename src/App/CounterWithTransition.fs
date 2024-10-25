@@ -2,6 +2,8 @@ module CounterWithTransition
 
 open Sutil
 open type Feliz.length
+open Sutil.Html
+open Sutil.Bind
 open Sutil.Core
 open Sutil.CoreElements
 
@@ -65,7 +67,7 @@ let Counter () =
     withStyle counterStyle
     <| Html.div [
         Html.button [
-            onClick (fun _ -> count <~= (+) 1) []
+            Ev.onClick (fun _ -> count <~= (+) 1) 
 
             Bind.el (
                 count,
@@ -79,13 +81,13 @@ let Counter () =
         ]
 
         Html.button [
-            class' "reset"
-            on "click" (fun _ -> count <~ 0) []
+            Attr.className "reset"
+            Ev.onClick (fun _ -> count <~ 0)
             text "Reset"
         ]
 
         (Html.div [
-            class' "hint"
+            Attr.className "hint"
             text "Click button to start counting"
         ])
         |> transition

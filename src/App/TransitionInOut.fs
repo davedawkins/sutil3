@@ -5,7 +5,8 @@ module TransitionInOut
 
 open Sutil
 
-open Sutil.Core
+open Sutil.Html
+open Sutil.Bind
 open Sutil.CoreElements
 open Sutil.Transition
 
@@ -18,8 +19,7 @@ let view () =
         ]
 
         Html.label [
-            Html.input [
-                type' "checkbox"
+            Bulma.inputCheckbox [
                 Bind.attr ("checked", visible)
             ]
             text " visible"
@@ -32,13 +32,14 @@ let view () =
                 Y 200.0
             ]
 
+        Html.p [
+            text "Flies in and fades out"
+        ]
+        |>
         transition
             [
                 In flyIn
                 Out fade
             ]
             visible
-        <| Html.p [
-            text "Flies in and fades out"
-        ]
     ]

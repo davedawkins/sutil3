@@ -5,9 +5,10 @@ module TransitionParameters
 
 open Sutil
 
-open Sutil.Core
-open Sutil.CoreElements
+open Sutil.Bind
 open Sutil.Transition
+open Sutil.Html
+open Sutil.CoreElements
 
 let view () =
     let visible = Store.make true
@@ -19,12 +20,16 @@ let view () =
 
         Html.label [
             Html.input [
-                type' "checkbox"
+                Attr.typeCheckbox
                 Bind.attr ("checked", visible)
             ]
             text " visible"
         ]
-        transition
+
+        Html.p [
+            text "Flies in and out"
+        ]
+        |> transition
             [
                 fly
                 |> withProps [
@@ -34,7 +39,4 @@ let view () =
                 |> InOut
             ]
             visible
-        <| Html.p [
-            text "Flies in and out"
-        ]
     ]

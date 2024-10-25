@@ -9,7 +9,6 @@ open Sutil.Internal
 open System.Collections.Generic
 open System
 open Fable.Core
-//open Interop
 
 type HTMLElement = Browser.Types.HTMLElement
 
@@ -500,26 +499,26 @@ let transitionNode  (el : HTMLElement)
         let createTrans = (init initProps) el
         startTransition createTrans
 
-type Hideable = {
-    predicate : IObservable<bool>
-    element   : SutilElement
-    transOpt  : TransitionAttribute list
-}
+// type Hideable = {
+//     predicate : IObservable<bool>
+//     element   : SutilElement
+//     transOpt  : TransitionAttribute list
+// }
 
-type HideableRuntime = {
-    hideable : Hideable
-    //mutable target : SutilEffect
-    mutable cache : bool
-    mutable unsubscribe : System.IDisposable
-}
+// type HideableRuntime = {
+//     hideable : Hideable
+//     //mutable target : SutilEffect
+//     mutable cache : bool
+//     mutable unsubscribe : System.IDisposable
+// }
 
-let createHideableRuntime h =
-    {
-        hideable = h
-        //target = SideEffect
-        cache = false
-        unsubscribe = null
-    }
+// let createHideableRuntime h =
+//     {
+//         hideable = h
+//         //target = SideEffect
+//         cache = false
+//         unsubscribe = null
+//     }
 
 // let transitionList (list : Hideable list) : SutilElement =
 //     SutilElement.HiddenDiv "transitionList"
@@ -539,22 +538,43 @@ let createHideableRuntime h =
     //     )
     // () )
 
-type MatchOption<'T> = ('T -> bool) *  SutilElement * TransitionAttribute list
+// type MatchOption<'T> = ('T -> bool) *  SutilElement * TransitionAttribute list
 
-let makeHideable guard element transOpt = {
-    element = element
-    transOpt = transOpt
-    predicate = guard
-}
+// let makeHideable guard element transOpt = {
+//     element = element
+//     transOpt = transOpt
+//     predicate = guard
+// }
 
 // let transitionMatch<'T> (store : IObservable<'T>) (options : MatchOption<'T> list) =
 //     options |> List.map (fun (p,e,t) -> makeHideable (store |> Store.map p) e t) |> transitionList
 
-let transitionOpt   (trans : TransitionAttribute list)
-                    (store : IObservable<bool>)
+let transitionOpt   (name : string)
+                    (trans : TransitionAttribute list)
+                    (visible : IObservable<bool>)
                     (element: SutilElement)
                     (elseElement : SutilElement option) : SutilElement =
-                    element
+    SutilElement.DefineBinding (
+        name,
+        fun _context ->
+            let context = _context.WithCurrent(null)
+
+            let node = element |> Core.mount context |> _.Node
+            let elseNode = elseElement |> Option.map (Core.mount context) |> Option.map _.Node
+
+            visible |> Store.distinct |> Store.subscribe (fun isVisible ->
+                transitionNode (node :?> HTMLElement) trans [] isVisible ignore ignore
+                elseNode 
+                |> Option.iter (fun elseNode -> 
+                    transitionNode (elseNode :?> HTMLElement) trans [] (not isVisible) ignore ignore)
+            )
+    )
+
+    // Old Sutil 2.x code
+    // There are some optimizations and tweaks here that I may need to port across
+    // to Sutil 3.x, so I'm leaving this for reference for now. However, not yet
+    // seeing the need for them when looking at the Examples 
+
     // SutilElement.Define("transitionOpt",
     // fun ctx ->
     // let transResult = SutilEffect.MakeGroup( "transition", ctx.Parent, ctx.Previous ) |> Group
@@ -592,19 +612,19 @@ let transitionOpt   (trans : TransitionAttribute list)
 
 /// Show or hide according to an IObservable&lt;bool> using a transition
 let transition (options : TransitionAttribute list) visibility element =
-    transitionOpt options visibility element None
+    transitionOpt "transition" options visibility element None
 
 /// Alternate between a pair of elements according to an IObservable&lt;bool> with no transition
 let transitionElse(options : TransitionAttribute list) visibility element otherElement=
-    transitionOpt options visibility element (Some otherElement)
+    transitionOpt "transitionElse" options visibility element (Some otherElement)
 
 /// Show or hide according to an IObservable&lt;bool> with no transition
 let showIf visibility element =
-    transitionOpt [] visibility element None
+    transitionOpt "showIf" [] visibility element None
 
 /// Alternate between a pair of elements according to an IObservable&lt;bool> with no transition
 let showIfElse visibility element otherElement=
-    transitionOpt [] visibility element (Some otherElement)
+    transitionOpt "showIfElse" [] visibility element (Some otherElement)
 
 
 

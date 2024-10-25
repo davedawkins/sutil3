@@ -113,7 +113,7 @@ type Expect =
     static member queryChildIsText (query: string)=
         let el = currentEl.querySelector(":scope " + query)
         Expect.assertTrue (not(isNull el)) ("query failed: " + query)
-        Expect.assertTrue (Sutil.Internal.TypeHelpers.isTextNode (el.firstChild)) ("not a text node: " + query)
+        Expect.assertTrue (Sutil.Internal.Node.isTextNode (el.firstChild)) ("not a text node: " + query)
         
     static member querySingleTextChild (query : string) (expected : string)=
         let el = currentEl.querySelector(":scope " + query)
@@ -122,7 +122,7 @@ type Expect =
 
         let child = el.firstChild :?> Browser.Types.Text
 
-        Expect.assertTrue (Sutil.Internal.TypeHelpers.isTextNode (el.firstChild)) ("not a text node: " + query)
+        Expect.assertTrue (Sutil.Internal.Node.isTextNode (el.firstChild)) ("not a text node: " + query)
         Expect.areEqual( child.textContent, expected, "text node content is '" + expected + "'" )
         Expect.assertTrue( isNull (child.nextSibling)) "text node is only child" 
 

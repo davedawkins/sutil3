@@ -5,15 +5,16 @@ module TransitionCustom
 
 open Sutil
 
-open Sutil.Core
+open Sutil.Html
 open Sutil.CoreElements
 open Sutil.Transition
+open Sutil.Bind
 open Browser.Types
-open Sutil.Internal.DomHelpers
+open Sutil.Internal
 
 let typewriter (userProps: TransitionProp list) (node: HTMLElement) =
     fun _ ->
-        let valid = node.childNodes.length = 1 && isTextNode (node.childNodes.[0])
+        let valid = node.childNodes.length = 1 && Node.isTextNode (node.childNodes.[0])
 
         if not valid then
             failwith "This transition only works on elements with a single text node child"
@@ -39,27 +40,26 @@ let view () =
     let visible = Store.make false
 
     Html.div [
-        class' "container"
+        Attr.className "container"
 
         Html.label [
-            Html.input [
-                type' "checkbox"
+            Bulma.inputCheckbox [
                 Bind.attr ("checked", visible)
             ]
             text " visible"
         ]
 
-        transition
+        Html.p [
+            text "The quick brown fox jumps over the lazy dog"
+        ] 
+        |> transition
             [
                 In typewriter
             ]
             visible
-        <| Html.p [
-            text "The quick brown fox jumps over the lazy dog"
-        ]
 
         disposeOnUnmount [
             visible
         ]
-        onMount (fun _ -> true |> Store.set visible) [] // Force a transition upon first showing
+        Ev.onMount (fun _ -> true |> Store.set visible) // Force a transition upon first showing
     ]

@@ -6,11 +6,11 @@ open Types
 let CompilationFailure() =
     Html.div "Compilation failure :-("
 
-module TransitionParameters = let view = CompilationFailure
-module TransitionInOut = let view = CompilationFailure
-module TransitionCustomCss = let view = CompilationFailure
-module TransitionCustom = let view = CompilationFailure
-module TransitionEvents = let view = CompilationFailure
+// module TransitionParameters = let view = CompilationFailure
+// module TransitionInOut = let view = CompilationFailure
+// module TransitionCustomCss = let view = CompilationFailure
+// module TransitionCustom = let view = CompilationFailure
+// module TransitionEvents = let view = CompilationFailure
 
 #if !FANTOMAS
 let allExamples = [
@@ -33,12 +33,12 @@ let allExamples = [
         { Pass = true; Category = "Events"; Title = "DOM events"; Link = AppLink (DomEvents.view, ["DomEvents.fs"])  }
         { Pass = true; Category = "Events"; Title = "Custom events"; Link = AppLink (CustomEvents.view, ["CustomEvents.fs"])  }
         { Pass = true; Category = "Events"; Title = "Event modifiers"; Link = AppLink (EventModifiers.view, ["EventModifiers.fs"])  }
-        { Pass =false; Category = "Transitions"; Title = "Transition"; Link = AppLink (Transition.view, ["Transition.fs"])  }
-        { Pass =false; Category = "Transitions"; Title = "Adding parameters"; Link = AppLink (TransitionParameters.view, ["TransitionParameters.fs"])  }
-        { Pass =false; Category = "Transitions"; Title = "In and out"; Link = AppLink (TransitionInOut.view, ["TransitionInOut.fs"])  }
-        { Pass =false; Category = "Transitions"; Title = "Custom CSS"; Link = AppLink (TransitionCustomCss.view, ["TransitionCustomCss.fs"])  }
-        { Pass =false; Category = "Transitions"; Title = "Custom Code"; Link = AppLink (TransitionCustom.view, ["TransitionCustom.fs"])  }
-        { Pass =false; Category = "Transitions"; Title = "Transition events"; Link = AppLink (TransitionEvents.view, ["TransitionEvents.fs"])  }
+        { Pass =true; Category = "Transitions"; Title = "Transition"; Link = AppLink (Transition.view, ["Transition.fs"])  }
+        { Pass =true; Category = "Transitions"; Title = "Adding parameters"; Link = AppLink (TransitionParameters.view, ["TransitionParameters.fs"])  }
+        { Pass =true; Category = "Transitions"; Title = "In and out"; Link = AppLink (TransitionInOut.view, ["TransitionInOut.fs"])  }
+        { Pass =true; Category = "Transitions"; Title = "Custom CSS"; Link = AppLink (TransitionCustomCss.view, ["TransitionCustomCss.fs"])  }
+        { Pass =true; Category = "Transitions"; Title = "Custom Code"; Link = AppLink (TransitionCustom.view, ["TransitionCustom.fs"])  }
+        { Pass =true; Category = "Transitions"; Title = "Transition events"; Link = AppLink (TransitionEvents.view, ["TransitionEvents.fs"])  }
         { Pass =false; Category = "Transitions"; Title = "Animation"; Link = AppLink (Todos.view, ["Todos.fs"])  }
 
         // Needs Bulma

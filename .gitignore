@@ -309,3 +309,4 @@ public/apidocs
 .fsdocs/cache
 src/Sutil/Sutil.fable-temp.csproj
 fable-build
+src/App/App.fable-temp.csproj
