@@ -13,7 +13,7 @@ StoreTest.init()
 ExamplesTests.init()
 
 BrowserFramework.runAll( 
-    "*", "*" //"withStyle colors text after binding"
+    "*", "Bind dispose div" //"withStyle colors text after binding"
     )
 
 #endif

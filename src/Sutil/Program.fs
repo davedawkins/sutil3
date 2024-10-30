@@ -30,7 +30,7 @@ type Program() =
             (BuildContext
                 .Create(Browser.Dom.document.getElementById (id))
                 .WithAppendNode(append)
-                .WithCurrent(null))
+                .WithCurrent(NodeRange.Empty))
             app
         |> (fun result -> Dispose.makeDisposable (fun () -> DomEdit.remove result.Node))
 
@@ -45,7 +45,7 @@ type Program() =
                     DomEdit.clear parent
                     DomEdit.append parent node
                 )
-                .WithCurrent(null))
+                .WithCurrent(NodeRange.Empty))
             app
         |> (fun result -> Dispose.makeDisposable (fun () -> DomEdit.remove result.Node))
 
@@ -72,7 +72,7 @@ type Program() =
             (BuildContext
                 .Create(prev.parentElement)
                 .WithAppendNode(fun parent node -> DomEdit.insertAfter parent node prev)
-                .WithCurrent(null)
+                .WithCurrent(NodeRange.Empty)
                 )
             app
 
@@ -83,7 +83,7 @@ type Program() =
     ///</summary>
     static member mountAppend(prev: HTMLElement, app: SutilElement) : IDisposable =
 
-        Core.mount (BuildContext.Create(prev.parentElement).WithCurrent(null)) app
+        Core.mount (BuildContext.Create(prev.parentElement).WithCurrent(NodeRange.Empty)) app
 
         |> (fun result -> Dispose.makeDisposable (fun () -> DomEdit.remove result.Node))
 

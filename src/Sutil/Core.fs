@@ -68,8 +68,8 @@ let private logPatch (context: BuildContext) (patchAction: NodeAction) =
         fun () ->
             _log.trace (
                 sprintf
-                    "Patch action:\n current= %s\n action=%s\n parent=%s"
-                    (Node.outerHTML context.Current)
+                    "Patch action:\n  action=%s\n parent=%s"
+                    //(Node.outerHTML context.Current)
                     (patchAction.ToString())
                     (context.ParentElement.outerHTML)
             )

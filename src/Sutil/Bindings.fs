@@ -107,9 +107,9 @@ let bindElementWithName<'T>
         name,
         fun _context ->
 
-            let mutable currentNode: Node = _context.Current
+            let mutable currentNode: Node = _context.Current.NodeOrNull
 
-            let context = _context.WithCurrent(null)
+            let context = _context.WithCurrent(NodeRange.Empty)
 
             if _log.enabled then
 

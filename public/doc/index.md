@@ -31,5 +31,8 @@
 - [Upgrading to Sutil 2.x](upgrading_to_sutil2.md)
 - [DevTools - coming soon](coming_soon.md)
 
+# Implementation
+- [Expected Behaviour](expected_behaviour.md)
+
 # API
 - [Reference](https://sutil.dev/apidocs/reference/sutil.html)

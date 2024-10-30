@@ -9,6 +9,19 @@ type Globals =
     static let _globalNextId = Helpers.createIdGenerator ()
     static member NextId : unit -> int = _globalNextId
 
+type NodeRange =
+    NodeRange of Browser.Types.Node[]
+    with
+        static member Of (nodes : Browser.Types.Node[]) = NodeRange nodes
+        static member Of (node : Browser.Types.Node) =
+            node |> Array.singleton |> NodeRange.Of
+        static member Empty = NodeRange [||]
+        member __.Nodes = let (NodeRange nodes) = __ in nodes
+        member __.Length = __.Nodes.Length
+        member __.IsEmpty = __.Length = 0
+        member __.IsSingleNode = __.Length = 1
+        member __.NodeOrNull = if __.Length = 1 then __.Nodes[0] else null
+
 type PatchResult =
     | AttrSet
     | AttrRemoved
@@ -79,7 +92,7 @@ and BuildContext =
         AppendNode: Node -> Node -> unit
 
         /// The current node that this SutilElement is replacing or patching
-        Current: Node
+        Current: NodeRange
 
         /// Create DOM element
         ElementCtor: string * string -> Element
@@ -101,7 +114,7 @@ and BuildContext =
             Parent = parent
             NextId = Globals.NextId
             AppendNode = BuildContext.DefaultAppendNode
-            Current = null
+            Current = NodeRange.Empty
             OnImportedNode = None
             ElementCtor = Sutil.Internal.DomEdit.elementNS
             LogElementEnabled = false
@@ -144,9 +157,21 @@ and BuildContext =
             Id = Globals.NextId()
         }
 
+    member __.WithCurrent(nodes: NodeRange) =
+        { __ with
+            Current = nodes
+            Id = Globals.NextId()
+        }
+
+    member __.WithCurrent(nodes: Node[]) =
+        { __ with
+            Current = NodeRange.Of nodes
+            Id = Globals.NextId()
+        }
+
     member __.WithCurrent(node: Node) =
         { __ with
-            Current = node
+            Current = NodeRange.Of node
             Id = Globals.NextId()
         }
 

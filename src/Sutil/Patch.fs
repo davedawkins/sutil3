@@ -117,21 +117,17 @@ module private Helpers =
                 | Some x, None -> RemoveAttr(name, x)
                 | _ -> ()
         |]
+    // let tryGetDomNode (parent : Node) (ve : VirtualElement) : Node option =
+    //     Node.children parent
+    //     |> Seq.tryFind (fun node -> JsMap.getKeyDefault node VIRTUAL_ELEMENT_KEY "" = ve.Key)
 
-    let tryGetDomNode (parent : Node) (ve : VirtualElement) : Node option =
-        Node.children parent
-        |> Seq.tryFind (fun node -> JsMap.getKeyDefault node VIRTUAL_ELEMENT_KEY "" = ve.Key)
-        // ve.GetKey()
-        // |> Key
-        // |> _.TryFindNode(parent)
-
-    let tryWithDomNode (parent : Node) (map : Node -> 'r) (ve : VirtualElement) : Result<'r,string> =
-        tryGetDomNode parent ve
-        |> Option.map (map>>Ok)
-        |> Option.defaultWith (fun () ->
-            Log.Console.trace("DOM node does not exist")
-            (Error "DOM node does not exist: ")        
-        )
+    // let tryWithDomNode (parent : Node) (map : Node -> 'r) (ve : VirtualElement) : Result<'r,string> =
+    //     tryGetDomNode parent ve
+    //     |> Option.map (map>>Ok)
+    //     |> Option.defaultWith (fun () ->
+    //         Log.Console.trace("DOM node does not exist")
+    //         (Error "DOM node does not exist: ")        
+    //     )
 
 open Helpers
 
@@ -220,20 +216,22 @@ let rec private calculatePatch (node : Node) (existing: VirtualElement) (latest:
     else
         failwith "Unexpected virtual element"
 
-let calculate (node: Node) (ve: VirtualElement) : NodeAction =
-    match VirtualElement.TryFind node with
-    | Some ve0 when ve0.Key = ve.Key ->
-        calculatePatch (node : Node) ve0 ve
-    | Some ve0 when ve0.Key <> ve.Key ->
-        failwith ("Virtual element found but keys don't match: " + ve0.Key + " <> " + ve.Key)
-    | _ ->
-        if isNull node then
-            Insert ve
-        else
+let calculate (nodeRange: NodeRange) (ve: VirtualElement) : NodeAction =
+    match nodeRange.Length with
+    | 0 ->
+        Insert ve
+    | 1 ->
+        let node = nodeRange.NodeOrNull
+        match VirtualElement.TryFind node with
+        | Some ve0  ->
+            calculatePatch (node : Node) ve0 ve
+        | _ ->
             failwith "Node was expected to have an associated VirtualElement"        
+    | _ ->
+        failwith "Not implemented yet: calculate for multiple nodes"
 
 let rec applyPatchAction (context : BuildContext) (patchAction : PatchAction) : Result<PatchResult,string> =
-    let current = context.Current
+    let current = context.Current.NodeOrNull
 
     let veChildren = getVirtualChildren current
 
@@ -314,12 +312,12 @@ let rec applyPatchAction (context : BuildContext) (patchAction : PatchAction) : 
 and applyNodeAction (context : BuildContext) (nodeAction : NodeAction) : Result<SutilResult, string> =
     let ok (r, node) = (r, node) |> SutilResult.Of |> Ok
 
-    let current = context.Current
+    let current = context.Current.NodeOrNull
 
     match nodeAction with
 
     | AsIs ->
-        (Unchanged,context.Current) |> ok
+        (Unchanged,context.Current.NodeOrNull) |> ok
 
     | Remove ->
         DomEdit.remove current
@@ -342,11 +340,10 @@ and applyNodeAction (context : BuildContext) (nodeAction : NodeAction) : Result<
         if (isNull current) then
             Error "Node to be patched cannot be found"
         else
-            // Internal.Dispose.disposeAll current
-            // // Remove subscriptions made by bindings
+            // Remove subscriptions made by bindings
             Internal.Bindings.clear current
 
-            // // Remove event listeners
+            // Remove event listeners
             Internal.EventListeners.clear current
 
             // ^^ these will be added again, cannot be patched

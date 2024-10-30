@@ -52,7 +52,7 @@ let html (text: string) : SutilElement =
             Basic.attr "data-sutil-imported" "html" // Tell Patcher that no point in trying repair this section
         ],
         fun ctx ->
-            let host = ctx.Current :?> HTMLElement  // We know this will be a div, passed as init in DefineBinding
+            let host = ctx.Current.NodeOrNull :?> HTMLElement  // We know this will be a div, passed as init in DefineBinding
             
             // Parse HTML and add to new node
             host.innerHTML <- text.Trim()

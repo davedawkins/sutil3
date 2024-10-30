@@ -48,7 +48,6 @@ type VirtualElement with
 
     member __.GetKey() = __.Key
 
-
     member __.WithKey k = { __ with Key = k }
 
     member __.IsTextNode =
@@ -318,7 +317,7 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
 
         JsMap.setKey el VIRTUAL_ELEMENT_KEY (ve.WithNoChildren)
 
-        el.setAttribute("data-sutil-key", ve.Key)
+        //el.setAttribute("data-sutil-key", ve.Key)
 
         if (ve.Attributes |> Array.exists (fun (name, value) -> name = "data-binding")) then
             let mapped = context |> ve.MapContext

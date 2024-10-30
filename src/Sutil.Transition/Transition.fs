@@ -557,7 +557,7 @@ let transitionOpt   (name : string)
     SutilElement.DefineBinding (
         name,
         fun _context ->
-            let context = _context.WithCurrent(null)
+            let context = _context.WithCurrent(NodeRange.Empty)
 
             let node = element |> Core.mount context |> _.Node
             let elseNode = elseElement |> Option.map (Core.mount context) |> Option.map _.Node

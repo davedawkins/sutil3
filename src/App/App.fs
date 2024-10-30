@@ -16,6 +16,7 @@ open Sutil.Elmish.Cmd
 let [<Literal>] LOADING = "[ Loading ]"
 
 open type Feliz.length
+open Sutil.Transition
 
 //
 // Books
@@ -721,28 +722,28 @@ let tiles =
         ]
     ]
 
-// let slideshow interval (*trans*) (elements : SutilElement list) =
-//     let currentTileIndex = Store.make 0
-//     let numElements = elements.Length
+let slideshow interval trans (elements : SutilElement list) =
+    let currentTileIndex = Store.make 0
+    let numElements = elements.Length
 
-//     let ticker =
-//         DomHelpers.interval
-//             (fun _ -> currentTileIndex |> Store.modify (fun x -> (x + 1) % numElements))
-//             interval
+    let ticker =
+        Sutil.Internal.Timers.interval
+            (fun _ -> currentTileIndex |> Store.modify (fun x -> (x + 1) % numElements))
+            interval
 
-//     let transitionElements =
-//         elements
-//         |> List.mapi (fun i tile ->  transition trans (currentTileIndex |> Store.map ((=) i)) tile)
+    let transitionElements =
+        elements
+        |> List.mapi (fun i tile -> transition trans (currentTileIndex |> Store.map ((=) i)) tile)
 
-//     let cleanupElements = [
-//         disposeOnUnmount [ currentTileIndex ]
-//         unsubscribeOnUnmount [ ticker ]
-//     ]
+    let cleanupElements = [
+        disposeOnUnmount [ currentTileIndex ]
+        unsubscribeOnUnmount [ ticker ]
+    ]
 
-//     transitionElements @ cleanupElements |> Html.fragment
+    transitionElements @ cleanupElements |> Html.fragment
 
 let viewFrontPage () =
-    //let tileFade = fade |> withProps [Duration 1000.0]
+    let tileFade = fade |> withProps [Duration 1000.0]
 
     Html.div [
         Attr.className "app-main-section"
@@ -770,21 +771,17 @@ let viewFrontPage () =
                 ]
             ]
 
-        // slideshow
-        //     5000
-        //     //[ InOut tileFade ]
-        //     tiles
+            slideshow
+                5000
+                [ InOut tileFade ]
+                tiles
         ]
-    ]
-    |> withStyle frontPageRules
+    ] |> withStyle frontPageRules
 
 let appMain () =
     let model, dispatch = () |> Store.makeElmish init update ignore
-
     let showContents = model .> (fun m -> not m.IsMobile || m.ShowContents)
-
     let umedia = Media.listenMedia ("(max-width: 768px)", dispatch << SetIsMobile)
-
     let upage =
         Navigable.listenLocation (UrlParser.parsePageView, dispatch << SetPageView)
 
