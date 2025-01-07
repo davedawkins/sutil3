@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="BrowserFramework.fs" />
+    <Compile Include="Describe.fs" />
+    <Compile Include="HelloWorldTest.fs" />
+    <Compile Include="StyleTests.fs" />
+    <Compile Include="ExamplesTests.fs" />
+    <Compile Include="DOMTest.fs" />
+    <Compile Include="BindingTest.fs" />
+    <Compile Include="ObservableTest.fs" />
+    <Compile Include="StoreTest.fs" />
+    <Compile Include="Main.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Sutil\Sutil.fsproj" />
+    <ProjectReference Include="..\..\src\Sutil.Html\Sutil.Html.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Expect" />
+  </ItemGroup>
+</Project>

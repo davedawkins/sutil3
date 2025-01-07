@@ -1,0 +1,37 @@
+<!--
+    Define shared properties for all the projects in the src directory
+-->
+<Project>
+    <!--
+        We import the top level Directory.Build.props because we want to use
+        Central Package Management for both the src, demo and test projects
+    -->
+    <Import Project="$(MSBuildThisFileDirectory)\..\Directory.Build.props" />
+    <!--
+        Starting here, we define properties that are common to all the projects in the src directory
+    -->
+    <PropertyGroup>
+        <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <UsesMarkdownComments>false</UsesMarkdownComments>
+        <Authors>David Dawkins</Authors>
+        <DefineConstants>$(DefineConstants);FABLE_COMPILER;</DefineConstants>
+    </PropertyGroup>
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)\..\LICENSE.txt" Pack="true"
+            PackagePath="$(PackageLicenseFile)" />
+        <None Include="$(MSBuildThisFileDirectory)\..\README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+    <!-- Packages common to all the projects excepts build project -->
+    <ItemGroup>
+        <PackageReference Include="EasyBuild.PackageReleaseNotes.Tasks">
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+            <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+        <!--  -->
+        <PackageReference Include="Fable.Package.SDK">
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+          <PrivateAssets>all</PrivateAssets>
+        </PackageReference>
+    </ItemGroup>
+</Project>

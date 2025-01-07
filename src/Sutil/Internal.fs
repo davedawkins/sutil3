@@ -37,7 +37,7 @@ module JsMap =
     let deleteKey (node: obj) (key: string) = jsNative
 
     [<Emit("Object.keys($0)")>]
-    let keyNames (node  : obj) : string[] = jsNative
+    let keyNames (node: obj) : string[] = jsNative
 
     let hasKey (node: obj) (key: string) = jsIn key node
 
@@ -49,11 +49,11 @@ module JsMap =
         else
             None
 
-    let getKeyWith (node: obj) (key: string) (defaultValue: unit ->'t) : 't =
+    let getKeyWith (node: obj) (key: string) (defaultValue: unit -> 't) : 't =
         match tryGetKey node key with
         | Some v -> v
-        | None -> 
-            let v = defaultValue()
+        | None ->
+            let v = defaultValue ()
             setKey node key v
             v
 
@@ -93,7 +93,7 @@ module Id =
         JsMap.getCreate doc.body NodeMap (fun () -> upcast {| |})
 
     let setId (node: Node) (x: string) =
-        JsMap.setKey node SUTIL_ID  x
+        JsMap.setKey node SUTIL_ID x
 
         let map = getNodeMap node.ownerDocument
         JsMap.setKey map (string id) node
@@ -459,7 +459,8 @@ module Timers =
 module Promise =
     open Fable.Core
 
-    let [<Literal>] private PROMISE_KEY = "__sutil_promise"
+    [<Literal>]
+    let private PROMISE_KEY = "__sutil_promise"
 
     ///<summary>
     /// Serialize tasks through an element. If the task already has a running task
@@ -472,25 +473,24 @@ module Promise =
         let run () = andThen () |> JsMap.setKey el key
 
         if JsMap.hasKey el key then
-            let p : JS.Promise<unit> = JsMap.getKey el key
+            let p: JS.Promise<unit> = JsMap.getKey el key
             JsMap.deleteKey el key
             p.``then`` run |> ignore
         else
             run ()
 
-    
 [<RequireQualifiedAccess>]
 module HTMLElement =
 
-    let attributes (el : Browser.Types.HTMLElement) = el.attributes |> NamedNodeMap.toArray
+    let attributes (el: Browser.Types.HTMLElement) = el.attributes |> NamedNodeMap.toArray
 
-                
 /// Support for disposing of Node-related resources (subscriptions etc)
 module Dispose =
 
-    type NamedDisposable( name : string, d : System.IDisposable ) = 
+    type NamedDisposable(name: string, d: System.IDisposable) =
         member __.Name = name
         member __.Dispose() = d.Dispose()
+
         interface System.IDisposable with
             member __.Dispose() = __.Dispose()
 
@@ -519,56 +519,53 @@ module Dispose =
 
     let private safeDispose (d: NamedDisposable) =
         try
-            Fable.Core.JS.console.log("Disposing '" + d.Name + "'")
+            Fable.Core.JS.console.log ("Disposing '" + d.Name + "'")
             d.Dispose()
         with x ->
             log.error (sprintf "Error while disposing: %s" x.Message)
 
-    let private disposeArray (ds : NamedDisposable[]) =
-        ds |> Array.iter safeDispose
+    let private disposeArray (ds: NamedDisposable[]) = ds |> Array.iter safeDispose
 
-    let private mapOf(node: Node) : obj =
-        JsMap.getKeyDefault node MAP ({| |})
+    let private mapOf (node: Node) : obj = JsMap.getKeyDefault node MAP ({| |})
 
-    let private clearMap (node: Node) : unit =
-        JsMap.deleteKey node MAP
+    let private clearMap (node: Node) : unit = JsMap.deleteKey node MAP
 
-    let private getDisposablesForKey (node: Node) (key : string): NamedDisposable[] =
+    let private getDisposablesForKey (node: Node) (key: string) : NamedDisposable[] =
         JsMap.getKeyDefault (mapOf node) key Array.empty
 
-    let private clearDisposablesForKey (node: Node) (key : string) : unit =
+    let private clearDisposablesForKey (node: Node) (key: string) : unit =
         let map = mapOf node
         JsMap.deleteKey map key
         JsMap.setKey node MAP map
 
-    let internal disposeAllOfKey (node : Node) (key : string) : unit =
+    let internal disposeAllOfKey (node: Node) (key: string) : unit =
         let ds = getDisposablesForKey node key |> Array.copy
-        Fable.Core.JS.console.log("Disposing 1 " + key + ": " + (string ds.Length))
+        Fable.Core.JS.console.log ("Disposing 1 " + key + ": " + (string ds.Length))
         clearDisposablesForKey node key
 
         let ds2 = getDisposablesForKey node key |> Array.copy
-        Fable.Core.JS.console.log("Disposing 2 " + key + ": " + (string ds2.Length))
+        Fable.Core.JS.console.log ("Disposing 2 " + key + ": " + (string ds2.Length))
 
         ds |> disposeArray
 
-    let private collectAllDisposables (node : Node) = 
+    let private collectAllDisposables (node: Node) =
         JsMap.keyNames (mapOf node)
         |> Array.collect (fun key -> getDisposablesForKey node key)
 
-    let internal disposeAll (node : Node) : unit =
+    let internal disposeAll (node: Node) : unit =
         let all = collectAllDisposables node
         clearMap node
         all |> disposeArray
 
-    let addDisposableForKey (node: Node) (key: string) (name : string) (d: System.IDisposable) =
+    let addDisposableForKey (node: Node) (key: string) (name: string) (d: System.IDisposable) =
         let map = mapOf node
-        JsMap.arrayAppendKey map key (new NamedDisposable(key + ":" + name,d))
+        JsMap.arrayAppendKey map key (new NamedDisposable(key + ":" + name, d))
         JsMap.setKey node MAP map
 
     let addDisposable (node: Node) (name: string) (d: System.IDisposable) =
         addDisposableForKey node DEFAULT_KEY name d
 
-    let addUnsubscribeForKey (node: Node) (key : string) (name: string) (f: Unsubscriber) =
+    let addUnsubscribeForKey (node: Node) (key: string) (name: string) (f: Unsubscriber) =
         f |> makeDisposable |> addDisposableForKey node key name
 
     let addUnsubscribe (node: Node) (name: string) (f: Unsubscriber) =
@@ -588,25 +585,29 @@ module Dispose =
 
     let internal dispose (node: Node) = disposeTree node
 
-    let composeUU (u1 : Unsubscriber) (u2 : Unsubscriber) =
-        (u1>>u2) |> makeDisposable
-            
-    let composeDD (d1 : System.IDisposable)  (d2 : System.IDisposable)=
+    let composeUU (u1: Unsubscriber) (u2: Unsubscriber) = (u1 >> u2) |> makeDisposable
+
+    let composeDD (d1: System.IDisposable) (d2: System.IDisposable) =
         (fun () ->
             d1.Dispose()
-            d2.Dispose()) |> makeDisposable
+            d2.Dispose()
+        )
+        |> makeDisposable
 
-    let composeDU (d : System.IDisposable) (u : Unsubscriber) =
+    let composeDU (d: System.IDisposable) (u: Unsubscriber) =
         (fun () ->
             d.Dispose()
-            u()) |> makeDisposable
-            
-    let composeUD (u : Unsubscriber)  (d : System.IDisposable)=
+            u ()
+        )
+        |> makeDisposable
+
+    let composeUD (u: Unsubscriber) (d: System.IDisposable) =
         (fun () ->
             d.Dispose()
-            u()) |> makeDisposable
+            u ()
+        )
+        |> makeDisposable
 
-            
 /// Support for editing classes
 module ClassHelpers =
     open System
@@ -620,9 +621,9 @@ module ClassHelpers =
             StringSplitOptions.RemoveEmptyEntries
         )
 
-    let setClass (className: string) (e: HTMLElement) = 
-        e.setAttributeNS(null, "class", className)
-//        e.className <- className // Doesn't work for SVG nodes
+    let setClass (className: string) (e: HTMLElement) =
+        e.setAttributeNS (null, "class", className)
+    //        e.className <- className // Doesn't work for SVG nodes
 
     let toggleClass (className: string) (e: HTMLElement) =
         e.classList.toggle (className) |> ignore
@@ -653,10 +654,14 @@ module DomEdit =
         if not (isNull node.parentNode) then
             node.parentNode.removeChild (node) |> ignore
 
-    let append (parent: Browser.Types.Node) (node: Browser.Types.Node) = 
+    let append (parent: Browser.Types.Node) (node: Browser.Types.Node) =
         parent.appendChild (node) |> ignore
 
-    let replace (parent: Browser.Types.Node) (current: Browser.Types.Node) (node: Browser.Types.Node) =
+    let replace
+        (parent: Browser.Types.Node)
+        (current: Browser.Types.Node)
+        (node: Browser.Types.Node)
+        =
         if isNull (current) then
             failwith "Attempt to replace null node"
 
@@ -669,10 +674,18 @@ module DomEdit =
             Log.Console.info ("node   : ", node |> Node.toStringOutline)
             Log.Console.info ("parent : ", parent |> Node.toStringOutline)
 
-    let insertBefore (parent: Browser.Types.Node) (child: Browser.Types.Node) (refNode: Browser.Types.Node) =
+    let insertBefore
+        (parent: Browser.Types.Node)
+        (child: Browser.Types.Node)
+        (refNode: Browser.Types.Node)
+        =
         parent.insertBefore (child, refNode) |> ignore
 
-    let insertAfter (parent: Browser.Types.Node) (newChild: Browser.Types.Node) (refChild: Browser.Types.Node) =
+    let insertAfter
+        (parent: Browser.Types.Node)
+        (newChild: Browser.Types.Node)
+        (refChild: Browser.Types.Node)
+        =
         let beforeChild =
             if isNull refChild then
                 parent.firstChild
@@ -689,11 +702,11 @@ module DomEdit =
 
     let element tag = Browser.Dom.document.createElement tag
 
-    let elementNS(ns : string, tag : string) : Browser.Types.Element =
-        if ns = "" then 
+    let elementNS (ns: string, tag: string) : Browser.Types.Element =
+        if ns = "" then
             Browser.Dom.document.createElement tag
         else
-            Browser.Dom.document.createElementNS(ns,tag)
+            Browser.Dom.document.createElementNS (ns, tag)
 
     let private booleanAttributes =
         [
@@ -730,8 +743,7 @@ module DomEdit =
         else
             el.setAttribute (name, svalue)
 
-    let removeAttribute (parent: Browser.Types.HTMLElement) name = 
-        parent.removeAttribute (name)
+    let removeAttribute (parent: Browser.Types.HTMLElement) name = parent.removeAttribute (name)
 
     let setHeadStylesheet (doc: Browser.Types.Document) (url: string) =
         let head = doc.head
@@ -768,12 +780,12 @@ module Bindings =
 
     open Browser.Types
 
-    let [<Literal>] BINDINGS = "__sutil_bnd"
+    [<Literal>]
+    let BINDINGS = "__sutil_bnd"
 
-    let clear (node : Node) : unit =
-        Dispose.disposeAllOfKey node BINDINGS
+    let clear (node: Node) : unit = Dispose.disposeAllOfKey node BINDINGS
 
-    let add (node : Node) (d: System.IDisposable) =
+    let add (node: Node) (d: System.IDisposable) =
         Dispose.addDisposableForKey node BINDINGS "" d
 
 module AbortController =
@@ -783,15 +795,15 @@ module AbortController =
     // From Fable.Fetch
 
     type AbortSignal =
-      inherit Browser.Types.EventTarget
-      abstract aborted : bool with get
-      abstract onabort : (unit -> unit) with get, set
-      abstract reason: obj with get
-      abstract throwIfAborted: unit -> unit
+        inherit Browser.Types.EventTarget
+        abstract aborted: bool with get
+        abstract onabort: (unit -> unit) with get, set
+        abstract reason: obj with get
+        abstract throwIfAborted: unit -> unit
 
     type AbortController =
-      abstract signal : AbortSignal with get
-      abstract abort : (unit -> unit) with get
+        abstract signal: AbortSignal with get
+        abstract abort: (unit -> unit) with get
 
     [<Emit("new AbortController()")>]
     let newAbortController () : AbortController = jsNative
@@ -804,32 +816,36 @@ module EventListeners =
 
     open Browser.Types
 
-    let [<Literal>] LISTENERS = "__sutil_lsn"
-    let [<Literal>] ABORT = "__sutil_abort"
+    [<Literal>]
+    let LISTENERS = "__sutil_lsn"
 
-    let private getAbort() : AbortController =
-        newAbortController()
+    [<Literal>]
+    let ABORT = "__sutil_abort"
 
-    let clear (node : EventTarget) : unit =
+    let private getAbort () : AbortController = newAbortController ()
+
+    let clear (node: EventTarget) : unit =
         let n = (node :?> Node)
         Dispose.disposeAllOfKey n LISTENERS
 
-    let private addUnlisten (node : EventTarget) (event : string) (u : Unsubscriber) =
+    let private addUnlisten (node: EventTarget) (event: string) (u: Unsubscriber) =
         Dispose.addUnsubscribeForKey (node :?> Node) LISTENERS event u
 
     let add (event: string) (node: EventTarget) (handler: Event -> unit) : Unsubscriber =
-        
-        let abortC = getAbort()
 
-        node.addEventListener( 
+        let abortC = getAbort ()
+
+        node.addEventListener (
             event.ToLower(), // Bug in Feliz.Engine that sends us "dragStart" instead of "dragstart"
             handler,
-            {| signal = abortC.signal |} :> obj :?> AddEventListenerOptions
+            {|
+                signal = abortC.signal
+            |}
+            :> obj
+            :?> AddEventListenerOptions
         )
 
-        let remove = (fun () -> 
-            abortC.abort()
-        )
+        let remove = (fun () -> abortC.abort ())
 
         remove |> addUnlisten node event
         remove

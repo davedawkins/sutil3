@@ -267,15 +267,17 @@ type SutilAttrEngine() =
             (fun key value -> _attr (key, string value))
         )
 
-    member _.disabled<'T> (value: IObservable<'T>) = Bind.attr( "disabled", value )
+    member _.disabled<'T>(value: IObservable<'T>) = Bind.attr ("disabled", value)
 
     member _.value(value: obj) = _attr ("value", value)
     member _.value(value: int) = _attr ("value", value)
     member _.value(value: float) = _attr ("value", value)
     member _.value(value: bool) = _attr ("value", value)
 
-    member _.value<'T> (value: IObservable<'T>) = Bind.attr( "value", value )
-    member _.value<'T> (value: IObservable<'T>, dispatch: 'T -> unit) = Bind.attr("value",value,dispatch)
+    member _.value<'T>(value: IObservable<'T>) = Bind.attr ("value", value)
+
+    member _.value<'T>(value: IObservable<'T>, dispatch: 'T -> unit) =
+        Bind.attr ("value", value, dispatch)
 
     member _.style(cssAttrs: (string * obj) seq) =
         _attr ("style", cssAttrs |> Seq.map (fun (n, v) -> $"{n}: {v};") |> String.concat "")

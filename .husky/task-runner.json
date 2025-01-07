@@ -1,0 +1,32 @@
+{
+    "$schema": "https://alirezanet.github.io/Husky.Net/schema.json",
+    "tasks": [
+        {
+            "name": "fantomas-format-staged-files",
+            "group": "pre-commit",
+            "command": "dotnet",
+            "args": [
+                "fantomas",
+                "${staged}"
+            ],
+            "include": [
+                "**/*.fs",
+                "**/*.fsx",
+                "**/*.fsi"
+            ]
+        },
+        {
+            "name": "prevent-modification",
+            "group": "pre-commit",
+            "command": "dotnet",
+            "filteringRule": "staged",
+            "args": [
+                "fsi",
+                ".husky/scripts/prevent-modification.fsx"
+            ],
+            "include": [
+                "web/QuickTest/QuickTest.fs"
+            ]
+        }
+    ]
+}

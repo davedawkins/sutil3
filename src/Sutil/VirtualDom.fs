@@ -8,7 +8,8 @@ type EventHandler = (Browser.Types.Event -> unit)
 [<Literal>]
 let private CLASS = "class"
 
-let [<Literal>] VIRTUAL_ELEMENT_KEY = "__sutil_ve"
+[<Literal>]
+let VIRTUAL_ELEMENT_KEY = "__sutil_ve"
 
 let private _log = Log.create ("VirtualDom")
 
@@ -16,14 +17,15 @@ _log.enabled <- false
 
 type VirtualElement with
 
-    static member TryFind( node : Browser.Types.Node ) : VirtualElement option =
-        if isNull node then 
+    static member TryFind(node: Browser.Types.Node) : VirtualElement option =
+        if isNull node then
             None
         else
             JsMap.tryGetKey node VIRTUAL_ELEMENT_KEY
 
     static member Empty =
-        {   Key = ""
+        {
+            Key = ""
             Type = NullNode
             Children = Array.empty
             Attributes = Array.empty
@@ -38,17 +40,20 @@ type VirtualElement with
 
     static member ElementNode(ns: string, tag: string) =
         { VirtualElement.Empty with
-            Type = TagNode (ns,tag)
+            Type = TagNode(ns, tag)
         }
 
-    static member ElementNode( tag: string) =
+    static member ElementNode(tag: string) =
         { VirtualElement.Empty with
-            Type = TagNode ("",tag)
+            Type = TagNode("", tag)
         }
 
     member __.GetKey() = __.Key
 
-    member __.WithKey k = { __ with Key = k }
+    member __.WithKey k =
+        { __ with
+            Key = k
+        }
 
     member __.IsTextNode =
         match __.Type with
@@ -64,7 +69,10 @@ type VirtualElement with
 
     member __.DomChildren = __.Children |> Array.filter _.IsDomNode
 
-    member __.WithNoChildren = { __ with Children = Array.empty }
+    member __.WithNoChildren =
+        { __ with
+            Children = Array.empty
+        }
 
     member __.ChildrenWithDomIndex =
         let mutable i = -1
@@ -78,18 +86,30 @@ type VirtualElement with
                     yield (-1, child)
         |]
 
-    member __.MapContext( ctx : BuildContext ) : BuildContext=
+    member __.MapContext(ctx: BuildContext) : BuildContext =
         __.Mapper |> Option.map (fun m -> m ctx) |> Option.defaultValue ctx
 
-    member __.AddMapper( map : BuildContext -> BuildContext ) =
-        { __ with Mapper = __.Mapper |> Option.map (fun current -> current<<map) |> Option.orElse (Some map) }
+    member __.AddMapper(map: BuildContext -> BuildContext) =
+        { __ with
+            Mapper =
+                __.Mapper
+                |> Option.map (fun current -> current << map)
+                |> Option.orElse (Some map)
+        }
 
     member __.AddChild(ch: VirtualElement) =
-        let getKey() = if ch.Key = "" then sprintf "k%d" __.Children.Length else ch.Key
+        let getKey () =
+            if ch.Key = "" then
+                sprintf "k%d" __.Children.Length
+            else
+                ch.Key
 
         { __ with
-            Children = 
-                Array.singleton { ch with Key = getKey() } 
+            Children =
+                Array.singleton
+                    { ch with
+                        Key = getKey ()
+                    }
                 |> Array.append __.Children
         }
 
@@ -131,7 +151,11 @@ type VirtualElement with
         match __.Type with
         | NullNode -> "#null#"
         | TextNode _ -> "#text#"
-        | TagNode (ns,tag) -> if ns = "" then tag else sprintf "%s:%s" ns tag
+        | TagNode(ns, tag) ->
+            if ns = "" then
+                tag
+            else
+                sprintf "%s:%s" ns tag
 
     member __.InnerText =
         let rec inner (e: VirtualElement) =
@@ -152,16 +176,23 @@ type VirtualElement with
                    |> String.concat " ")
 
         let attrs =
-            if __.Mapper.IsNone then (attrs) else (" map" + attrs)
+            if __.Mapper.IsNone then
+                (attrs)
+            else
+                (" map" + attrs)
 
-        let attrs =
-            attrs + " key='" + __.Key + "'"
+        let attrs = attrs + " key='" + __.Key + "'"
 
         match __.Type with
         | NullNode -> "<null/>"
         | TextNode s -> s
-        | TagNode (ns,tag) -> 
-            let nstag = if ns = "" then tag else ns + ":" + tag
+        | TagNode(ns, tag) ->
+            let nstag =
+                if ns = "" then
+                    tag
+                else
+                    ns + ":" + tag
+
             "<" + nstag + attrs + ">" + children + "</" + nstag + ">"
 
     member __.AsString() =
@@ -192,7 +223,7 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
 
     | Element(ns, tag, children) ->
         children
-        |> Array.fold addSutilElement (VirtualElement.ElementNode (ns,tag))
+        |> Array.fold addSutilElement (VirtualElement.ElementNode(ns, tag))
         |> parent.AddChild
 
     | Fragment(children) -> children |> Array.fold addSutilElement parent
@@ -205,10 +236,7 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
 
     | Event(name, handler, options) -> parent.AddEvent(name, handler, options)
 
-    | MappingElement(name, map, child) ->
-        (fromSutil child)
-        |> _.AddMapper(map) 
-        |> parent.AddChild
+    | MappingElement(name, map, child) -> (fromSutil child) |> _.AddMapper(map) |> parent.AddChild
 
     | BindElement(name, init, handler) ->
         fromSutil init
@@ -222,10 +250,7 @@ let rec addSutilElement (parent: VirtualElement) (se: SutilElement) : VirtualEle
                 let ctx: BuildContext = JsMap.getKey el "__sutil_ctx"
 
                 if isNull (ctx :> obj) then
-                    Log.Console.error (
-                        "Key '__sutil_ctx' not set on ",
-                        el |> Node.toStringSummary
-                    )
+                    Log.Console.error ("Key '__sutil_ctx' not set on ", el |> Node.toStringSummary)
                 else
                     if _log.enabled then
                         _log.trace (
@@ -246,7 +271,8 @@ and fromSutil (se: SutilElement) : VirtualElement =
 
     let root = addSutilElement (emptyDiv ()) se
 
-    let noAttributes = root.Attributes.Length = 0 && root.Events.Length = 0 && root.Mapper.IsNone
+    let noAttributes =
+        root.Attributes.Length = 0 && root.Events.Length = 0 && root.Mapper.IsNone
 
     let el =
 
@@ -259,19 +285,19 @@ and fromSutil (se: SutilElement) : VirtualElement =
         // No elements found, and no attributes (and events etc) given
         // Eg fragment []
         elif root.Children.Length = 0 && noAttributes then
-            Log.Console.log("Fragment created for " + (se.ToString()))
+            Log.Console.log ("Fragment created for " + (se.ToString()))
             invisibleDiv ()
 
         elif root.Mapper.IsSome then
             root
 
         else
-        // Every other case. We have a non-empty fragment
-        // Eg
-        // fragment [ div [] div [] ... ]
-        // fragment [ div [] Attr.xx  ... ]
-        // fragment [ Attr.xx ... ]
-        //
+            // Every other case. We have a non-empty fragment
+            // Eg
+            // fragment [ div [] div [] ... ]
+            // fragment [ div [] Attr.xx  ... ]
+            // fragment [ Attr.xx ... ]
+            //
             root |> addClass "fragment" |> addAttr "style" "display:contents;"
 
     if not (el.IsElementNode) && not (el.IsTextNode) (* && not (el.IsEffectNode) *) then
@@ -283,22 +309,17 @@ and fromSutil (se: SutilElement) : VirtualElement =
 let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node =
 
     match ve.Type with
-    | NullNode -> 
-        failwith "Cannot create DOM node from null node"
+    | NullNode -> failwith "Cannot create DOM node from null node"
 
     | TextNode s ->
         if _log.enabled then
-            _log.trace (
-                "toDom: TextNode",
-                s,
-                context.ParentNode |> Internal.Node.toStringSummary
-            )
+            _log.trace ("toDom: TextNode", s, context.ParentNode |> Internal.Node.toStringSummary)
 
         let text = DomEdit.text s
         JsMap.setKey text VIRTUAL_ELEMENT_KEY ve
         text
 
-    | TagNode (ns,tag) ->
+    | TagNode(ns, tag) ->
         if _log.enabled then
             _log.trace (
                 "toDom: TagNode",
@@ -306,7 +327,7 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
                 context.ParentNode |> Internal.Node.toStringSummary
             )
 
-        let el = context.CreateElement(ns,tag)
+        let el = context.CreateElement(ns, tag)
 
         let _id = context.NextId()
 
@@ -325,7 +346,11 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
 
             if _log.enabled then
                 _log.trace ("toDom: -- set __sutil_ctx ", el |> Node.toStringSummary)
-                _log.trace ("toDom: -- set __sutil_ctx: ctx.Parent ", mapped.Parent |> Node.toStringSummary)
+
+                _log.trace (
+                    "toDom: -- set __sutil_ctx: ctx.Parent ",
+                    mapped.Parent |> Node.toStringSummary
+                )
 
         ve.Attributes
         |> Array.iter (fun (name, value) ->
@@ -356,12 +381,11 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
         |> Array.iter (fun child ->
             let childEl: Browser.Types.Node =
                 if _log.enabled then
-                    _log.trace (
-                        "toDom: -- addChild to ",
-                        el |> Internal.Node.toStringSummary
-                    )
+                    _log.trace ("toDom: -- addChild to ", el |> Internal.Node.toStringSummary)
 
-                toDom (context.WithParent(el).WithAppendNode(DomEdit.append) |> child.MapContext) child
+                toDom
+                    (context.WithParent(el).WithAppendNode(DomEdit.append) |> child.MapContext)
+                    child
 
             // Maybe toDom should return an enum to be very specific about what
             // happened?
@@ -371,4 +395,3 @@ let rec toDom (context: BuildContext) (ve: VirtualElement) : Browser.Types.Node 
 
         context.NotifyNodeImported el
         el
-

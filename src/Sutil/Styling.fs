@@ -243,11 +243,7 @@ module Renderer =
         )
         |> Map
 
-    let styleSheetWithScopeAsText
-        (scopeName: string)
-        (styleSheet: SutilStyleSheet)
-        : string
-        =
+    let styleSheetWithScopeAsText (scopeName: string) (styleSheet: SutilStyleSheet) : string =
 
         let classMap = getClassMap (styleSheet.Definitions)
 
@@ -255,8 +251,7 @@ module Renderer =
         |> Array.map (entryToText classMap scopeName)
         |> String.concat "\n"
 
-    let styleSheetAsText (styleSheet: SutilStyleSheet) =
-        styleSheetWithScopeAsText "" styleSheet
+    let styleSheetAsText (styleSheet: SutilStyleSheet) = styleSheetWithScopeAsText "" styleSheet
 
 let makeMediaRule condition rules =
     MediaRule
@@ -327,8 +322,8 @@ let private addScopeForNode (scopeName: string) (node: Browser.Types.Node) : uni
                 |> ClassHelpers.setClassList el
 
                 el |> Node.children |> Seq.iter (run scopeName)
-            // else
-            //     Log.Console.log("run: ALREADY scoped: " + (Node.toStringSummary(node)) )
+        // else
+        //     Log.Console.log("run: ALREADY scoped: " + (Node.toStringSummary(node)) )
 
         )
 
@@ -338,7 +333,7 @@ open Core
 
 let withStyle (rules: SutilStyleRule seq) (sutilElement: SutilElement) =
 
-    let buildScope() =
+    let buildScope () =
         let scopeName = sprintf "%s-%d" SUTIL_SCOPE (Globals.NextId())
 
         rules
@@ -352,10 +347,7 @@ let withStyle (rules: SutilStyleRule seq) (sutilElement: SutilElement) =
     SutilElement.DefineMapping(
         WITH_STYLE,
 
-        (fun context ->
-                context
-                    .WithOnImportedNode(addScopeForNode (buildScope()))
-        ),
+        (fun context -> context.WithOnImportedNode(addScopeForNode (buildScope ()))),
 
-        sutilElement 
+        sutilElement
     )

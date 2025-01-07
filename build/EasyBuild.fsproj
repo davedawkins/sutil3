@@ -1,0 +1,29 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ManagePackageVersionsCentrally>False</ManagePackageVersionsCentrally>
+    <!-- Disabled to make __SOURCE_DIRECTORY__ works on Github CI -->
+    <ContinuousIntegrationBuild>false</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Workspace.fs" />
+    <Compile Include="Commands/Test.fs" />
+    <Compile Include="Commands/QuickTest.fs" />
+    <Compile Include="Commands/Docs.fs" />
+    <Compile Include="Commands/Deploy.fs" />
+    <Compile Include="Commands/Release.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="EasyBuild.FileSystemProvider" Version="0.3.0" />
+    <PackageReference Include="EasyBuild.Tools" Version="4.1.0" />
+    <PackageReference Include="Fake.IO.FileSystem" Version="6.1.3" />
+    <PackageReference Include="SimpleExec" Version="12.0.0" />
+    <PackageReference Include="Spectre.Console.Cli" Version="0.49.1" />
+  </ItemGroup>
+
+</Project>

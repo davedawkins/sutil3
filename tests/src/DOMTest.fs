@@ -1,0 +1,743 @@
+module DOMTest
+
+open Describe
+
+#if HEADLESS
+open WebTestRunner
+#endif
+
+open Sutil
+open Sutil.Internal
+open Sutil.Html
+open Sutil.Bind
+open Sutil.CoreElements
+
+let log s = Fable.Core.JS.console.log s
+
+open Fable.Core.JsInterop
+
+describe "DOM"
+<| fun () ->
+
+    // Simplest case
+    it "Hello World"
+    <| fun () ->
+        promise {
+            let app = Html.div "Hello World"
+
+            mountTestApp app
+
+            Expect.queryText "div" "Hello World"
+        }
+
+    // Mount
+    it "Mount is called once"
+    <| fun () ->
+        promise {
+            let counters = Array.zeroCreate 6
+
+            let countMount i =
+                Ev.onMount (fun e ->
+                    counters.[i] <- counters.[i] + 1
+
+                    log (
+                        sprintf "mount %d: %s" i (Sutil.Internal.Node.toStringSummary (!!e.target))
+                    )
+                )
+
+            let app =
+                Html.div [
+                    countMount 0
+                    Html.h1 [
+                        countMount 1
+                        Html.fragment [
+                            text "Hello"
+                        ]
+                    ]
+                    Html.fragment [
+                        countMount 2 //  target will be <div> (parent)
+                        Html.p [
+                            countMount 3
+                        ]
+                        Html.span [
+                            countMount 4
+                        ]
+                    ]
+                    Html.fragment [
+                        countMount 5 // target will be <div> (parent)
+                    ]
+                ]
+
+            mountTestApp app
+
+            Expect.areEqual (counters.[0], 1)
+            Expect.areEqual (counters.[1], 1)
+            Expect.areEqual (counters.[2], 1)
+            Expect.areEqual (counters.[3], 1)
+            Expect.areEqual (counters.[4], 1)
+            Expect.areEqual (counters.[5], 1)
+        }
+
+    // Basic Html.fragment
+    it "Fragment"
+    <| fun () ->
+        promise {
+            let app =
+                Html.div [
+                    Html.div "Header"
+                    Html.fragment [
+                        Html.div "Body"
+                    ]
+                    Html.div "Footer"
+                ]
+
+            mountTestApp app
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)" "Body"
+            Expect.queryText "div>div:nth-child(3)" "Footer"
+        }
+
+    // Basic Html.fragment
+    it "Adjacent Fragments"
+    <| fun () ->
+        promise {
+            let app =
+                Html.div [
+                    Html.fragment [
+                        Html.h2 "Section 1"
+                        Html.div "Item 1.a"
+                    ]
+                    Html.fragment [
+                        Html.h2 "Section 2"
+                        Html.div "Item 2.a"
+                    ]
+                ]
+
+            mountTestApp app
+
+            Expect.queryText "div>h2:nth-child(1)" "Section 1"
+            Expect.queryText "div>div:nth-child(2)" "Item 1.a"
+            Expect.queryText "div>h2:nth-child(3)" "Section 2"
+            Expect.queryText "div>div:nth-child(4)" "Item 2.a"
+        }
+
+    it "Delay"
+    <| fun () ->
+        promise {
+            let app1 = Html.div "Delay: Waiting"
+            let app2 = Html.div "Delay: Done"
+            mountTestApp app1
+            do! Promise.sleep (40)
+            mountTestApp app2
+        }
+
+    it "Animation frame"
+    <| fun () ->
+        promise {
+            let app1 = Html.div "Frame: Waiting"
+            let app2 = Html.div "Frame: Done"
+            mountTestApp app1
+
+            for t in
+                [
+                    1..1
+                ] do
+                do! BrowserFramework.waitAnimationFrame ()
+
+            mountTestApp app2
+        }
+
+    it "Binding"
+    <| fun () ->
+        promise {
+            let store: IStore<int> = Store.make 0
+
+            let app =
+                Html.fragment [
+                    Bind.el (store, Html.div)
+                ]
+
+            mountTestApp app
+            Expect.queryText "div" "0"
+            store |> Store.modify ((+) 1)
+            Expect.queryText "div" "1"
+        }
+
+    it "Consecutive Bindings"
+    <| fun () ->
+        promise {
+            let store1 = Store.make 10
+            let store2 = Store.make 20
+
+            let app =
+                Html.fragment [
+                    Bind.el (store1, Html.div)
+                    Bind.el (store2, Html.div)
+                ]
+
+            mountTestApp app
+
+            Expect.queryText "div.fragment>div:nth-child(1)" "10"
+            Expect.queryText "div.fragment>div:nth-child(2)" "20"
+
+            store1 |> Store.modify ((+) 1)
+
+            Expect.queryText "div.fragment>div:nth-child(1)" "11"
+            Expect.queryText "div.fragment>div:nth-child(2)" "20"
+
+            store2 |> Store.modify ((+) 1)
+
+            Expect.queryText "div.fragment>div:nth-child(1)" "11"
+            Expect.queryText "div.fragment>div:nth-child(2)" "21"
+        }
+
+    it "Consecutive Binding Fragments"
+    <| fun () ->
+        promise {
+            let store1 = Store.make 10
+            let store2 = Store.make 20
+            let n = 10
+
+            let app =
+                Html.div [
+                    Bind.el (
+                        store1,
+                        fun n ->
+                            Html.div [
+                                Html.div "Binding 1"
+                                Html.div (string n)
+                            ]
+                    )
+                    Bind.el (
+                        store2,
+                        fun n ->
+                            Html.fragment [
+                                Html.div "Binding 2"
+                                Html.div (string n)
+                            ]
+                    )
+                ]
+
+            mountTestApp app
+
+            Expect.queryText "div >div >div:nth-child(1)" "Binding 1"
+            Expect.queryText "div >div >div:nth-child(2)" "10"
+
+            Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(1)" "Binding 2"
+            Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(2)" "20"
+
+            store1 |> Store.modify ((+) 1)
+
+            Expect.queryText "div >div >div:nth-child(1)" "Binding 1"
+            Expect.queryText "div >div >div:nth-child(2)" "11"
+
+            Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(1)" "Binding 2"
+            Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(2)" "20"
+
+            store2 |> Store.modify ((+) 1)
+
+            Expect.queryText "div >div >div:nth-child(1)" "Binding 1"
+            Expect.queryText "div >div >div:nth-child(2)" "11"
+
+            Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(1)" "Binding 2"
+            Expect.queryText "div >div.fragment:nth-child(2) >div:nth-child(2)" "21"
+        }
+
+    it "Each"
+    <| fun () ->
+        promise {
+            let cons x xs = x :: xs
+            let store1 = Store.make ([]: string list)
+
+            let app =
+                Html.div [
+                    Html.div "Header"
+                    Bind.each (store1, Html.div)
+                    Html.div "Footer"
+                ]
+
+            mountTestApp app
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(3)" "Footer"
+
+            store1 |> Store.modify (cons "A")
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(3)" "Footer"
+        }
+
+    it "Consecutive Each"
+    <| fun () ->
+        promise {
+            let cons x xs = x :: xs
+            let store1 = Store.make ([]: string list)
+            let store2 = Store.make ([]: string list)
+
+            let app =
+                Html.div [
+                    Html.div "Header"
+                    Bind.each (store1, Html.div)
+                    Bind.each (store2, Html.div)
+                    Html.div "Footer"
+                ]
+
+            mountTestApp app
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(4)" "Footer"
+
+            store1 |> Store.modify (cons "A")
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(4)" "Footer"
+
+            Store.modify (cons "B") store1
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)>div:nth-child(1)" "B"
+            Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(4)" "Footer"
+
+            store2 |> Store.modify (cons "X")
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)>div:nth-child(1)" "B"
+            Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(3)" "X"
+            Expect.queryText "div>div:nth-child(4)" "Footer"
+
+            store2 |> Store.modify (cons "Y")
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)>div:nth-child(1)" "B"
+            Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(3)>div:nth-child(1)" "Y"
+            Expect.queryText "div>div:nth-child(3)>div:nth-child(2)" "X"
+            Expect.queryText "div>div:nth-child(4)" "Footer"
+        }
+
+    it "Consecutive Each Update Sequence #2"
+    <| fun () ->
+        promise {
+            let cons x xs = x :: xs
+            let store1 = Store.make ([]: string list)
+            let store2 = Store.make ([]: string list)
+
+            let app =
+                Html.div [
+                    Html.div "Header"
+                    Bind.each (store1, Html.div)
+                    Bind.each (store2, Html.div)
+                    Html.div "Footer"
+                ]
+
+            mountTestApp app
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(4)" "Footer"
+
+            store1 |> Store.modify (cons "A")
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(4)" "Footer"
+
+            store2 |> Store.modify (cons "X")
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(3)" "X"
+            Expect.queryText "div>div:nth-child(4)" "Footer"
+
+            store1 |> Store.modify (cons "B")
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)>div" "B"
+            Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(3)" "X"
+            Expect.queryText "div>div:nth-child(4)" "Footer"
+
+            store2 |> Store.modify (cons "Y")
+
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)>div" "B"
+            Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(3)>div" "Y"
+            Expect.queryText "div>div:nth-child(3)>div:nth-child(2)" "X"
+            Expect.queryText "div>div:nth-child(4)" "Footer"
+        }
+
+    it "Separated each"
+    <| fun () ->
+        promise {
+            let cons x xs = x :: xs
+            let store1 = Store.make ([]: string list)
+            let store2 = Store.make ([]: string list)
+
+            let app =
+                Html.div [
+                    Html.div "Header"
+                    Bind.each (store1, Html.div)
+                    Html.div "Middle"
+                    Bind.each (store2, Html.div)
+                    Html.div "Footer"
+                ]
+
+            mountTestApp app
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(3)" "Middle"
+            Expect.queryText "div>div:nth-child(5)" "Footer"
+
+            store1 |> Store.modify (cons "A")
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(3)" "Middle"
+            Expect.queryText "div>div:nth-child(5)" "Footer"
+
+            store2 |> Store.modify (cons "X")
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(3)" "Middle"
+            Expect.queryText "div>div:nth-child(4)" "X"
+            Expect.queryText "div>div:nth-child(5)" "Footer"
+
+            store1 |> Store.modify (cons "B")
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)>div" "B"
+            Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(3)" "Middle"
+            Expect.queryText "div>div:nth-child(4)" "X"
+            Expect.queryText "div>div:nth-child(5)" "Footer"
+
+            store2 |> Store.modify (cons "Y")
+            Expect.queryText "div>div:nth-child(1)" "Header"
+            Expect.queryText "div>div:nth-child(2)>div" "B"
+            Expect.queryText "div>div:nth-child(2)>div:nth-child(2)" "A"
+            Expect.queryText "div>div:nth-child(3)" "Middle"
+            Expect.queryText "div>div:nth-child(4)>div" "Y"
+            Expect.queryText "div>div:nth-child(4)>div:nth-child(2)" "X"
+            Expect.queryText "div>div:nth-child(5)" "Footer"
+        }
+
+    it "disposes conditional div"
+    <| fun _ ->
+        promise {
+            let switch = Store.make true
+            let mutable disposed = false
+            let mutable unsubbed = false
+
+            let app =
+                Bind.el (
+                    switch,
+                    fun flag ->
+                        if flag then
+                            Html.div [
+                                Html.text "Hello"
+                                unsubscribeOnUnmount [
+                                    (fun _ -> unsubbed <- true)
+                                ]
+                                disposeOnUnmount [
+                                    { new System.IDisposable with
+                                        member _.Dispose() = disposed <- true
+                                    }
+                                ]
+                            ]
+                        else
+                            Html.fragment []
+                )
+
+            mountTestApp app
+
+            Expect.areEqual (disposed, false, "disposed is false")
+            Expect.areEqual (unsubbed, false, "unsubbed is false")
+
+            switch |> Store.modify not
+
+            Expect.areEqual (disposed, true, "disposed is true")
+            Expect.areEqual (unsubbed, true, "unsubbed is true")
+
+            return ()
+        }
+
+    it "onUnmount called"
+    <| fun _ ->
+        promise {
+            let switch = Store.make true
+
+            let mutable unmounted0 = false
+            let mutable unmounted1 = false
+
+            let app =
+                Bind.el (
+                    switch,
+                    fun flag ->
+                        if flag then
+                            Html.div [
+                                Ev.onUnmount (fun _ ->
+                                    Fable.Core.JS.console.log ("Unmount 0")
+                                    unmounted0 <- true
+                                )
+
+                                Html.div [
+                                    Ev.onUnmount (fun _ ->
+                                        Fable.Core.JS.console.log ("Unmount 1")
+                                        unmounted1 <- true
+                                    )
+                                ]
+                            ]
+                        else
+                            Html.fragment []
+                )
+
+            mountTestApp app
+
+            Expect.assertFalse unmounted0 "unmounted0 is false"
+            Expect.assertFalse unmounted1 "unmounted1 is false"
+
+            switch |> Store.modify not
+
+            Expect.assertTrue unmounted0 "unmounted0 is true"
+            Expect.assertTrue unmounted1 "unmounted1 is true"
+
+            return ()
+        }
+
+    it "cleans up div"
+    <| fun _ ->
+        promise {
+            let mutable node1 = Unchecked.defaultof<_>
+            let mutable node2 = Unchecked.defaultof<_>
+            let mutable node2_unsubbed = false
+
+            let app =
+                Html.div [
+                    hookParent (fun n -> node1 <- n)
+
+                    Html.div [
+                        hookParent (fun n -> node2 <- n)
+                        text "node2"
+                        unsubscribeOnUnmount [
+                            (fun _ -> node2_unsubbed <- true)
+                        ]
+                    ]
+                ]
+
+            mountTestApp app
+
+            Expect.queryText "div" "node2"
+            Expect.queryText "div>div" "node2"
+
+            DomEdit.remove node2
+
+            Expect.queryText "div" ""
+            Expect.areEqual (node2_unsubbed, true)
+
+            return ()
+        }
+
+    it "cleans up Html.fragment"
+    <| fun _ ->
+        promise {
+            let mutable node1 = Unchecked.defaultof<_>
+            let mutable node2 = Unchecked.defaultof<_>
+            let mutable node2_fragment_unsubbed = 0
+
+            let app =
+                Html.div [
+                    hookParent (fun n -> node1 <- n)
+
+                    Html.div [
+                        hookParent (fun n -> node2 <- n)
+                        Html.fragment [
+                            text "node2"
+                            unsubscribeOnUnmount [
+                                (fun _ -> node2_fragment_unsubbed <- node2_fragment_unsubbed + 1)
+                            ]
+                        ]
+                    ]
+                ]
+
+            mountTestApp app
+
+            Expect.queryText "div" "node2"
+            Expect.queryText "div>div" "node2"
+
+            DomEdit.remove node2
+
+            Expect.queryText "div" ""
+            Expect.areEqual (node2_fragment_unsubbed, 1)
+
+            return ()
+        }
+
+    it "cleans up Html.fragment"
+    <| fun _ ->
+        promise {
+            let mutable node1 = Unchecked.defaultof<_>
+            let mutable node2 = Unchecked.defaultof<_>
+            let mutable node2_fragment_unsubbed = 0
+
+            let app =
+                Html.div [
+                    hookParent (fun n -> node1 <- n)
+
+                    Html.div [
+                        hookParent (fun n -> node2 <- n)
+                        Html.fragment [
+                            text "node2"
+                            unsubscribeOnUnmount [
+                                (fun _ -> node2_fragment_unsubbed <- node2_fragment_unsubbed + 1)
+                            ]
+                        ]
+                    ]
+                ]
+
+            mountTestApp app
+
+            Expect.queryText "div" "node2"
+            Expect.queryText "div>div" "node2"
+
+            DomEdit.remove node2
+
+            Expect.queryText "div" ""
+            Expect.areEqual (node2_fragment_unsubbed, 1)
+
+            return ()
+        }
+
+    it "disposes conditional Html.fragment"
+    <| fun _ ->
+        promise {
+            let switch = Store.make true
+            let mutable disposed = false
+            let mutable unsubbed = false
+
+            let app =
+                Bind.el (
+                    switch,
+                    fun flag ->
+                        if flag then
+                            Html.fragment [
+                                text "frag001"
+                                unsubscribeOnUnmount [
+                                    (fun _ -> unsubbed <- true)
+                                ]
+                                disposeOnUnmount [
+                                    { new System.IDisposable with
+                                        member _.Dispose() = disposed <- true
+                                    }
+                                ]
+                            ]
+                        else
+                            Html.fragment []
+                )
+
+            mountTestApp app
+
+            Expect.areEqual (Expect.getInnerText (), "frag001")
+            Expect.areEqual (disposed, false)
+            Expect.areEqual (unsubbed, false)
+
+            switch |> Store.modify not
+
+            Expect.areEqual (Expect.getInnerText (), "")
+            Expect.areEqual (disposed, true)
+            Expect.areEqual (unsubbed, true)
+
+            return ()
+        }
+
+    // Issue #91
+    it "input readonly=false is writable"
+    <| fun _ ->
+        promise {
+            let mutable readOnly = true
+
+            let app =
+                Html.input [
+                    Attr.readOnly false
+                    Ev.onMount (fun e ->
+                        let ipEl = e.target :?> Browser.Types.HTMLInputElement
+                        readOnly <- ipEl.readOnly
+                    )
+                ]
+
+            mountTestApp app
+
+            Expect.assertFalse readOnly "input should not be readonly"
+
+            return ()
+        }
+
+    it "input readonly=true is read-only"
+    <| fun _ ->
+        promise {
+            let mutable readOnly = false
+
+            let app =
+                Html.input [
+                    Attr.readOnly true
+                    Ev.onMount (fun e ->
+                        let ipEl = e.target :?> Browser.Types.HTMLInputElement
+                        readOnly <- ipEl.readOnly
+                    )
+                ]
+
+            mountTestApp app
+
+            Expect.assertTrue readOnly "input should be readonly"
+
+            return ()
+        }
+
+    it "bind initialization"
+    <| fun _ ->
+        promise {
+            let view () =
+                let name = Store.make ("Bob")
+
+                Html.div [
+                    Bind.el (
+                        name,
+                        fun value ->
+                            Html.span [
+                                text ("Enter your name: " + value)
+                            ]
+                    )
+
+                    Html.p [
+                        Bind.el (name, text)
+                    ]
+                ]
+
+            view () |> mountTestApp
+
+            Expect.queryIsElement "div>*:nth-child(1)" "span"
+            Expect.queryIsElement "div>*:nth-child(2)" "p"
+            Expect.queryText "div>span" "Enter your name: Bob"
+            Expect.queryText "div>p" "Bob"
+
+            return ()
+        }
+
+    it "disposeOnUnmount doesn't create real elements"
+    <| fun _ ->
+        promise {
+            let view () =
+                Html.div [
+                    Html.fragment [
+                        Attr.custom ("data-test", "hello")
+                    ]
+                    disposeOnUnmount []
+                ]
+
+            view () |> mountTestApp
+
+            return ()
+        }
+
+let init () = ()

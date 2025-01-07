@@ -93,15 +93,13 @@ let bindElementWithName<'T>
     (view: 'T -> SutilElement)
     (compare: 'T -> 'T -> bool)
     =
-    let _log = Log.create("Bind:" + name)
+    let _log = Log.create ("Bind:" + name)
     _log.enabled <- false
 
-    let mapOptions (options : BuildOptions) : BuildOptions =
-        options
-            .WithPostBuildVirtualElement(
-                fun (ve : VirtualElement) -> 
-                    ve.WithKey("host-for-" + name)
-            )
+    let mapOptions (options: BuildOptions) : BuildOptions =
+        options.WithPostBuildVirtualElement(fun (ve: VirtualElement) ->
+            ve.WithKey("host-for-" + name)
+        )
 
     SutilElement.DefineBinding(
         name,
@@ -113,10 +111,7 @@ let bindElementWithName<'T>
 
             if _log.enabled then
 
-                _log.trace (
-                    "parent=",
-                    _context.ParentNode |> Node.toString
-                )
+                _log.trace ("parent=", _context.ParentNode |> Node.toString)
                 _log.trace ("current=", currentNode |> Node.toString)
 
             source
@@ -124,23 +119,26 @@ let bindElementWithName<'T>
             |> Store.subscribe (fun value ->
                 try
                     if _log.enabled then
-                        _log.trace ( sprintf "rebuilding with value %A" (Fable.Core.JS.JSON.stringify value) )
+                        _log.trace (
+                            sprintf "rebuilding with value %A" (Fable.Core.JS.JSON.stringify value)
+                        )
 
-                    currentNode <- 
-                        value   
+                    currentNode <-
+                        value
                         |> view
                         |> mountWith mapOptions (context.WithCurrent(currentNode))
                         |> _.Node
 
                     if _log.enabled then
-                        _log.trace ( "next parent=", currentNode.parentNode |> Node.toString )
-                        _log.trace ( "next current=", currentNode |> Node.toString )
-                        _log.trace ( "next ctxprnt=", _context.ParentNode |> Node.toString )
+                        _log.trace ("next parent=", currentNode.parentNode |> Node.toString)
+                        _log.trace ("next current=", currentNode |> Node.toString)
+                        _log.trace ("next ctxprnt=", _context.ParentNode |> Node.toString)
 
                 with x ->
                     JS.console.error (x)
-                    currentNode <- 
-                        (elementFromException x) 
+
+                    currentNode <-
+                        (elementFromException x)
                         |> mountWith mapOptions (context.WithCurrent(currentNode))
                         |> _.Node
             )
@@ -155,7 +153,6 @@ let bindElement2<'A, 'B>
     (view: ('A * 'B) -> SutilElement)
     =
     bindElement (Store.zip a b) view (fun _ _ -> false)
-
 
 let bindElementK<'T, 'K when 'K: equality>
     (name: string)
@@ -202,46 +199,50 @@ let bindSelected<'T when 'T: equality>
     (selection: IObservable<List<'T>>)
     (dispatch: List<'T> -> unit)
     =
-    CoreElements.bindDisposable(
-        //"bindSelected",
-        fun (selectElement : HTMLSelectElement) ->
+    CoreElements.bindDisposable (
+    //"bindSelected",
+    //"bindSelected",
+    //"bindSelected",
+    //"bindSelected",
+    fun (selectElement: HTMLSelectElement) ->
 
-            //let selectElement = parent :?> HTMLSelectElement
-            let selOps = selectElement.selectedOptions
-            let op (coll: HTMLCollection) i = coll.[i] :?> HTMLOptionElement
-            let opValue op : 'T = JsMap.getKey op "__value"
+        //let selectElement = parent :?> HTMLSelectElement
+        let selOps = selectElement.selectedOptions
+        let op (coll: HTMLCollection) i = coll.[i] :?> HTMLOptionElement
+        let opValue op : 'T = JsMap.getKey op "__value"
 
-            let getValueList () =
+        let getValueList () =
+            [
+                0 .. selOps.length - 1
+            ]
+            |> List.map (fun i -> opValue (op selOps i))
+
+        let updateSelected (v: List<'T>) =
+            let ops = selectElement.options
+
+            for i in
                 [
-                    0 .. selOps.length - 1
-                ]
-                |> List.map (fun i -> opValue (op selOps i))
+                    0 .. ops.length - 1
+                ] do
+                let o = op ops i
+                o.selected <- v |> List.contains (opValue o)
 
-            let updateSelected (v: List<'T>) =
-                let ops = selectElement.options
+        let unsubInput =
+            EventListeners.add "input" selectElement <| fun _ -> getValueList () |> dispatch
 
-                for i in
-                    [
-                        0 .. ops.length - 1
-                    ] do
-                    let o = op ops i
-                    o.selected <- v |> List.contains (opValue o)
+        // We need to finalize checked status after all attrs have been processed for input,
+        // in case 'value' hasn't been set yet
+        EventListeners.once
+            CustomEvents.ELEMENT_READY
+            selectElement
+            (fun _ ->
+                selection
+                |> Store.subscribe (updateSelected)
+                |> Dispose.addDisposable selectElement "bindSelected:unsub"
+            )
+        |> ignore
 
-            let unsubInput =
-                EventListeners.add "input" selectElement <| fun _ -> getValueList () |> dispatch
-
-            // We need to finalize checked status after all attrs have been processed for input,
-            // in case 'value' hasn't been set yet
-            EventListeners.once
-                CustomEvents.ELEMENT_READY
-                selectElement
-                (fun _ ->
-                    selection |> Store.subscribe (updateSelected)
-                    |> Dispose.addDisposable selectElement "bindSelected:unsub"
-                )
-            |> ignore
-
-            unsubInput |> Dispose.makeDisposable
+        unsubInput |> Dispose.makeDisposable
 
     )
 
@@ -270,75 +271,81 @@ let private isNullString (obj: obj) =
 let private getId (s: IStore<'T>) = s.GetHashCode()
 
 let bindGroup<'T> (store: IStore<List<string>>) : SutilElement =
-    CoreElements.bindDisposable(
-        //"bindGroup",
-        fun parent ->
-            let name =
-                match JsMap.getKey parent "name" with
-                | s when isNullString s -> $"store-{getId store}"
-                | s -> s
+    CoreElements.bindDisposable (
+    //"bindGroup",
+    //"bindGroup",
+    //"bindGroup",
+    //"bindGroup",
+    fun parent ->
+        let name =
+            match JsMap.getKey parent "name" with
+            | s when isNullString s -> $"store-{getId store}"
+            | s -> s
 
-            // Group this input with all other inputs that reference the same store
-            JsMap.setKey parent "name" name
+        // Group this input with all other inputs that reference the same store
+        JsMap.setKey parent "name" name
 
-            let getValueList () =
-                let inputs = (parent.ownerDocument).querySelectorAll (@$"input[name=""{name}""]")
+        let getValueList () =
+            let inputs = (parent.ownerDocument).querySelectorAll (@$"input[name=""{name}""]")
 
-                [
-                    0 .. (inputs.length - 1)
-                ]
-                |> List.map (fun i -> inputs.[i])
-                |> List.filter getInputChecked
-                |> List.map getInputValue
+            [
+                0 .. (inputs.length - 1)
+            ]
+            |> List.map (fun i -> inputs.[i])
+            |> List.filter getInputChecked
+            |> List.map getInputValue
 
-            let updateChecked (v: List<string>) =
-                setInputChecked parent (v |> List.contains (getInputValue parent))
+        let updateChecked (v: List<string>) =
+            setInputChecked parent (v |> List.contains (getInputValue parent))
 
-            // Update the store when the radio box is clicked on
-            let unsubInput =
-                EventListeners.add "input" parent <| fun _ -> getValueList () |> Store.set store
+        // Update the store when the radio box is clicked on
+        let unsubInput =
+            EventListeners.add "input" parent <| fun _ -> getValueList () |> Store.set store
 
-            // We need to finalize checked status after all attrs have been processed for input,
-            // in case 'value' hasn't been set yet
-            EventListeners.once CustomEvents.ELEMENT_READY parent (fun _ -> store |> Store.get |> updateChecked)
-            |> ignore
+        // We need to finalize checked status after all attrs have been processed for input,
+        // in case 'value' hasn't been set yet
+        EventListeners.once
+            CustomEvents.ELEMENT_READY
+            parent
+            (fun _ -> store |> Store.get |> updateChecked)
+        |> ignore
 
-            // When store changes make sure check status is synced
-            store 
-            |> Store.subscribe (updateChecked)
-            |> Dispose.composeUD unsubInput 
+        // When store changes make sure check status is synced
+        store |> Store.subscribe (updateChecked) |> Dispose.composeUD unsubInput
     )
 
 // T can realistically only be numeric or a string. We're relying (I think!) on JS's ability
 // to turn a string into an int automatically in the Store.set call (maybe it's Fable doing that)
 //
 let bindRadioGroup<'T> (store: IStore<'T>) : SutilElement =
-    CoreElements.bindDisposable(
-        //"bindRadioGroup",
-        fun parent ->
+    CoreElements.bindDisposable (
+    //"bindRadioGroup",
+    //"bindRadioGroup",
+    //"bindRadioGroup",
+    //"bindRadioGroup",
+    fun parent ->
 
-            let name =
-                match JsMap.getKey parent "name" with
-                | s when isNullString s -> $"store-{getId store}"
-                | s -> s
-            // Group this input with all other inputs that reference the same store
-            JsMap.setKey parent "name" name
+        let name =
+            match JsMap.getKey parent "name" with
+            | s when isNullString s -> $"store-{getId store}"
+            | s -> s
+        // Group this input with all other inputs that reference the same store
+        JsMap.setKey parent "name" name
 
-            let updateChecked (v: obj) =
-                setInputChecked parent ((string v) = getInputValue parent)
+        let updateChecked (v: obj) =
+            setInputChecked parent ((string v) = getInputValue parent)
 
-            // We need to finalize checked status after all attrs have been processed for input,
-            // in case 'value' hasn't been set yet
-            EventListeners.once CustomEvents.ELEMENT_READY parent (fun _ -> store |> Store.get |> updateChecked)
-            |> ignore
+        // We need to finalize checked status after all attrs have been processed for input,
+        // in case 'value' hasn't been set yet
+        EventListeners.once
+            CustomEvents.ELEMENT_READY
+            parent
+            (fun _ -> store |> Store.get |> updateChecked)
+        |> ignore
 
-            // Update the store when the radio box is clicked on
-            EventListeners.add 
-                "input" 
-                parent 
-                (fun _ -> JsMap.getKey parent "value" |> Store.set store)
-            |> Dispose.composeDU 
-                (store |> Store.subscribe updateChecked)
+        // Update the store when the radio box is clicked on
+        EventListeners.add "input" parent (fun _ -> JsMap.getKey parent "value" |> Store.set store)
+        |> Dispose.composeDU (store |> Store.subscribe updateChecked)
     )
 
 let bindClassToggle
@@ -363,51 +370,56 @@ let bindBoolAttr (toggle: IObservable<bool>) (boolAttr: string) =
         | false -> el.removeAttribute (boolAttr)
 
 let bindClassNames (classNames: IObservable<#seq<string>>) =
-    CoreElements.bindSubscribe 
-        classNames <|
-            fun el current ->
-                el.className <- ""
-                el.classList.add (current |> Array.ofSeq)
+    CoreElements.bindSubscribe classNames
+    <| fun el current ->
+        el.className <- ""
+        el.classList.add (current |> Array.ofSeq)
 
 let bindClassName (classNames: IObservable<string>) =
     CoreElements.bindSubscribe classNames (fun el current -> el.className <- current)
 
 /// Bind a store value to an element attribute. Updates to the element are unhandled
 let bindAttrIn<'T> (attrName: string) (store: IObservable<'T>) : SutilElement =
-    CoreElements.bindDisposable(
-        //"bindAttrIn",
-        fun parent ->
-            if attrName = "class" then
-                store |> Store.subscribe (fun cls -> parent.className <- (string cls))
-            else
-                store |> Store.subscribe (DomEdit.setAttribute parent attrName)
+    CoreElements.bindDisposable (
+    //"bindAttrIn",
+    //"bindAttrIn",
+    //"bindAttrIn",
+    //"bindAttrIn",
+    fun parent ->
+        if attrName = "class" then
+            store |> Store.subscribe (fun cls -> parent.className <- (string cls))
+        else
+            store |> Store.subscribe (DomEdit.setAttribute parent attrName)
     )
 
 let bindAttrOut<'T> (attrName: string) (onchange: 'T -> unit) : SutilElement =
-    CoreElements.bindDisposable(
-        //"bindAttrOut",
-        fun parent ->
-            EventListeners.add "input" parent (fun _ -> JsMap.getKey parent attrName |> onchange)
-            |> Dispose.makeDisposable
+    CoreElements.bindDisposable (
+    //"bindAttrOut",
+    //"bindAttrOut",
+    //"bindAttrOut",
+    //"bindAttrOut",
+    fun parent ->
+        EventListeners.add "input" parent (fun _ -> JsMap.getKey parent attrName |> onchange)
+        |> Dispose.makeDisposable
     )
 
 // Bind a scalar value to an element attribute. Listen for onchange events and dispatch the
 // attribute's current value to the given function. This form is useful for view templates
 // where v is invariant (for example, an each that already filters on the value of v, like Todo.Done)
 let attrNotify<'T> (attrName: string) (value: 'T) (onchange: 'T -> unit) : SutilElement =
-    CoreElements.bindDisposable(
-        // "attrNotify",
-        fun parent ->
-            EventListeners.add 
-                "input" 
-                parent 
-                (fun _ -> JsMap.getKey parent attrName |> onchange)
+    CoreElements.bindDisposable (
+    // "attrNotify",
+    // "attrNotify",
+    // "attrNotify",
+    // "attrNotify",
+    fun parent ->
+        EventListeners.add "input" parent (fun _ -> JsMap.getKey parent attrName |> onchange)
 
-            |> fun stop ->
-                JsMap.setKey parent attrName value
-                stop
+        |> fun stop ->
+            JsMap.setKey parent attrName value
+            stop
 
-            |> Dispose.makeDisposable
+        |> Dispose.makeDisposable
     )
 
 // Bind an observable value to an element attribute. Listen for onchange events and dispatch the
@@ -430,15 +442,16 @@ let bindListen<'T>
     (handler: Event -> unit)
     : SutilElement
     =
-    CoreElements.bindDisposable(
-        //"bindListen",
-        fun parent ->
-            EventListeners.add event parent handler
-            |> Dispose.composeDU 
-                (store |> Store.subscribe (JsMap.setKey parent attrName))
+    CoreElements.bindDisposable (
+    //"bindListen",
+    //"bindListen",
+    //"bindListen",
+    //"bindListen",
+    fun parent ->
+        EventListeners.add event parent handler
+        |> Dispose.composeDU (store |> Store.subscribe (JsMap.setKey parent attrName))
     )
 
-        
 // Bind a store value to an element attribute. Listen for onchange events write the converted
 // value back to the store
 let private bindAttrConvert<'T>
@@ -447,14 +460,17 @@ let private bindAttrConvert<'T>
     (convert: obj -> 'T)
     : SutilElement
     =
-    CoreElements.bindDisposable(
-        //"bindAttrConvert",
-        fun parent ->
-            EventListeners.add 
-                "input" 
-                parent
-                (fun _ -> JsMap.getKey parent attrName |> convert |> Store.set store)
-            |> Dispose.composeDU (store |> Store.subscribe (JsMap.setKey parent attrName))
+    CoreElements.bindDisposable (
+    //"bindAttrConvert",
+    //"bindAttrConvert",
+    //"bindAttrConvert",
+    //"bindAttrConvert",
+    fun parent ->
+        EventListeners.add
+            "input"
+            parent
+            (fun _ -> JsMap.getKey parent attrName |> convert |> Store.set store)
+        |> Dispose.composeDU (store |> Store.subscribe (JsMap.setKey parent attrName))
     )
 
 // Unsure how to safely convert Element.getAttribute():string to 'T
@@ -465,14 +481,17 @@ let bindAttrStoreBoth<'T> (attrName: string) (store: IStore<'T>) =
     bindAttrConvert attrName store convertObj<'T>
 
 let bindAttrStoreOut<'T> (attrName: string) (store: IStore<'T>) : SutilElement =
-    CoreElements.bindDisposable(
-//        "bindAttrStoreOut",
-        fun parent ->
-            EventListeners.add 
-                "input" 
-                parent
-                (fun _ -> JsMap.getKey parent attrName |> convertObj<'T> |> Store.set store)
-            |> Dispose.makeDisposable
+    CoreElements.bindDisposable (
+    //        "bindAttrStoreOut",
+    //        "bindAttrStoreOut",
+    //        "bindAttrStoreOut",
+    //        "bindAttrStoreOut",
+    fun parent ->
+        EventListeners.add
+            "input"
+            parent
+            (fun _ -> JsMap.getKey parent attrName |> convertObj<'T> |> Store.set store)
+        |> Dispose.makeDisposable
     )
 
 let private attrIsSizeRelated (attrName: string) =
@@ -480,33 +499,31 @@ let private attrIsSizeRelated (attrName: string) =
     upr.IndexOf("WIDTH") >= 0 || upr.IndexOf("HEIGHT") >= 0
 
 let listenToProp<'T> (attrName: string) (dispatch: 'T -> unit) : SutilElement =
-    CoreElements.bindDisposable(
-        fun parent ->
-            let notify () =
-                JsMap.getKey parent attrName |> convertObj<'T> |> dispatch
+    CoreElements.bindDisposable (fun parent ->
+        let notify () =
+            JsMap.getKey parent attrName |> convertObj<'T> |> dispatch
 
-            EventListeners.once
-                CustomEvents.ELEMENT_READY
-                parent
-                (fun _ ->
-                    if attrIsSizeRelated attrName then
-                        Dispose.addDisposable
-                            parent
-                            "EventListeners.addToProp"
-                            ((ResizeObserver.getResizer parent).Subscribe(notify))
-                        
-                    else
-                        Dispose.addUnsubscribe
-                            parent
-                            "EventListeners.addToProp"
-                            (EventListeners.add "input" parent (fun _ -> notify ()))
-                        
+        EventListeners.once
+            CustomEvents.ELEMENT_READY
+            parent
+            (fun _ ->
+                if attrIsSizeRelated attrName then
+                    Dispose.addDisposable
+                        parent
+                        "EventListeners.addToProp"
+                        ((ResizeObserver.getResizer parent).Subscribe(notify))
 
-                    Timers.rafu notify
-                )
-            |> ignore
+                else
+                    Dispose.addUnsubscribe
+                        parent
+                        "EventListeners.addToProp"
+                        (EventListeners.add "input" parent (fun _ -> notify ()))
 
-            ignore |> Dispose.makeDisposable
+                Timers.rafu notify
+            )
+        |> ignore
+
+        ignore |> Dispose.makeDisposable
     )
 
 let bindPropOut<'T> (attrName: string) (store: IStore<'T>) : SutilElement =
@@ -557,7 +574,6 @@ let eachi
     =
     eachiko items (StaticIndexed view) fst
 
-
 let eachk (items: IObservable<ICollectionWrapper<'T>>) (view: 'T -> SutilElement) (key: 'T -> 'K) =
     eachiko
         items
@@ -568,9 +584,7 @@ let eachk (items: IObservable<ICollectionWrapper<'T>>) (view: 'T -> SutilElement
 open Browser.CssExtensions
 
 let bindStyle<'T> (value: IObservable<'T>) (f: CSSStyleDeclaration -> 'T -> unit) =
-    CoreElements.bindSubscribe 
-        value
-        (fun el value -> f (el.style) value)
+    CoreElements.bindSubscribe value (fun el value -> f (el.style) value)
 
 let bindElementEffect<'T, 'Element when 'Element :> HTMLElement>
     (value: IObservable<'T>)

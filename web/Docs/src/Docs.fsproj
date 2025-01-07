@@ -1,0 +1,80 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="Markdown.fs" />
+    <Compile Include="Doc.fs" />
+    <Compile Include="Events/Custom.fs" />
+    <Compile Include="Events/Dom.fs" />
+    <Compile Include="Events/Modifiers.fs" />
+    <Compile Include="Introduction/DynamicAttributes.fs" />
+    <Compile Include="Introduction/HelloWorld.fs" />
+    <Compile Include="Introduction/HtmlTags.fs" />
+    <Compile Include="Introduction/Nested.fs" />
+    <Compile Include="Introduction/NestedComponents.fs" />
+    <Compile Include="Introduction/Styling.fs" />
+    <Compile Include="Reactivity/Counter.fs" />
+    <Compile Include="Reactivity/ReactiveDeclarations.fs" />
+    <Compile Include="Reactivity/ReactiveStatements.fs" />
+    <Compile Include="Logic/AwaitBlocks.fs" />
+    <Compile Include="Logic/EachBlocks.fs" />
+    <Compile Include="Logic/KeyedEachBlocks.fs" />
+    <Compile Include="Logic/If.fs" />
+    <Compile Include="Logic/Else.fs" />
+    <Compile Include="Logic/ElseIf.fs" />
+    <Compile Include="Logic/StaticEach.fs" />
+    <Compile Include="Logic/StaticEachWithIndex.fs" />
+    <Compile Include="Transitions/Simple.fs" />
+    <Compile Include="Transitions/WithParameters.fs" />
+    <Compile Include="Transitions/InOut.fs" />
+    <Compile Include="Transitions/CustomCss.fs" />
+    <Compile Include="Transitions/CustomCode.fs" />
+    <Compile Include="Transitions/Events.fs" />
+    <Compile Include="Transitions/Todos.fs" />
+    <Compile Include="Bindings/NumericInputs.fs" />
+    <Compile Include="Bindings/CheckboxInputs.fs" />
+    <Compile Include="Bindings/GroupInputs.fs" />
+    <Compile Include="Bindings/TextArea.fs" />
+    <Compile Include="Bindings/FileInputs.fs" />
+    <Compile Include="Bindings/Select.fs" />
+    <Compile Include="Bindings/SelectMultiple.fs" />
+    <Compile Include="Bindings/Dimensions.fs" />
+    <Compile Include="Bindings/TextInputs.fs" />
+    <Compile Include="Svg/BarChart.fs" />
+    <Compile Include="Miscellaneous/Spreadsheet/Parser.fs" />
+    <Compile Include="Miscellaneous/Spreadsheet/Evaluator.fs" />
+    <Compile Include="Miscellaneous/Spreadsheet/Spreadsheet.fs" />
+    <Compile Include="Miscellaneous/Modal.fs" />
+    <Compile Include="Miscellaneous/Login.fs" />
+    <Compile Include="Miscellaneous/LoginExample.fs" />
+    <Compile Include="Miscellaneous/TimerLogic.fs" />
+    <Compile Include="Miscellaneous/TimerWithButton.fs" />
+    <Compile Include="Miscellaneous/DragDropListSort.fs" />
+    <Compile Include="Miscellaneous/SortableTimerList.fs" />
+    <Compile Include="Miscellaneous/SafeClient.fs" />
+    <Compile Include="Miscellaneous/DataSimulation.fs" />
+    <Compile Include="Miscellaneous/DataSim.fs" />
+    <Compile Include="Miscellaneous/WebComponents.fs" />
+    <Compile Include="7Guis/Cells.fs" />
+    <Compile Include="7Guis/CRUD.fs" />
+    <Compile Include="Parsec.fs" />
+    <Compile Include="Helpers.fs" />
+    <!-- <Compile Include="Draw.fs" /> -->
+    <Compile Include="Examples.fs" />
+    <Compile Include="App.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Sutil\Sutil.fsproj" />
+    <ProjectReference Include="..\..\..\src\Sutil.Html\Sutil.Html.fsproj" />
+    <ProjectReference Include="..\..\..\src\Sutil.Bulma\Sutil.Bulma.fsproj" />
+    <ProjectReference Include="..\..\..\src\Sutil.BulmaEngine\Sutil.BulmaEngine.fsproj" />
+    <ProjectReference Include="..\..\..\src\Sutil.Transition\Sutil.Transition.fsproj" />
+    <ProjectReference Include="..\..\..\src\Sutil.WebComponents\Sutil.WebComponents.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Fable.Fetch" />
+    <PackageReference Include="Fable.Formatting.Markdown" />
+  </ItemGroup>
+</Project>

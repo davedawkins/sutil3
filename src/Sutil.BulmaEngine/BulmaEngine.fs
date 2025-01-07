@@ -8,7 +8,6 @@ open Sutil.Html
 
 open type Feliz.length
 
-
 /// <summary>
 /// Patches to help with issues with <c>Feliz.Engine.Bulma</c>
 /// </summary>
@@ -21,24 +20,36 @@ module Helpers =
     //    height: auto;
     //    padding: 0;
     //}
-    let selectList (props : SutilElement list) =
+    let selectList (props: SutilElement list) =
         Html.div [
             Attr.className "select is-multiple"
             Html.select [
-                Attr.style [ Css.height auto; Css.padding 0 ]
+                Attr.style [
+                    Css.height auto
+                    Css.padding 0
+                ]
                 yield! props
             ]
         ]
-        // |> withStyleAppend [
-        //             rule "option" [
-        //                 Css.padding(em 0.5, em 1.0)
-        //             ]
-        //             rule "select" [
-        //                 Css.height auto
-        //                 Css.padding 0
-        //             ] ]
+    // |> withStyleAppend [
+    //             rule "option" [
+    //                 Css.padding(em 0.5, em 1.0)
+    //             ]
+    //             rule "select" [
+    //                 Css.height auto
+    //                 Css.padding 0
+    //             ] ]
 
-    let selectMultiple (props : SutilElement list) = Html.div [ Attr.className "select is-multiple"; Html.select ([ Attr.multiple true ] @ props) ]
+    let selectMultiple (props: SutilElement list) =
+        Html.div [
+            Attr.className "select is-multiple"
+            Html.select (
+                [
+                    Attr.multiple true
+                ]
+                @ props
+            )
+        ]
 
 // let styleHelpers = [
 //     rule "h1" [ PseudoCss.addClass "title"; PseudoCss.addClass "is-1" ]
@@ -84,7 +95,10 @@ module Helpers =
 /// Helper for creating FontAwesome icons: <c>&lt;i class='fa fa-name'/></c>
 [<AutoOpen>]
 module FontAwesome =
-    let fa name = Html.i [ Attr.className ("fa fa-" + name) ]
+    let fa name =
+        Html.i [
+            Attr.className ("fa fa-" + name)
+        ]
 
 // --------------------------------------------------------
 // !!! DO NOT EDIT !!!
@@ -95,7 +109,7 @@ module FontAwesome =
 // and replace Framework and FrameworkElement appropriately. It isn't necessary, but it may
 // help reduce some "bulma.m." boilerplate noise in your app
 
-let bulma = Feliz.Engine.Bulma.BulmaEngine<SutilElement>( Html, Attr )
+let bulma = Feliz.Engine.Bulma.BulmaEngine<SutilElement>(Html, Attr)
 
 // Can these be generated with a source generator?
 let helpers = bulma.m.helpers

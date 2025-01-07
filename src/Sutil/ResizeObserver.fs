@@ -72,7 +72,9 @@ type ResizeObserver(el: HTMLElement) =
                     )
         else
             iframe.setAttribute ("src", "about:blank")
-            iframe.onload <- (fun e -> unsubscribe <- EventListeners.add "resize" iframe.contentWindow notify)
+
+            iframe.onload <-
+                (fun e -> unsubscribe <- EventListeners.add "resize" iframe.contentWindow notify)
 
         el.appendChild (iframe) |> ignore
 

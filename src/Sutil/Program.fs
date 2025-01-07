@@ -72,8 +72,7 @@ type Program() =
             (BuildContext
                 .Create(prev.parentElement)
                 .WithAppendNode(fun parent node -> DomEdit.insertAfter parent node prev)
-                .WithCurrent(NodeRange.Empty)
-                )
+                .WithCurrent(NodeRange.Empty))
             app
 
         |> (fun result -> Dispose.makeDisposable (fun () -> DomEdit.remove result.Node))

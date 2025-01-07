@@ -1,55 +1,34 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <Description>Front-end framework for Fable</Description>
-    <Authors>David Dawkins</Authors>
-    <Version>3.0.0</Version>
-    <PackageVersion>3.0.0-alpha-001</PackageVersion>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <RepositoryType>git</RepositoryType>
-    <UsesMarkdownComments>false</UsesMarkdownComments>
-    <DefineConstants>$(DefineConstants);FABLE_COMPILER;</DefineConstants>
-  </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="Helpers.fs" />
-    <Compile Include="Log.fs" />
-    <Compile Include="Internal.fs" />
-    <Compile Include="Types.fs" />
-    <Compile Include="StyleDomHelpers.fs" />
-    <Compile Include="EventHelpers.fs" />
-    <Compile Include="Store.fs" />
-    <Compile Include="Elmish.fs" />
-    <Compile Include="VirtualDom.fs" />
-    <Compile Include="Patch.fs" />
-    <Compile Include="Core.fs" />
-    <Compile Include="ResizeObserver.fs" />
-    <Compile Include="CoreElements.fs" />
-    <Compile Include="Bindings.fs" />
-    <Compile Include="Bind.fs" />
-    <Compile Include="Styling.fs" />
-    <Compile Include="Navigable.fs" />
-    <Compile Include="Program.fs" />
-  </ItemGroup>
-  <ItemGroup>
-    <!-- <PackageReference Include="Feliz.Engine" Version="1.0.0-beta-004" />
-    <PackageReference Include="Feliz.Engine.Event" Version="1.0.0-beta-004" /> -->
-    <PackageReference Include="Fable.Browser.Css" Version="2.*" />
-    <PackageReference Include="Fable.Browser.Dom" Version="2.*" />
-    <PackageReference Include="Fable.Browser.Event" Version="1.*" />
-    <PackageReference Include="Fable.Core" Version="3.*" />
-    <PackageReference Include="Fable.Promise" Version="3.*" />
-    <PackageReference Include="Fable.Browser.MediaQueryList" Version="1.*" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="5.0.2" />
-  </ItemGroup>
-  <!-- Add source files to "fable" folder in Nuget package -->
-  <ItemGroup>
-    <Content Include="*.fsproj; **\*.fs" PackagePath="fable" />
-  </ItemGroup>
-  <Target Name="ReallyClean" AfterTargets="Clean">
-    <!-- Remove obj folder -->
-    <RemoveDir Directories="$(BaseIntermediateOutputPath)" />
-    <!-- Remove bin folder -->
-    <RemoveDir Directories="$(BaseOutputPath)" />
-  </Target>
+    <PropertyGroup>
+        <Description>Front-end framework for Fable</Description>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <FablePackageType>library</FablePackageType>
+        <PackageTags>fable-javascript</PackageTags>
+    </PropertyGroup>
+    <ItemGroup>
+        <Compile Include="Helpers.fs" />
+        <Compile Include="Log.fs" />
+        <Compile Include="Internal.fs" />
+        <Compile Include="Types.fs" />
+        <Compile Include="StyleDomHelpers.fs" />
+        <Compile Include="EventHelpers.fs" />
+        <Compile Include="Store.fs" />
+        <Compile Include="Elmish.fs" />
+        <Compile Include="VirtualDom.fs" />
+        <Compile Include="Patch.fs" />
+        <Compile Include="Core.fs" />
+        <Compile Include="ResizeObserver.fs" />
+        <Compile Include="CoreElements.fs" />
+        <Compile Include="Bindings.fs" />
+        <Compile Include="Bind.fs" />
+        <Compile Include="Styling.fs" />
+        <Compile Include="Navigable.fs" />
+        <Compile Include="Program.fs" />
+    </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Fable.Browser.Css" />
+        <PackageReference Include="Fable.Browser.Dom" />
+        <PackageReference Include="Fable.Core" />
+        <PackageReference Include="Fable.Promise" />
+    </ItemGroup>
 </Project>

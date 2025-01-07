@@ -14,28 +14,24 @@ module CoreExtensions =
 
     type SutilElement with
 
-        static member DefineBinding(name: string, init : SutilElement, f: BuildContext -> unit) =
-            SutilElement.BindElement(
-                name, 
-                init, 
-                f
-            )
+        static member DefineBinding(name: string, init: SutilElement, f: BuildContext -> unit) =
+            SutilElement.BindElement(name, init, f)
 
-        static member DefineBinding(name: string, init : SutilElement, f: BuildContext -> System.IDisposable) =
+        static member DefineBinding
+            (name: string, init: SutilElement, f: BuildContext -> System.IDisposable)
+            =
             SutilElement.DefineBinding(
-                name, 
-                init, 
+                name,
+                init,
                 (fun ctx -> ctx |> f |> Bindings.add ctx.ParentElement)
             )
 
         static member DefineBinding(name: string, f: BuildContext -> System.IDisposable) =
-            SutilElement.DefineBinding(
-                name,
-                Basic.el "div" [],
-                f
-        )
+            SutilElement.DefineBinding(name, Basic.el "div" [], f)
 
-        static member DefineMapping(name : string, f: BuildContext -> BuildContext, child : SutilElement ) =
+        static member DefineMapping
+            (name: string, f: BuildContext -> BuildContext, child: SutilElement)
+            =
             SutilElement.MappingElement(name, f, child)
 
         static member HiddenDiv(name: string) =
@@ -48,10 +44,10 @@ module CoreExtensions =
                 |]
             )
 
-let private forceLog (f : unit -> unit) =
+let private forceLog (f: unit -> unit) =
     let save = _log.enabled
     _log.enabled <- true
-    f()
+    f ()
     _log.enabled <- save
 
 let private logElement (context: BuildContext) (velement: VirtualElement) =
@@ -106,8 +102,7 @@ let internal notifySutilEvents (node: Browser.Types.Node) =
     else if _log.enabled then
         _log.trace ("Not connected: ", Internal.Node.toStringSummary node)
 
-
-let tryFindNewNode ( result : SutilResult ) : Browser.Types.Node option =
+let tryFindNewNode (result: SutilResult) : Browser.Types.Node option =
     match result.Result with
     | Replaced
     | Appended -> Some result.Node
@@ -122,50 +117,67 @@ let notifyNewNodes (result: SutilResult) =
 
 type BuildOptions =
     {
-        BuildVirtualElement : BuildContext -> SutilElement -> VirtualElement
-        CalculatePatches : BuildContext -> VirtualElement -> NodeAction
-        ApplyPatches : BuildContext -> NodeAction -> SutilResult
+        BuildVirtualElement: BuildContext -> SutilElement -> VirtualElement
+        CalculatePatches: BuildContext -> VirtualElement -> NodeAction
+        ApplyPatches: BuildContext -> NodeAction -> SutilResult
     }
-    with
-        static member Create() =
-            {
-                BuildVirtualElement = fun _ se -> VirtualDom.fromSutil se
-                CalculatePatches = fun ctx ve -> Patch.calculate (ctx.Current) ve
-                ApplyPatches = fun ctx action -> 
+
+    static member Create() =
+        {
+            BuildVirtualElement = fun _ se -> VirtualDom.fromSutil se
+            CalculatePatches = fun ctx ve -> Patch.calculate (ctx.Current) ve
+            ApplyPatches =
+                fun ctx action ->
                     match Patch.apply ctx action with
                     | Ok r -> r
-                    | Error s -> 
-                        failwith s
-            }
+                    | Error s -> failwith s
+        }
 
-        member __.WithBuildVirtualElement ( create : BuildContext -> SutilElement -> VirtualElement ) =
-            {  __ with BuildVirtualElement = create }
+    member __.WithBuildVirtualElement(create: BuildContext -> SutilElement -> VirtualElement) =
+        { __ with
+            BuildVirtualElement = create
+        }
 
-        member __.WithCalculatePatches ( calc : BuildContext -> VirtualElement -> NodeAction ) =
-            {  __ with CalculatePatches = calc }
+    member __.WithCalculatePatches(calc: BuildContext -> VirtualElement -> NodeAction) =
+        { __ with
+            CalculatePatches = calc
+        }
 
-        member __.WithApplyPatchess ( apply : BuildContext -> NodeAction -> SutilResult ) =
-            {  __ with ApplyPatches = apply }
+    member __.WithApplyPatchess(apply: BuildContext -> NodeAction -> SutilResult) =
+        { __ with
+            ApplyPatches = apply
+        }
 
-        member __.WithPostBuildVirtualElement ( post : VirtualElement -> VirtualElement ) =
-            __.WithBuildVirtualElement( fun ctx se -> __.BuildVirtualElement ctx se |> post )
+    member __.WithPostBuildVirtualElement(post: VirtualElement -> VirtualElement) =
+        __.WithBuildVirtualElement(fun ctx se -> __.BuildVirtualElement ctx se |> post)
 
-        member __.WithPostCalculatePatches ( post : NodeAction -> NodeAction ) =
-            __.WithCalculatePatches( fun ctx action -> __.CalculatePatches ctx action |> post )
+    member __.WithPostCalculatePatches(post: NodeAction -> NodeAction) =
+        __.WithCalculatePatches(fun ctx action -> __.CalculatePatches ctx action |> post)
 
-let buildWith (options : BuildOptions) (context : BuildContext) (sutilElement : SutilElement) : SutilResult =
+let buildWith
+    (options: BuildOptions)
+    (context: BuildContext)
+    (sutilElement: SutilElement)
+    : SutilResult
+    =
     sutilElement
     |> options.BuildVirtualElement context
     |> options.CalculatePatches context
     |> options.ApplyPatches context
 
-let buildWithLogging (options : BuildOptions) (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
-    let options = 
+let buildWithLogging
+    (options: BuildOptions)
+    (context: BuildContext)
+    (sutilElement: SutilElement)
+    : SutilResult
+    =
+    let options =
         if _log.enabled then
             _log.trace ("Mount: building", "parent=", context.Parent |> Node.toStringOutline)
+
             options
-                .WithPostBuildVirtualElement( logElement context )
-                .WithPostCalculatePatches( logPatch context )
+                .WithPostBuildVirtualElement(logElement context)
+                .WithPostCalculatePatches(logPatch context)
         else
             options
 
@@ -173,32 +185,37 @@ let buildWithLogging (options : BuildOptions) (context: BuildContext) (sutilElem
 
     buildWith options context sutilElement
 
-let makeOptions() =
+let makeOptions () =
     BuildOptions
         .Create()
-        .WithCalculatePatches( fun ctx ve -> 
+        .WithCalculatePatches(fun ctx ve ->
 #if NO_PATCH
             // Behave like Sutil 2.x
-            match isNull (ctx.Current) with 
+            match isNull (ctx.Current) with
             | true -> NodeAction.Insert ve
             | false -> NodeAction.Replace ve
 #else
             Patch.calculate (ctx.Current) ve
 #endif
         )
-        .WithApplyPatchess( fun ctx action -> 
+        .WithApplyPatchess(fun ctx action ->
             match Patch.apply ctx action with
             | Ok r -> r
-            | Error s -> 
-                failwith s)
+            | Error s -> failwith s
+        )
 
-let notify (result : SutilResult) =
+let notify (result: SutilResult) =
     notifyNewNodes result
     result
 
-let mountWith (mapOptions : BuildOptions -> BuildOptions) (context: BuildContext) (sutilElement: SutilElement) : SutilResult =
+let mountWith
+    (mapOptions: BuildOptions -> BuildOptions)
+    (context: BuildContext)
+    (sutilElement: SutilElement)
+    : SutilResult
+    =
     sutilElement
-    |> buildWith (makeOptions() |> mapOptions) context
+    |> buildWith (makeOptions () |> mapOptions) context
     //|> buildWithLogging (makeOptions() |> mapOptions) context
     |> notify
 

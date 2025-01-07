@@ -22,7 +22,6 @@ module Elmish =
 
         // Ported from https://github.com/elmish/elmish
 
-
         //
         // All Cmd code take from Fable.Elmish/src/cmd.fs, by Maxel Mangime
         // TODO: Refactor this into Sutil.Elmish module
@@ -427,9 +426,8 @@ module Elmish =
                 let s = Store.makeStore i d
 
                 let u =
-                    (fun f ->
-                        s.Update(f)
-                        //Sutil.Internal.CustomEvents.notifySutilUpdated doc
+                    (fun f -> s.Update(f)
+                    //Sutil.Internal.CustomEvents.notifySutilUpdated doc
                     )
 
                 upcast s, u
@@ -453,9 +451,8 @@ module Elmish =
                 let s = Store.makeStore i d
 
                 let u =
-                    (fun f ->
-                        s.Update(f)
-                        //Sutil.Internal.CustomEvents.notifySutilUpdated doc
+                    (fun f -> s.Update(f)
+                    //Sutil.Internal.CustomEvents.notifySutilUpdated doc
                     )
 
                 upcast s, u

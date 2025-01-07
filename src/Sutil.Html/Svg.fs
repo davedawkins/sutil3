@@ -6,7 +6,7 @@ open CoreElements
 
 ///  <exclude />
 module SvgInternal =
-    let svgel (tag:string) (xs:seq<SutilElement>) =
+    let svgel (tag: string) (xs: seq<SutilElement>) =
         Basic.elns "http://www.w3.org/2000/svg" tag xs
 
     let svg xs : SutilElement = svgel "svg" xs
@@ -17,26 +17,26 @@ module SvgInternal =
     let text xs : SutilElement = svgel "text" xs
     let line xs : SutilElement = svgel "line" xs
 
-    let inline attr (n,v) = Basic.attr n v
-    let x obj = attr("x",obj)
-    let y obj = attr("y",obj)
-    let cx obj = attr("cx",obj)
-    let cy obj = attr("cy",obj)
-    let rx obj = attr("rx",obj)
-    let ry obj = attr("ry",obj)
-    let r obj = attr("r",obj)
-    let x1 obj = attr("x1",obj)
-    let y1 obj = attr("y1",obj)
-    let x2 obj = attr("x2",obj)
-    let y2 obj = attr("y2",obj)
-    let width obj = attr("width",obj)
-    let height obj = attr("height",obj)
-    let transform obj = attr("transform",obj)
-
+    let inline attr (n, v) = Basic.attr n v
+    let x obj = attr ("x", obj)
+    let y obj = attr ("y", obj)
+    let cx obj = attr ("cx", obj)
+    let cy obj = attr ("cy", obj)
+    let rx obj = attr ("rx", obj)
+    let ry obj = attr ("ry", obj)
+    let r obj = attr ("r", obj)
+    let x1 obj = attr ("x1", obj)
+    let y1 obj = attr ("y1", obj)
+    let x2 obj = attr ("x2", obj)
+    let y2 obj = attr ("y2", obj)
+    let width obj = attr ("width", obj)
+    let height obj = attr ("height", obj)
+    let transform obj = attr ("transform", obj)
 
 open Feliz
+
 type SutilSvgEngine() =
-    inherit SvgEngine<SutilElement>( SvgInternal.svgel, Basic.text, (fun () -> Basic.fragment []) )
+    inherit SvgEngine<SutilElement>(SvgInternal.svgel, Basic.text, (fun () -> Basic.fragment []))
 
     member _.x = SvgInternal.x
     member _.x1 = SvgInternal.x1
@@ -51,7 +51,7 @@ type SutilSvgEngine() =
 
     member _.transform = SvgInternal.transform
 
-    member _.text (children : SutilElement seq) = SvgInternal.text children
+    member _.text(children: SutilElement seq) = SvgInternal.text children
 
 [<AutoOpen>]
 module SvgEngineHelpers =

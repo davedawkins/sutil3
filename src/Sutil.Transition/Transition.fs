@@ -12,49 +12,57 @@ open Fable.Core
 
 type HTMLElement = Browser.Types.HTMLElement
 
-let [<Literal>] private TICK_TASK = "__sutil_ticktask"
+[<Literal>]
+let private TICK_TASK = "__sutil_ticktask"
 
 let private log = Log.create "Transition"
 
 let slowAnimations = false
-let documentOf (node : Browser.Types.Node) = node.ownerDocument
+let documentOf (node: Browser.Types.Node) = node.ownerDocument
 let nodeStr node = Node.toStringSummary node
 
 module StyleHelpers =
 
-    let parseStyleAttr (style : string) =
-        style.Split([|';'|], StringSplitOptions.RemoveEmptyEntries)
-            |> Array.collect (fun entry ->
-                            entry.Split([|':'|],2)
-                            |> Array.chunkBySize 2
-                            |> Array.map (fun pair -> pair.[0].Trim(), pair.[1].Trim()))
+    let parseStyleAttr (style: string) =
+        style.Split(
+            [|
+                ';'
+            |],
+            StringSplitOptions.RemoveEmptyEntries
+        )
+        |> Array.collect (fun entry ->
+            entry.Split(
+                [|
+                    ':'
+                |],
+                2
+            )
+            |> Array.chunkBySize 2
+            |> Array.map (fun pair -> pair.[0].Trim(), pair.[1].Trim())
+        )
 
-    let emitStyleAttr (keyValues : (string * string) array) =
-        keyValues
-            |> Array.map (fun (k,v) -> sprintf "%s:%s;" k v )
-            |> String.concat ""
+    let emitStyleAttr (keyValues: (string * string) array) =
+        keyValues |> Array.map (fun (k, v) -> sprintf "%s:%s;" k v) |> String.concat ""
 
     let filterStyleAttr name style =
-        parseStyleAttr style
-            |> Array.filter (fun (k,v) -> k <> name)
-            |> emitStyleAttr
+        parseStyleAttr style |> Array.filter (fun (k, v) -> k <> name) |> emitStyleAttr
 
-    let getStyleAttr (el : HTMLElement) =
-        match el.getAttribute("style") with
+    let getStyleAttr (el: HTMLElement) =
+        match el.getAttribute ("style") with
         | null -> ""
         | s -> s
 
-    let addStyleAttr (el : HTMLElement) name value =
+    let addStyleAttr (el: HTMLElement) name value =
         let style = getStyleAttr el |> filterStyleAttr name
-        el.setAttribute( "style", sprintf "%s%s:%s;" style name value )
+        el.setAttribute ("style", sprintf "%s%s:%s;" style name value)
 
-    let removeStyleAttr (el : HTMLElement) name =
+    let removeStyleAttr (el: HTMLElement) name =
         //if logEnabled() then log( sprintf "filter by %s: %A -> %A" name (getStyleAttr el) (getStyleAttr el |> filterStyleAttr name) )
-        el.setAttribute( "style", getStyleAttr el |> filterStyleAttr name )
+        el.setAttribute ("style", getStyleAttr el |> filterStyleAttr name)
 
 open StyleHelpers
 
-let internal showEl (el : HTMLElement) isVisible =
+let internal showEl (el: HTMLElement) isVisible =
     if isVisible then
         if JsMap.hasKey el "_display" then
             addStyleAttr el "display" (JsMap.getKey el "_display")
@@ -62,32 +70,50 @@ let internal showEl (el : HTMLElement) isVisible =
             removeStyleAttr el "display"
     else
         addStyleAttr el "display" "none"
-    let ev = CustomEvents.customEvent (if isVisible then CustomEvents.SHOW else CustomEvents.HIDE) {|  |}
-    el.dispatchEvent(ev) |> ignore
+
+    let ev =
+        CustomEvents.customEvent
+            (if isVisible then
+                 CustomEvents.SHOW
+             else
+                 CustomEvents.HIDE)
+            {| |}
+
+    el.dispatchEvent (ev) |> ignore
     ()
 
 module private LoopTasks =
 
-    type private Task = { C : float -> bool; F : unit -> unit }
+    type private Task =
+        {
+            C: float -> bool
+            F: unit -> unit
+        }
 
-    type LoopTask = { Promise : JS.Promise<unit>; Abort: (unit -> unit) }
+    type LoopTask =
+        {
+            Promise: JS.Promise<unit>
+            Abort: (unit -> unit)
+        }
 
     let mutable private tasks = new HashSet<Task>()
 
-    let rec runTasks(now) =
-        tasks |> Array.ofSeq |> Array.iter (fun task ->
+    let rec runTasks (now) =
+        tasks
+        |> Array.ofSeq
+        |> Array.iter (fun task ->
             if not (task.C(now)) then
                 tasks.Remove(task) |> ignore
                 task.F()
         )
+
         if tasks.Count <> 0 then
             Timers.raf runTasks |> ignore
 
     (**
      * For testing purposes only!
      *)
-    let private clearLoops =
-        tasks.Clear()
+    let private clearLoops = tasks.Clear()
 
     (**
      * Creates a new task that runs on each raf frame
@@ -100,12 +126,18 @@ module private LoopTasks =
             Timers.raf runTasks |> ignore
 
         {
-            Promise = Promise.create( fun fulfill _ ->
-                task <- { C = callback;  F = fulfill }
-                tasks.Add(task) |> ignore
-            )
+            Promise =
+                Promise.create (fun fulfill _ ->
+                    task <-
+                        {
+                            C = callback
+                            F = fulfill
+                        }
 
-            Abort = fun _ -> tasks.Remove (task) |> ignore
+                    tasks.Add(task) |> ignore
+                )
+
+            Abort = fun _ -> tasks.Remove(task) |> ignore
         }
 
 type TransitionProp =
@@ -117,58 +149,63 @@ type TransitionProp =
     | Duration of float
     | DurationFn of (float -> float)
     | Ease of (float -> float)
-    | CssGen of (float -> float -> string )
+    | CssGen of (float -> float -> string)
     | Tick of (float -> float -> unit)
     | Speed of float
     | Fallback of TransitionBuilder
 
 and Transition =
     {
-        Key : string
-        X : float
-        Y : float
-        Opacity : float
-        Delay : float
-        Duration : float
-        DurationFn : (float->float) option
-        Speed : float
-        Ease : (float -> float)
-        CssGen : (float -> float -> string ) option
+        Key: string
+        X: float
+        Y: float
+        Opacity: float
+        Delay: float
+        Duration: float
+        DurationFn: (float -> float) option
+        Speed: float
+        Ease: (float -> float)
+        CssGen: (float -> float -> string) option
         Tick: (float -> float -> unit) option
         Fallback: TransitionBuilder option
-    } with
-            static member Default = {
-                Key =""
-                X = 0.0
-                Y = 0.0
-                Delay = 0.0
-                Opacity = 0.0
-                Duration = 0.0
-                DurationFn = None
-                Speed = 0.0
-                Ease = Easing.linear
-                CssGen = None
-                Fallback = None
-                Tick = None }
+    }
 
-and CreateTransition =
-     unit -> Transition
+    static member Default =
+        {
+            Key = ""
+            X = 0.0
+            Y = 0.0
+            Delay = 0.0
+            Opacity = 0.0
+            Duration = 0.0
+            DurationFn = None
+            Speed = 0.0
+            Ease = Easing.linear
+            CssGen = None
+            Fallback = None
+            Tick = None
+        }
+
+and CreateTransition = unit -> Transition
 
 and TransitionBuilder = TransitionProp list -> HTMLElement -> CreateTransition
 
-type Animation = {
-    From: Browser.Types.ClientRect
-    To: Browser.Types.ClientRect
-}
+type Animation =
+    {
+        From: Browser.Types.ClientRect
+        To: Browser.Types.ClientRect
+    }
 
 type AnimationBuilder = TransitionProp list -> HTMLElement -> Animation -> Transition
 
-let mergeProps newerProps existingProps : TransitionProp list =
-    existingProps @ newerProps
+let mergeProps newerProps existingProps : TransitionProp list = existingProps @ newerProps
 
-let withProps (userProps : TransitionProp list) (f : TransitionProp list -> 'a) : TransitionProp list -> 'a =
-    fun (initProps : TransitionProp list) ->
-        initProps |> mergeProps userProps |> f
+let withProps
+    (userProps: TransitionProp list)
+    (f: TransitionProp list -> 'a)
+    : TransitionProp list -> 'a
+    =
+    fun (initProps: TransitionProp list) -> initProps |> mergeProps userProps |> f
 
 type TransitionAttribute =
     | InOut of TransitionBuilder
@@ -176,75 +213,136 @@ type TransitionAttribute =
     | Out of TransitionBuilder
     | Animate of AnimationBuilder
 
-let private overrideDuration d = if slowAnimations then 10.0 * d else d
-let private overrideDurationFn fo = if slowAnimations then (fo |> Option.map (fun f -> ((*)10.0 << f))) else fo
+let private overrideDuration d =
+    if slowAnimations then
+        10.0 * d
+    else
+        d
 
-let private applyProp (r:Transition) (prop : TransitionProp) =
+let private overrideDurationFn fo =
+    if slowAnimations then
+        (fo |> Option.map (fun f -> ((*) 10.0 << f)))
+    else
+        fo
+
+let private applyProp (r: Transition) (prop: TransitionProp) =
     match prop with
-    | Delay d -> { r with Delay = d }
-    | Duration d -> { r with Duration = d; DurationFn = None }
-    | DurationFn fo -> { r with DurationFn = Some fo; Duration = 0.0 }
-    | Ease f -> { r with Ease = f }
-    | CssGen f -> { r with CssGen = Some f }
-    | Tick f -> { r with Tick = Some f }
-    | Speed s -> { r with Speed = s }
-    | X n -> { r with X = n }
-    | Y n -> { r with Y = n }
-    | Opacity n -> { r with Opacity = n }
-    | Key f -> { r with Key = f }
-    | Fallback f -> { r with Fallback = Some f }
+    | Delay d ->
+        { r with
+            Delay = d
+        }
+    | Duration d ->
+        { r with
+            Duration = d
+            DurationFn = None
+        }
+    | DurationFn fo ->
+        { r with
+            DurationFn = Some fo
+            Duration = 0.0
+        }
+    | Ease f ->
+        { r with
+            Ease = f
+        }
+    | CssGen f ->
+        { r with
+            CssGen = Some f
+        }
+    | Tick f ->
+        { r with
+            Tick = Some f
+        }
+    | Speed s ->
+        { r with
+            Speed = s
+        }
+    | X n ->
+        { r with
+            X = n
+        }
+    | Y n ->
+        { r with
+            Y = n
+        }
+    | Opacity n ->
+        { r with
+            Opacity = n
+        }
+    | Key f ->
+        { r with
+            Key = f
+        }
+    | Fallback f ->
+        { r with
+            Fallback = Some f
+        }
 
-let applyProps (props : TransitionProp list) (tr:Transition) = props |> List.fold applyProp tr
-let makeTransition (props : TransitionProp list) = applyProps props Transition.Default
+let applyProps (props: TransitionProp list) (tr: Transition) = props |> List.fold applyProp tr
+let makeTransition (props: TransitionProp list) = applyProps props Transition.Default
 let mapTrans (f: Transition -> TransitionProp list) t = applyProps (f t) t
 
-let element (doc:Browser.Types.Document) tag = doc.createElement(tag)
+let element (doc: Browser.Types.Document) tag = doc.createElement (tag)
 
 let mutable private numActiveAnimations = 0
-let mutable private tasks : (unit -> unit) list = []
-let mutable private activeDocs : Map<int,Browser.Types.Document> = Map.empty
+let mutable private tasks: (unit -> unit) list = []
+let mutable private activeDocs: Map<int, Browser.Types.Document> = Map.empty
 
-let private registerDoc (doc:Browser.Types.Document) =
-    activeDocs <- activeDocs.Add( doc.GetHashCode(), doc )
-    if log.enabled then log.info($"Active docs: {activeDocs.Count}")
+let private registerDoc (doc: Browser.Types.Document) =
+    activeDocs <- activeDocs.Add(doc.GetHashCode(), doc)
 
-let private runTasks() =
+    if log.enabled then
+        log.info ($"Active docs: {activeDocs.Count}")
+
+let private runTasks () =
     let copy = tasks
     tasks <- []
+
     if (copy.Length > 0) then
-        if log.enabled then log.info($"- - - Tasks: running {copy.Length} tasks - - - - - - - - - - - - - -")
-    for f in copy do f()
+        if log.enabled then
+            log.info ($"- - - Tasks: running {copy.Length} tasks - - - - - - - - - - - - - -")
+
+    for f in copy do
+        f ()
 
 let private waitAnimationFrame f =
     let init = tasks.IsEmpty
     tasks <- f :: tasks
+
     if init then
         Timers.rafu runTasks
 
-let private getSutilStyleElement (doc : Browser.Types.Document) =
-    let mutable e = doc.querySelector("head style#__sutil_keyframes")
+let private getSutilStyleElement (doc: Browser.Types.Document) =
+    let mutable e = doc.querySelector ("head style#__sutil_keyframes")
+
     if (isNull e) then
         e <- element doc "style"
-        e.setAttribute("id", "__sutil_keyframes")
-        doc.head.appendChild(e) |> ignore
+        e.setAttribute ("id", "__sutil_keyframes")
+        doc.head.appendChild (e) |> ignore
+
     e
 
 let private dotSheet styleElem : Browser.Types.CSSStyleSheet = JsMap.getKey styleElem "sheet"
 
-let private getSutilStylesheet (doc : Browser.Types.Document) = getSutilStyleElement doc |> dotSheet
+let private getSutilStylesheet (doc: Browser.Types.Document) = getSutilStyleElement doc |> dotSheet
 
-let private nextRuleId = Sutil.Helpers.createIdGenerator()
+let private nextRuleId = Sutil.Helpers.createIdGenerator ()
 
-let private toEmptyStr s = if System.String.IsNullOrEmpty(s) then "" else s
+let private toEmptyStr s =
+    if System.String.IsNullOrEmpty(s) then
+        ""
+    else
+        s
 
 open Browser.CssExtensions
 
-let createRule (node : HTMLElement) (a:float) (b:float) tr (uid:int) =
+let createRule (node: HTMLElement) (a: float) (b: float) tr (uid: int) =
     registerDoc (node.ownerDocument)
 
-    let css = match tr.CssGen with
-                | Some f -> f
-                | None -> failwith "No CSS function supplied"
+    let css =
+        match tr.CssGen with
+        | Some f -> f
+        | None -> failwith "No CSS function supplied"
 
     if (tr.DurationFn.IsSome) then
         failwith "Duration function not permitted in createRule"
@@ -252,95 +350,181 @@ let createRule (node : HTMLElement) (a:float) (b:float) tr (uid:int) =
     let durn = tr.Duration |> overrideDuration
 
     let step = 16.666 / durn
-    let mutable keyframes = [ "{\n" ];
 
-    for p in [0.0 ..step.. 1.0] do
+    let mutable keyframes =
+        [
+            "{\n"
+        ]
+
+    for p in
+        [
+            0.0 .. step .. 1.0
+        ] do
         let t = a + (b - a) * tr.Ease(p)
-        keyframes <- keyframes @ [ sprintf "%f%%{%s}\n" (p * 100.0) (css t (1.0 - t)) ]
 
-    let rule = keyframes @ [ sprintf "100%% {%s}\n" (css b (1.0 - b)) ] |> String.concat ""
+        keyframes <-
+            keyframes
+            @ [
+                sprintf "%f%%{%s}\n" (p * 100.0) (css t (1.0 - t))
+            ]
 
-    let name = sprintf "__sutil_%d" (if uid = 0 then nextRuleId() else uid)
+    let rule =
+        keyframes
+        @ [
+            sprintf "100%% {%s}\n" (css b (1.0 - b))
+        ]
+        |> String.concat ""
+
+    let name =
+        sprintf
+            "__sutil_%d"
+            (if uid = 0 then
+                 nextRuleId ()
+             else
+                 uid)
+
     let keyframeText = sprintf "@keyframes %s %s" name rule
-    if log.enabled then log.info( sprintf "keyframe: %s" (keyframes |> List.skip (keyframes.Length / 2) |> List.head))
-    if log.enabled then log.info($"createRule {name} {durn}ms for {nodeStr node}")
+
+    if log.enabled then
+        log.info (
+            sprintf "keyframe: %s" (keyframes |> List.skip (keyframes.Length / 2) |> List.head)
+        )
+
+    if log.enabled then
+        log.info ($"createRule {name} {durn}ms for {nodeStr node}")
 
     let stylesheet = getSutilStylesheet (documentOf node)
-    stylesheet.insertRule( keyframeText, stylesheet.cssRules.length) |> ignore
+    stylesheet.insertRule (keyframeText, stylesheet.cssRules.length) |> ignore
 
     let animations =
-        if String.IsNullOrEmpty(node.style.animation) then [] else [ node.style.animation ]
-        @ [ sprintf "%s %fms linear %fms 1 both" name durn tr.Delay ]
+        if String.IsNullOrEmpty(node.style.animation) then
+            []
+        else
+            [
+                node.style.animation
+            ]
+        @ [
+            sprintf "%s %fms linear %fms 1 both" name durn tr.Delay
+        ]
 
     node.style.animation <- animations |> String.concat ", "
     numActiveAnimations <- numActiveAnimations + 1
     name
 
-let clearAnimations (node:HTMLElement) = node.style.animation <-""
+let clearAnimations (node: HTMLElement) = node.style.animation <- ""
 
-let private clearRules() =
-    Timers.rafu( fun _ ->
+let private clearRules () =
+    Timers.rafu (fun _ ->
         if (numActiveAnimations = 0) then
             for kv in activeDocs do
                 let doc = kv.Value
                 let stylesheet = getSutilStylesheet doc
-                if log.enabled then log.info(sprintf "clearing %d rules" (int stylesheet.cssRules.length))
-                for i in [(int stylesheet.cssRules.length-1) .. -1 .. 0] do
-                    stylesheet.deleteRule( float i )
-            //doc.__svelte_rules = {};
-        activeDocs <- Map.empty
-    ) |> ignore
 
-let private deleteRule (node:HTMLElement) (name:string) =
-    let previous = (toEmptyStr node.style.animation).Split( ',' )
+                if log.enabled then
+                    log.info (sprintf "clearing %d rules" (int stylesheet.cssRules.length))
+
+                for i in
+                    [
+                        (int stylesheet.cssRules.length - 1) .. -1 .. 0
+                    ] do
+                    stylesheet.deleteRule (float i)
+        //doc.__svelte_rules = {};
+        activeDocs <- Map.empty
+    )
+    |> ignore
+
+let private deleteRule (node: HTMLElement) (name: string) =
+    let previous = (toEmptyStr node.style.animation).Split(',')
+
     let next =
-        previous |> Array.filter
-            (if System.String.IsNullOrEmpty(name)
-                then (fun anim -> anim.IndexOf(name) < 0) // remove specific animation
-                else (fun anim -> anim.IndexOf("__sutil") < 0)) // remove all Svelte animations
+        previous
+        |> Array.filter (
+            if System.String.IsNullOrEmpty(name) then
+                (fun anim -> anim.IndexOf(name) < 0) // remove specific animation
+            else
+                (fun anim -> anim.IndexOf("__sutil") < 0)
+        ) // remove all Svelte animations
+
     let deleted = previous.Length - next.Length
+
     if (deleted > 0) then
         //log <| sprintf "Deleted rule(s) %s (%d removed)" name deleted
         node.style.animation <- next |> Array.map (fun s -> s.Trim()) |> String.concat ", "
         numActiveAnimations <- numActiveAnimations - deleted
-        if (numActiveAnimations = 0) then clearRules()
 
-let private rectToStr (c : Browser.Types.ClientRect ) =
+        if (numActiveAnimations = 0) then
+            clearRules ()
+
+let private rectToStr (c: Browser.Types.ClientRect) =
     sprintf "[%f,%f -> %f,%f]" c.left c.top c.right c.bottom
 
-let flip props (node:Browser.Types.Element) (animation:Animation) =
-    let tr = applyProps props  {
-            Transition.Default with
+let flip props (node: Browser.Types.Element) (animation: Animation) =
+    let tr =
+        applyProps
+            props
+            { Transition.Default with
                 Delay = 0.0
-                DurationFn = Some (fun d -> System.Math.Sqrt(d) * 60.0)
-                Ease = Easing.quintOut }
-    let style = Browser.Dom.window.getComputedStyle(node)
-    let transform = if style.transform = "none" then "" else style.transform
+                DurationFn = Some(fun d -> System.Math.Sqrt(d) * 60.0)
+                Ease = Easing.quintOut
+            }
+
+    let style = Browser.Dom.window.getComputedStyle (node)
+
+    let transform =
+        if style.transform = "none" then
+            ""
+        else
+            style.transform
+
     let scaleX = animation.From.width / node.clientWidth
     let scaleY = animation.From.height / node.clientHeight
     let dx = (animation.From.left - animation.To.left) / scaleX
     let dy = (animation.From.top - animation.To.top) / scaleY
     let d = Math.Sqrt(dx * dx + dy * dy)
-    if log.enabled then log.info( sprintf "flip: %A,%A %A %A -> %A" dx dy transform (rectToStr animation.From) (rectToStr animation.To))
-    {
-        tr with
-            Duration = match tr.DurationFn with
-                        | None -> tr.Duration //
-                        | Some f -> f(d) // Use user's function or our default
-            DurationFn = None  // Original converts any function into a scalar value
-            CssGen = Some (fun t u -> sprintf "transform: %s translate(%fpx, %fpx);`" transform (u * dx) (u * dy))
+
+    if log.enabled then
+        log.info (
+            sprintf
+                "flip: %A,%A %A %A -> %A"
+                dx
+                dy
+                transform
+                (rectToStr animation.From)
+                (rectToStr animation.To)
+        )
+
+    { tr with
+        Duration =
+            match tr.DurationFn with
+            | None -> tr.Duration //
+            | Some f -> f (d) // Use user's function or our default
+        DurationFn = None // Original converts any function into a scalar value
+        CssGen =
+            Some(fun t u ->
+                sprintf "transform: %s translate(%fpx, %fpx);`" transform (u * dx) (u * dy)
+            )
     }
 
-let createAnimation (node:HTMLElement) (from:Browser.Types.ClientRect) (animateFn : AnimationBuilder) props =
+let createAnimation
+    (node: HTMLElement)
+    (from: Browser.Types.ClientRect)
+    (animateFn: AnimationBuilder)
+    props
+    =
     //if (!from)
     //    return noop;
-    let tgt (* to *) = node.getBoundingClientRect()
+    let tgt (* to *) = node.getBoundingClientRect ()
 
     let shouldCreate =
-        not (isNull from) &&
-        not (from.width = 0) &&
-        not (from.height = 0) &&
-        not (from.left = tgt.left && from.right = tgt.right && from.top = tgt.top && from.bottom = tgt.bottom)
+        not (isNull from)
+        && not (from.width = 0)
+        && not (from.height = 0)
+        && not (
+            from.left = tgt.left
+            && from.right = tgt.right
+            && from.top = tgt.top
+            && from.bottom = tgt.bottom
+        )
     //    return noop;
 
     //let { delay = 0, duration = 300, easing = identity,
@@ -350,43 +534,69 @@ let createAnimation (node:HTMLElement) (from:Browser.Types.ClientRect) (animateF
     // TODO : Tick loop
 
     if (shouldCreate) then
-        let a = animateFn props node { From = from; To = tgt }
-        let r = { a with Duration = if (a.Duration = 0.0 && a.DurationFn.IsNone) then 300.0 else a.Duration }
+        let a =
+            animateFn
+                props
+                node
+                {
+                    From = from
+                    To = tgt
+                }
+
+        let r =
+            { a with
+                Duration =
+                    if (a.Duration = 0.0 && a.DurationFn.IsNone) then
+                        300.0
+                    else
+                        a.Duration
+            }
+
         createRule node 0.0 1.0 r 0
     else
         ""
 
-let private waitAnimationEnd (el : HTMLElement) (f : unit -> unit) =
+let private waitAnimationEnd (el: HTMLElement) (f: unit -> unit) =
     let rec cb _ =
-        el.removeEventListener("animationend",cb)
-        f()
-    el.addEventListener("animationend", cb)
+        el.removeEventListener ("animationend", cb)
+        f ()
 
-let animateNode (node : HTMLElement) from (animator : AnimationBuilder) =
-    waitAnimationFrame <| fun () ->
+    el.addEventListener ("animationend", cb)
+
+let animateNode (node: HTMLElement) from (animator: AnimationBuilder) =
+    waitAnimationFrame
+    <| fun () ->
         let name = createAnimation node from animator []
-        waitAnimationEnd node <| fun _ ->
-            deleteRule node name
+        waitAnimationEnd node <| fun _ -> deleteRule node name
 
-let private tickGen = Helpers.createIdGenerator()
+let private tickGen = Helpers.createIdGenerator ()
 
-let private findTransition (intro:bool) (trans : TransitionAttribute list) : TransitionBuilder option =
-    let mutable result : TransitionBuilder option = None
+let private findTransition
+    (intro: bool)
+    (trans: TransitionAttribute list)
+    : TransitionBuilder option
+    =
+    let mutable result: TransitionBuilder option = None
+
     for x in trans do
-        result <- match result, x, intro with
-                    | Some _, _, _ -> result
-                    | None, In x, true -> Some x
-                    | None, Out x, false -> Some x
-                    | None, InOut x, _ -> Some x
-                    | _ -> None
+        result <-
+            match result, x, intro with
+            | Some _, _, _ -> result
+            | None, In x, true -> Some x
+            | None, Out x, false -> Some x
+            | None, InOut x, _ -> Some x
+            | _ -> None
+
     result
 
-let transitionNode  (el : HTMLElement)
-                    (trans : TransitionAttribute list)
-                    (initProps : TransitionProp list) // Likely to just be Key, if anything
-                    (isVisible : bool)
-                    (start: HTMLElement -> unit)
-                    (complete: HTMLElement -> unit) =
+let transitionNode
+    (el: HTMLElement)
+    (trans: TransitionAttribute list)
+    (initProps: TransitionProp list) // Likely to just be Key, if anything
+    (isVisible: bool)
+    (start: HTMLElement -> unit)
+    (complete: HTMLElement -> unit)
+    =
 
     let mutable ruleName = ""
 
@@ -394,17 +604,27 @@ let transitionNode  (el : HTMLElement)
         match JsMap.tryGetKey el TICK_TASK with
         | Some f ->
             JsMap.deleteKey el TICK_TASK
-            f()
+            f ()
         | None -> ()
 
     let runTick tr b durn =
         // let logEnabled = Log.isSourceEnabled "tick"
         // let log = Logging.log "tick"
 
-        let a = if b = 0.0 then 1.0 else 0.0
+        let a =
+            if b = 0.0 then
+                1.0
+            else
+                0.0
+
         let d = b - a
-        let tickId = tickGen()
-        let tick = match tr.Tick with|Some f -> f|None -> failwith "No tick function supplied"
+        let tickId = tickGen ()
+
+        let tick =
+            match tr.Tick with
+            | Some f -> f
+            | None -> failwith "No tick function supplied"
+
         let ease = tr.Ease
         let delay = tr.Delay
 
@@ -414,16 +634,20 @@ let transitionNode  (el : HTMLElement)
         let mutable started = false
         let mutable finished = false
 
-        JsMap.setKey el TICK_TASK (fun () ->
-            // if logEnabled then log $"#{tickId}: cancel"
-            finished <- true
-        )
+        JsMap.setKey
+            el
+            TICK_TASK
+            (fun () ->
+                // if logEnabled then log $"#{tickId}: cancel"
+                finished <- true
+            )
 
         // if logEnabled then log $"#{tickId}: run b={b} durn={durn}"
         if (b > 0.0) then
             tick 0.0 1.0
 
-        LoopTasks.loop <| fun now ->
+        LoopTasks.loop
+        <| fun now ->
             if not started then
                 start <- now + delay
                 finish <- start + durn
@@ -445,48 +669,80 @@ let transitionNode  (el : HTMLElement)
 
             not finished
 
-    let hide() =
+    let hide () =
         // if log.enabled then log $"hide {nodeStr el}"
         showEl el false
         complete el
-        if ruleName <> "" then deleteRule el ruleName
-        CustomEvents.CustomDispatch<_>.dispatch(el,"outroend")
 
-    let show() =
+        if ruleName <> "" then
+            deleteRule el ruleName
+
+        CustomEvents.CustomDispatch<_>.dispatch (el, "outroend")
+
+    let show () =
         // if log.enabled then log $"show {nodeStr el}"
         showEl el true
         complete el
-        if ruleName <> "" then deleteRule el ruleName
-        CustomEvents.CustomDispatch<_>.dispatch(el, "introend")
+
+        if ruleName <> "" then
+            deleteRule el ruleName
+
+        CustomEvents.CustomDispatch<_>.dispatch (el, "introend")
 
     let tr = findTransition isVisible trans
 
     let startTransition createTrans =
-        let event = if isVisible then "introstart" else "outrostart"
-        let (a,b) = if isVisible then (0.0, 1.0)   else (1.0, 0.0)
-        let onEnd = if isVisible then show         else hide
+        let event =
+            if isVisible then
+                "introstart"
+            else
+                "outrostart"
 
-        cancelTick()
+        let (a, b) =
+            if isVisible then
+                (0.0, 1.0)
+            else
+                (1.0, 0.0)
 
-        waitAnimationFrame <| fun () ->
-            CustomEvents.CustomDispatch<_>.dispatch(el,event)
+        let onEnd =
+            if isVisible then
+                show
+            else
+                hide
+
+        cancelTick ()
+
+        waitAnimationFrame
+        <| fun () ->
+            CustomEvents.CustomDispatch<_>.dispatch (el, event)
             start el
             waitAnimationEnd el onEnd
+
             if (isVisible) then
                 showEl el true // Check: we're doing this again at animationEnd
-            let tr = createTrans()
-            if tr.DurationFn.IsSome then failwith "Duration function not permitted"
+
+            let tr = createTrans ()
+
+            if tr.DurationFn.IsSome then
+                failwith "Duration function not permitted"
+
             let d = tr.Duration
+
             if tr.CssGen.IsSome then
                 ruleName <- createRule el a b tr 0
+
             if tr.Tick.IsSome then
                 // Wait for the cancelled runTick to finish
-                Promise.wait el (fun () ->
-                    let t = runTick tr b d
-                    t.Promise)
+                Promise.wait
+                    el
+                    (fun () ->
+                        let t = runTick tr b d
+                        t.Promise
+                    )
 
     // Save the value of display for use by showEl
     let _display = el.style.display
+
     if not (isNull _display) && _display <> "" && _display <> "none" then
         JsMap.setKey el "_display" _display
 
@@ -522,21 +778,21 @@ let transitionNode  (el : HTMLElement)
 
 // let transitionList (list : Hideable list) : SutilElement =
 //     SutilElement.HiddenDiv "transitionList"
-    // SutilElement.Define( "transitionList",
-    // fun ctx ->
-    // let runtimes = list |> List.map createHideableRuntime
-    // for rt in runtimes do
-    //     rt.unsubscribe <- rt.hideable.predicate |> Store.subscribe ( fun show ->
-    //         if (rt.target.IsEmpty) then
-    //             rt.target <- build  rt.hideable.element ctx
-    //             rt.cache <- not show
+// SutilElement.Define( "transitionList",
+// fun ctx ->
+// let runtimes = list |> List.map createHideableRuntime
+// for rt in runtimes do
+//     rt.unsubscribe <- rt.hideable.predicate |> Store.subscribe ( fun show ->
+//         if (rt.target.IsEmpty) then
+//             rt.target <- build  rt.hideable.element ctx
+//             rt.cache <- not show
 
-    //         if (rt.cache <> show) then
-    //             rt.cache <- show
-    //             rt.target.collectDomNodes() |> List.iter (fun node ->
-    //                     transitionNode (node :?> HTMLElement) rt.hideable.transOpt [] show ignore ignore )
-    //     )
-    // () )
+//         if (rt.cache <> show) then
+//             rt.cache <- show
+//             rt.target.collectDomNodes() |> List.iter (fun node ->
+//                     transitionNode (node :?> HTMLElement) rt.hideable.transOpt [] show ignore ignore )
+//     )
+// () )
 
 // type MatchOption<'T> = ('T -> bool) *  SutilElement * TransitionAttribute list
 
@@ -549,12 +805,15 @@ let transitionNode  (el : HTMLElement)
 // let transitionMatch<'T> (store : IObservable<'T>) (options : MatchOption<'T> list) =
 //     options |> List.map (fun (p,e,t) -> makeHideable (store |> Store.map p) e t) |> transitionList
 
-let transitionOpt   (name : string)
-                    (trans : TransitionAttribute list)
-                    (visible : IObservable<bool>)
-                    (element: SutilElement)
-                    (elseElement : SutilElement option) : SutilElement =
-    SutilElement.DefineBinding (
+let transitionOpt
+    (name: string)
+    (trans: TransitionAttribute list)
+    (visible: IObservable<bool>)
+    (element: SutilElement)
+    (elseElement: SutilElement option)
+    : SutilElement
+    =
+    SutilElement.DefineBinding(
         name,
         fun _context ->
             let context = _context.WithCurrent(NodeRange.Empty)
@@ -562,60 +821,70 @@ let transitionOpt   (name : string)
             let node = element |> Core.mount context |> _.Node
             let elseNode = elseElement |> Option.map (Core.mount context) |> Option.map _.Node
 
-            visible |> Store.distinct |> Store.subscribe (fun isVisible ->
+            visible
+            |> Store.distinct
+            |> Store.subscribe (fun isVisible ->
                 transitionNode (node :?> HTMLElement) trans [] isVisible ignore ignore
-                elseNode 
-                |> Option.iter (fun elseNode -> 
-                    transitionNode (elseNode :?> HTMLElement) trans [] (not isVisible) ignore ignore)
+
+                elseNode
+                |> Option.iter (fun elseNode ->
+                    transitionNode
+                        (elseNode :?> HTMLElement)
+                        trans
+                        []
+                        (not isVisible)
+                        ignore
+                        ignore
+                )
             )
     )
 
-    // Old Sutil 2.x code
-    // There are some optimizations and tweaks here that I may need to port across
-    // to Sutil 3.x, so I'm leaving this for reference for now. However, not yet
-    // seeing the need for them when looking at the Examples 
+// Old Sutil 2.x code
+// There are some optimizations and tweaks here that I may need to port across
+// to Sutil 3.x, so I'm leaving this for reference for now. However, not yet
+// seeing the need for them when looking at the Examples
 
-    // SutilElement.Define("transitionOpt",
-    // fun ctx ->
-    // let transResult = SutilEffect.MakeGroup( "transition", ctx.Parent, ctx.Previous ) |> Group
-    // ctx.AddChild transResult
-    // let transCtx = ctx |> ContextHelpers.withParent transResult
+// SutilElement.Define("transitionOpt",
+// fun ctx ->
+// let transResult = SutilEffect.MakeGroup( "transition", ctx.Parent, ctx.Previous ) |> Group
+// ctx.AddChild transResult
+// let transCtx = ctx |> ContextHelpers.withParent transResult
 
-    // let mutable target : SutilEffect = SideEffect
-    // let mutable cache = false
-    // let mutable targetElse : SutilEffect = SideEffect
+// let mutable target : SutilEffect = SideEffect
+// let mutable cache = false
+// let mutable targetElse : SutilEffect = SideEffect
 
-    // let unsub = store |> Store.subscribe (fun isVisible ->
-    //     let wantTransition = not target.IsEmpty
+// let unsub = store |> Store.subscribe (fun isVisible ->
+//     let wantTransition = not target.IsEmpty
 
-    //     if target.IsEmpty then
-    //         target <- build element transCtx
-    //         cache <- not isVisible
-    //         match elseElement with
-    //         | Some e -> targetElse <- build e transCtx
-    //         | None -> ()
+//     if target.IsEmpty then
+//         target <- build element transCtx
+//         cache <- not isVisible
+//         match elseElement with
+//         | Some e -> targetElse <- build e transCtx
+//         | None -> ()
 
-    //     if cache <> isVisible then
-    //         cache <- isVisible
-    //         let trans' = if wantTransition then trans else []
+//     if cache <> isVisible then
+//         cache <- isVisible
+//         let trans' = if wantTransition then trans else []
 
-    //         target.collectDomNodes() |> List.iter (fun node ->
-    //             transitionNode (node :?> HTMLElement) trans' [] isVisible ignore ignore
-    //         )
-    //         targetElse.collectDomNodes() |> List.iter (fun node ->
-    //             transitionNode (node :?> HTMLElement) trans' [] (not isVisible) ignore ignore
-    //         )
-    //         //if not (isNull targetElse) then transitionNode (targetElse :?> HTMLElement) trans' [] (not isVisible) ignore ignore
-    // )
+//         target.collectDomNodes() |> List.iter (fun node ->
+//             transitionNode (node :?> HTMLElement) trans' [] isVisible ignore ignore
+//         )
+//         targetElse.collectDomNodes() |> List.iter (fun node ->
+//             transitionNode (node :?> HTMLElement) trans' [] (not isVisible) ignore ignore
+//         )
+//         //if not (isNull targetElse) then transitionNode (targetElse :?> HTMLElement) trans' [] (not isVisible) ignore ignore
+// )
 
-    // transResult )
+// transResult )
 
 /// Show or hide according to an IObservable&lt;bool> using a transition
-let transition (options : TransitionAttribute list) visibility element =
+let transition (options: TransitionAttribute list) visibility element =
     transitionOpt "transition" options visibility element None
 
 /// Alternate between a pair of elements according to an IObservable&lt;bool> with no transition
-let transitionElse(options : TransitionAttribute list) visibility element otherElement=
+let transitionElse (options: TransitionAttribute list) visibility element otherElement =
     transitionOpt "transitionElse" options visibility element (Some otherElement)
 
 /// Show or hide according to an IObservable&lt;bool> with no transition
@@ -623,8 +892,5 @@ let showIf visibility element =
     transitionOpt "showIf" [] visibility element None
 
 /// Alternate between a pair of elements according to an IObservable&lt;bool> with no transition
-let showIfElse visibility element otherElement=
+let showIfElse visibility element otherElement =
     transitionOpt "showIfElse" [] visibility element (Some otherElement)
-
-
-

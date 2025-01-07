@@ -7,20 +7,24 @@ type DomEventHandler = Event -> unit
 
 type Globals =
     static let _globalNextId = Helpers.createIdGenerator ()
-    static member NextId : unit -> int = _globalNextId
+    static member NextId: unit -> int = _globalNextId
 
 type NodeRange =
-    NodeRange of Browser.Types.Node[]
-    with
-        static member Of (nodes : Browser.Types.Node[]) = NodeRange nodes
-        static member Of (node : Browser.Types.Node) =
-            node |> Array.singleton |> NodeRange.Of
-        static member Empty = NodeRange [||]
-        member __.Nodes = let (NodeRange nodes) = __ in nodes
-        member __.Length = __.Nodes.Length
-        member __.IsEmpty = __.Length = 0
-        member __.IsSingleNode = __.Length = 1
-        member __.NodeOrNull = if __.Length = 1 then __.Nodes[0] else null
+    | NodeRange of Browser.Types.Node[]
+
+    static member Of(nodes: Browser.Types.Node[]) = NodeRange nodes
+    static member Of(node: Browser.Types.Node) = node |> Array.singleton |> NodeRange.Of
+    static member Empty = NodeRange [||]
+    member __.Nodes = let (NodeRange nodes) = __ in nodes
+    member __.Length = __.Nodes.Length
+    member __.IsEmpty = __.Length = 0
+    member __.IsSingleNode = __.Length = 1
+
+    member __.NodeOrNull =
+        if __.Length = 1 then
+            __.Nodes[0]
+        else
+            null
 
 type PatchResult =
     | AttrSet
@@ -69,18 +73,18 @@ and VirtualElement =
     {
         /// Only set when this element has been rendered into the DOM
         Key: string
-        
+
         Type: VirtualElementType
         Children: VirtualElement[]
         Attributes: (string * obj)[]
         Events: (string * (Browser.Types.Event -> unit) * Internal.CustomEvents.EventOption[])[]
-        Mapper : (BuildContext -> BuildContext) option
+        Mapper: (BuildContext -> BuildContext) option
     }
 
 /// BuildContext provides context for building SutilElements.
 and BuildContext =
     {
-        Id : int
+        Id: int
 
         /// Return new ID for next DOM element
         NextId: (unit -> int)
@@ -108,6 +112,7 @@ and BuildContext =
     }
 
     static member DefaultAppendNode = Internal.DomEdit.append
+
     static member Create(parent: Node) : BuildContext =
         {
             Id = Globals.NextId()
@@ -123,7 +128,7 @@ and BuildContext =
 
     member __.ParentNode = __.Parent
 
-    member __.CreateElement(ns: string, tag: string) : Element = __.ElementCtor (ns,tag)
+    member __.CreateElement(ns: string, tag: string) : Element = __.ElementCtor(ns, tag)
 
     member __.ParentElement = __.Parent :?> HTMLElement
 
@@ -179,15 +184,16 @@ and BuildContext =
         { __ with
             Id = Globals.NextId()
             OnImportedNode =
-                __.OnImportedNode 
+                __.OnImportedNode
                 |> Option.map (fun f0 ->
                     fun node ->
                         f node
-                        f0 node)
+                        f0 node
+                )
                 |> Option.orElse (Some f)
         }
 
-    member __.NotifyNodeImported (node : Node) =
+    member __.NotifyNodeImported(node: Node) =
         __.OnImportedNode |> Option.iter (fun f -> f node)
 
 and VirtualElementMapper = VirtualElement -> VirtualElement
@@ -213,23 +219,28 @@ and SutilElement =
     | Fragment of (SutilElement[])
 
     /// Custom element that will manage a sub-element at this DOM location.
-    /// An initial element is created and the effect is called when the initial element 
+    /// An initial element is created and the effect is called when the initial element
     /// is mounted
     /// Eg Bind.el, Html.parse
     | BindElement of SutilBindEffect
 
     | MappingElement of (string * (BuildContext -> BuildContext) * SutilElement)
 
-    with
-        override __.ToString() =
-            match __ with
-            | Text s -> "Text '" + s + "'"
-            | Element (ns, tag, children) -> "Element '" + tag + "' [" + (children |> Array.map _.ToString() |> String.concat ", ") + "]"
-            | Attribute (name,value) -> "Attr '" + name + "'='" + (string value) + "'"
-            | Event (name,_,_) -> "Event '" + name + "'"
-            | Fragment (children) -> "Fragment [" + (children |> Array.map _.ToString() |> String.concat ", ") + "]"
-            | BindElement (name,_,_) -> "Bind '" + name + "'"
-            | MappingElement (name, _, child) -> "Map '" + name + "' [" + child.ToString() + "]"
+    override __.ToString() =
+        match __ with
+        | Text s -> "Text '" + s + "'"
+        | Element(ns, tag, children) ->
+            "Element '"
+            + tag
+            + "' ["
+            + (children |> Array.map _.ToString() |> String.concat ", ")
+            + "]"
+        | Attribute(name, value) -> "Attr '" + name + "'='" + (string value) + "'"
+        | Event(name, _, _) -> "Event '" + name + "'"
+        | Fragment(children) ->
+            "Fragment [" + (children |> Array.map _.ToString() |> String.concat ", ") + "]"
+        | BindElement(name, _, _) -> "Bind '" + name + "'"
+        | MappingElement(name, _, child) -> "Map '" + name + "' [" + child.ToString() + "]"
 
 type 'T observable = System.IObservable<'T>
 
@@ -250,7 +261,7 @@ module Basic =
     let el (tag: string) (children: SutilElement seq) =
         SutilElement.Element("", tag, children |> Seq.toArray)
 
-    let elns (ns : string) (tag: string) (children: SutilElement seq) =
+    let elns (ns: string) (tag: string) (children: SutilElement seq) =
         SutilElement.Element(ns, tag, children |> Seq.toArray)
 
     let fragment (children: SutilElement seq) =

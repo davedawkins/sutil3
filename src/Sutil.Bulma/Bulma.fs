@@ -9,11 +9,11 @@ module Bulma =
 
     /// Just enough of a DSL to define the Bulma elements. This means we don't need to
     /// make a dependency on Sutil.Html and Feliz.Engine
-    /// 
+    ///
     module SimpleDsl =
         [<RequireQualifiedAccess>]
         module Length =
-            let inline percent (n : int) = sprintf "%d%%" n
+            let inline percent (n: int) = sprintf "%d%%" n
 
         [<RequireQualifiedAccess>]
         module Css =
@@ -28,12 +28,20 @@ module Bulma =
             let typeRange = Basic.attr "type" "range"
             let typeCheckbox = Basic.attr "type" "checkbox"
             let typeNumber = Basic.attr "type" "number"
-            let style (children : (string * string) seq) = 
-                Basic.attr "style" (children |> Seq.map (fun (k,v) -> sprintf "%s: %A" k v) |> String.concat ";")
-            
+
+            let style (children: (string * string) seq) =
+                Basic.attr
+                    "style"
+                    (children |> Seq.map (fun (k, v) -> sprintf "%s: %A" k v) |> String.concat ";")
+
         [<RequireQualifiedAccess>]
         module Html =
-            let inline elc tag cls children = Basic.el tag [ Attr.className cls; yield! children ]
+            let inline elc tag cls children =
+                Basic.el tag [
+                    Attr.className cls
+                    yield! children
+                ]
+
             let inline divc cls children = elc "div" cls children
             let inline h1c cls children = elc "h1" cls children
             let inline h2c cls children = elc "h2" cls children
